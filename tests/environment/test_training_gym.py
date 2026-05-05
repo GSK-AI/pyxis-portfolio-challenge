@@ -34,7 +34,10 @@ from aiml_pyxis_investment_game.game.constants import (
     TRIAL_PHASES,
 )
 from aiml_pyxis_investment_game.game.trial import Trial, TrialPhase, TrialState
+from aiml_pyxis_investment_game import PROJECT_ROOT
 from tests.game.test_asset import drug_asset_factory
+
+_TEST_ASSETS_DIR = PROJECT_ROOT / "tests" / "data" / "generated_assets"
 
 _DISABLED_DISTRIBUTIONAL_PTRS = DistributionalPtrsConfig(
     enabled=False,
@@ -855,7 +858,7 @@ def test_trial_observation_values(test_env):
 @pytest.mark.parametrize("level_idx", list(range(len(LEVELS))))
 def test_levels_env_initialization(level_idx):
     """Test LevelsInvestmentGameEnv initializes with correct parameters per level."""
-    env = LevelsInvestmentGameEnv(level_idx, reward_fn=LegacyStaticNPVReward(), shuffle_order=True, max_num_assets=MAX_NUM_ASSETS, flatten_obs=False, distributional_ptrs_config=_DISABLED_DISTRIBUTIONAL_PTRS, ta_experience_config=_DISABLED_TA_EXPERIENCE, uncertain_ptrs_config=_DISABLED_UNCERTAIN_PTRS, investment_levels_config=_DISABLED_INVESTMENT_LEVELS, interim_trial_observations_config=_DISABLED_INTERIM_TRIAL_OBS, rd_capacity_config=_DISABLED_RD_CAPACITY)
+    env = LevelsInvestmentGameEnv(level_idx, assets_dir=_TEST_ASSETS_DIR, reward_fn=LegacyStaticNPVReward(), shuffle_order=True, max_num_assets=MAX_NUM_ASSETS, flatten_obs=False, distributional_ptrs_config=_DISABLED_DISTRIBUTIONAL_PTRS, ta_experience_config=_DISABLED_TA_EXPERIENCE, uncertain_ptrs_config=_DISABLED_UNCERTAIN_PTRS, investment_levels_config=_DISABLED_INVESTMENT_LEVELS, interim_trial_observations_config=_DISABLED_INTERIM_TRIAL_OBS, rd_capacity_config=_DISABLED_RD_CAPACITY)
     level_info = LEVELS[level_idx]
     assert env.equilibrium_num_assets == level_info["num_assets"]
     assert env.starting_cash == level_info["starting_cash"]
@@ -868,7 +871,7 @@ def test_levels_env_initialization(level_idx):
 @pytest.mark.parametrize("level_idx", list(range(len(LEVELS))))
 def test_levels_env_reset_consistency(level_idx):
     """Test reset produces consistent initial state for a given level."""
-    env = LevelsInvestmentGameEnv(level_idx, reward_fn=LegacyStaticNPVReward(), shuffle_order=True, max_num_assets=MAX_NUM_ASSETS, flatten_obs=False, distributional_ptrs_config=_DISABLED_DISTRIBUTIONAL_PTRS, ta_experience_config=_DISABLED_TA_EXPERIENCE, uncertain_ptrs_config=_DISABLED_UNCERTAIN_PTRS, investment_levels_config=_DISABLED_INVESTMENT_LEVELS, interim_trial_observations_config=_DISABLED_INTERIM_TRIAL_OBS, rd_capacity_config=_DISABLED_RD_CAPACITY)
+    env = LevelsInvestmentGameEnv(level_idx, assets_dir=_TEST_ASSETS_DIR, reward_fn=LegacyStaticNPVReward(), shuffle_order=True, max_num_assets=MAX_NUM_ASSETS, flatten_obs=False, distributional_ptrs_config=_DISABLED_DISTRIBUTIONAL_PTRS, ta_experience_config=_DISABLED_TA_EXPERIENCE, uncertain_ptrs_config=_DISABLED_UNCERTAIN_PTRS, investment_levels_config=_DISABLED_INVESTMENT_LEVELS, interim_trial_observations_config=_DISABLED_INTERIM_TRIAL_OBS, rd_capacity_config=_DISABLED_RD_CAPACITY)
     obs1, info1 = env.reset()
     obs2, info2 = env.reset()
     # Should produce different states unless seeded, but both should be valid
@@ -880,7 +883,7 @@ def test_levels_env_reset_consistency(level_idx):
 
 def test_levels_env_spaces():
     """Test observation and action spaces are correctly set up."""
-    env = LevelsInvestmentGameEnv(0, reward_fn=LegacyStaticNPVReward(), shuffle_order=True, max_num_assets=MAX_NUM_ASSETS, flatten_obs=False, distributional_ptrs_config=_DISABLED_DISTRIBUTIONAL_PTRS, ta_experience_config=_DISABLED_TA_EXPERIENCE, uncertain_ptrs_config=_DISABLED_UNCERTAIN_PTRS, investment_levels_config=_DISABLED_INVESTMENT_LEVELS, interim_trial_observations_config=_DISABLED_INTERIM_TRIAL_OBS, rd_capacity_config=_DISABLED_RD_CAPACITY)
+    env = LevelsInvestmentGameEnv(0, assets_dir=_TEST_ASSETS_DIR, reward_fn=LegacyStaticNPVReward(), shuffle_order=True, max_num_assets=MAX_NUM_ASSETS, flatten_obs=False, distributional_ptrs_config=_DISABLED_DISTRIBUTIONAL_PTRS, ta_experience_config=_DISABLED_TA_EXPERIENCE, uncertain_ptrs_config=_DISABLED_UNCERTAIN_PTRS, investment_levels_config=_DISABLED_INVESTMENT_LEVELS, interim_trial_observations_config=_DISABLED_INTERIM_TRIAL_OBS, rd_capacity_config=_DISABLED_RD_CAPACITY)
     obs, info = env.reset()
     assert env.action_space.n == MAX_NUM_ASSETS
     assert env.observation_space.contains(obs)
@@ -888,7 +891,7 @@ def test_levels_env_spaces():
 
 def test_levels_env_step_output_types():
     """Test environment step returns expected output types."""
-    env = LevelsInvestmentGameEnv(0, reward_fn=LegacyStaticNPVReward(), shuffle_order=True, max_num_assets=MAX_NUM_ASSETS, flatten_obs=False, distributional_ptrs_config=_DISABLED_DISTRIBUTIONAL_PTRS, ta_experience_config=_DISABLED_TA_EXPERIENCE, uncertain_ptrs_config=_DISABLED_UNCERTAIN_PTRS, investment_levels_config=_DISABLED_INVESTMENT_LEVELS, interim_trial_observations_config=_DISABLED_INTERIM_TRIAL_OBS, rd_capacity_config=_DISABLED_RD_CAPACITY)
+    env = LevelsInvestmentGameEnv(0, assets_dir=_TEST_ASSETS_DIR, reward_fn=LegacyStaticNPVReward(), shuffle_order=True, max_num_assets=MAX_NUM_ASSETS, flatten_obs=False, distributional_ptrs_config=_DISABLED_DISTRIBUTIONAL_PTRS, ta_experience_config=_DISABLED_TA_EXPERIENCE, uncertain_ptrs_config=_DISABLED_UNCERTAIN_PTRS, investment_levels_config=_DISABLED_INVESTMENT_LEVELS, interim_trial_observations_config=_DISABLED_INTERIM_TRIAL_OBS, rd_capacity_config=_DISABLED_RD_CAPACITY)
     obs, info = env.reset()
     action = np.where(np.array(env.action_masks_binary()) == 1, 1, 0)  # Invert masks for action
     result = env.step(action)
@@ -1003,6 +1006,7 @@ def test_levels_investment_game_env_custom_max_num_assets(max_num_assets):
     """Test LevelsInvestmentGameEnv with custom max_num_assets values."""
     env = LevelsInvestmentGameEnv(
         level_idx=0,
+        assets_dir=_TEST_ASSETS_DIR,
         reward_fn=LegacyStaticNPVReward(),
         shuffle_order=False,
         max_num_assets=max_num_assets,
@@ -1129,6 +1133,7 @@ def levels_env_pair():
     """Create pair of level environments."""
     env_dict = LevelsInvestmentGameEnv(
         level_idx=0,
+        assets_dir=_TEST_ASSETS_DIR,
         reward_fn=LegacyStaticNPVReward(),
         shuffle_order=False,
         max_num_assets=MAX_NUM_ASSETS,
@@ -1143,6 +1148,7 @@ def levels_env_pair():
 
     env_flat = LevelsInvestmentGameEnv(
         level_idx=0,
+        assets_dir=_TEST_ASSETS_DIR,
         reward_fn=LegacyStaticNPVReward(),
         shuffle_order=False,
         max_num_assets=MAX_NUM_ASSETS,

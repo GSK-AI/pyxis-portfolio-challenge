@@ -6,7 +6,6 @@ import numpy as np
 import upath
 from stable_baselines3.common.callbacks import BaseCallback
 
-from aiml_pyxis_investment_game import PROJECT_ROOT
 from aiml_pyxis_investment_game.agents import PyxieAgent
 from aiml_pyxis_investment_game.game.asset_generators import JSONAssetGenerator
 from aiml_pyxis_investment_game.game.constants import LEVELS
@@ -37,11 +36,18 @@ class VecNormSyncCallback(BaseCallback):
 class PlayLevelsCallback(BaseCallback):
     """Custom callback to play levels during eval."""
 
-    def __init__(self, experiment_dir: str, max_num_assets: int, num_levels: int = 3):
+    def __init__(
+        self,
+        experiment_dir: str,
+        max_num_assets: int,
+        assets_dir: upath.UPath,
+        num_levels: int = 3,
+    ):
         """Initialize the PlayLevelsCallback."""
         super().__init__()
         self.experiment_path = experiment_dir
         self.max_num_assets = max_num_assets
+        self.assets_dir = assets_dir
         self.levels_info = LEVELS[:num_levels]
 
         self.temp_model_path = os.path.join(experiment_dir, "temp_model_for_levels.zip")
@@ -79,7 +85,7 @@ class PlayLevelsCallback(BaseCallback):
                 horizon=level_info["horizon"],
                 global_seed=level_info["global_seed"],
                 **{
-                    "assets_dir": PROJECT_ROOT / "asset_gen" / "o3_take3",
+                    "assets_dir": self.assets_dir,
                     "indication_spread": 4.0,
                     "indication_drift_speed": 1.0,
                     "trial_cost_multiplier": 1.0,

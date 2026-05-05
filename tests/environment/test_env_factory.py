@@ -2,6 +2,8 @@
 
 from unittest.mock import Mock, patch
 
+import upath
+
 from aiml_pyxis_investment_game.environment.env_factory import (  # noqa: E501
     _prepare_envs,
     _prepare_level_envs,
@@ -199,6 +201,7 @@ class TestPrepareLevelEnvs:
 
         train_env = _prepare_level_envs(
             level_idx=level_idx,
+            assets_dir=upath.UPath("dummy/path"),
             reward_fn=reward_fn,
             n_envs=n_envs,
             norm_obs=norm_obs,
@@ -225,6 +228,7 @@ class TestPrepareLevelEnvs:
             fn()
         mock_levels_env.assert_any_call(
             level_idx=level_idx,
+            assets_dir=upath.UPath("dummy/path"),
             reward_fn=reward_fn,
             shuffle_order=shuffle_order,
             flatten_obs=False,

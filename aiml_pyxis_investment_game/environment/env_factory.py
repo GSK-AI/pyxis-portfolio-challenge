@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+import upath
+
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize
 from stable_baselines3.common.vec_env.vec_monitor import VecMonitor
 
@@ -148,6 +150,7 @@ def _prepare_envs(
 
 def _prepare_level_envs(
     level_idx: int,
+    assets_dir: upath.UPath,
     reward_fn: Reward,
     n_envs: int,
     norm_obs: bool,
@@ -160,7 +163,6 @@ def _prepare_level_envs(
     investment_levels_config: InvestmentLevelsConfig | None = None,
     interim_trial_observations_config: InterimTrialObservationsConfig | None = None,
     distributional_ptrs_config: DistributionalPtrsConfig | None = None,
-    # CURRENTLY DOESN'T USE VARIABLE max_num_assets
 ):
     """Prepare the level-specific environments."""
 
@@ -168,6 +170,7 @@ def _prepare_level_envs(
         """Create the training environment."""
         env = LevelsInvestmentGameEnv(
             level_idx=level_idx,
+            assets_dir=assets_dir,
             reward_fn=reward_fn,
             shuffle_order=shuffle_order,
             flatten_obs=flatten_obs,

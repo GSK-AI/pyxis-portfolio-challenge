@@ -8,7 +8,6 @@ import gymnasium as gym
 import numpy as np
 import upath
 
-from aiml_pyxis_investment_game import PROJECT_ROOT
 from aiml_pyxis_investment_game.config import (
     DistributionalPtrsConfig,
     InterimTrialObservationsConfig,
@@ -1219,6 +1218,7 @@ class LevelsInvestmentGameEnv(InvestmentGameEnv):
     def __init__(
         self,
         level_idx: int,
+        assets_dir: upath.UPath,
         reward_fn: Reward,
         shuffle_order: bool,
         max_num_assets: int,
@@ -1270,8 +1270,6 @@ class LevelsInvestmentGameEnv(InvestmentGameEnv):
         asset_arrival_sensitivity_above = level_info.get(
             "asset_arrival_sensitivity_above", 3.0
         )
-        # Point directly to levels data
-        assets_dir = upath.UPath(PROJECT_ROOT / "asset_gen" / "o3_take3")
         super().__init__(
             equilibrium_num_assets=equilibrium_num_assets,
             max_num_assets=max_num_assets,
