@@ -1,0 +1,29 @@
+{
+    "name": "Leukostim",
+    "therapeutic_area": "oncology",
+    "type": "internal",
+    "description": "A CSF-1R inhibitor targeting macrophage-driven tumors such as tenosynovial giant cell tumor. Potential synergy with checkpoint inhibitors in solid tumors.",
+    "max_revenue": 3900000000,
+    "time_until_max_revenue": 6,
+    "time_until_patent_expiry": 17,
+    "trials": {
+        "phase_1": {
+            "cost_remaining": 0,
+            "time_remaining": 0,
+            "ptrs": 0.67
+        },
+        "phase_2": {
+            "cost_remaining": 0,
+            "time_remaining": 0,
+            "ptrs": 0.41
+        },
+        "phase_3": {
+            "cost_remaining": 230000000,
+            "time_remaining": 4,
+            "ptrs": 0.63
+        }
+    },
+    "state": "Idle",
+    "pending_trial_phase": "Phase 3",
+    "time_on_market": 0
+}

@@ -1,0 +1,161 @@
+# this config serves as a place to fix the train and eval environment parameters for the published game
+# Gym environment initialization parameters - 40 assets for complexity test
+equilibrium_num_assets: 10
+max_num_assets: 12
+asset_arrival_sensitivity_below: 2.0
+asset_arrival_sensitivity_above: 2.0
+starting_cash: 1.5e9  # Moderate constraint - allows some exploration
+horizon: 100
+reinvestment_percentage: 0.10
+shuffle_order: false
+mask_first_order_assets: true
+mask_negative_enpv_assets: false
+auto_center_rewards: false
+auto_center_calibration_steps: 10_000
+flatten_obs: true
+warmup_on_reset_steps: 0
+warmup_on_reset_policy: do_nothing
+reward_fn:
+  _target_: aiml_pyxis_investment_game.environment.reward.NetCashFlowReward
+
+# Training parameters
+training_data_dir: /Users/tomcarter/repos/aiml-pyxis-investment-game/rl-environment-assets/gpt5_09feb2026_highPtrs/training
+
+# Evaluation parameters
+evaluation_data_dir: /Users/tomcarter/repos/aiml-pyxis-investment-game/rl-environment-assets/gpt5_09feb2026_highPtrs/evaluation
+eval_initial_seed: 891024889
+num_eval_episodes: 100
+evaluation_metrics:
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerEvaluationCumulativeReward
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerEvaluationBankruptcyRate
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerEpisodeCumulativeReward
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerEpisodeRealisedRoi
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerEpisodeFinalEroi
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerEpisodeFinalEnpv
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerEpisodeNumSteps
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepReward
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepCash
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepRevenue
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepCost
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepNetCashFlow
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepCumulativeNetCashFlow
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepCumulativeReward
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepEnpv
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepEroi
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepNumAssetsIdleState
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepNumAssetsInDevelopmentState
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepNumAssetsOnMarketState
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepNumAssetsFailedState
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepNumAssetsExpiredState
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepFractionOfPossibleInvestments
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepFractionOfPossibleInvestmentsPosEnpv
+  # Uncertain PTRS metrics (for tracking TA specialization)
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepTAExperienceOncology
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepTAExperienceRespiratoryImmunology
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepTAExperienceVaccines
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepMeanPTRSError
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepMeanExpertiseBoost
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepNumAssetsOncology
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepNumAssetsRespiratoryImmunology
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepNumAssetsVaccines
+  # Investment levels metrics (for monitoring capacity and level distribution)
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepCapacityUsed
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepCapacityRatio
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepGlobalSuccessModifier
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepGlobalCostModifier
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepNumAssetsMinimalLevel
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepNumAssetsStandardLevel
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepNumAssetsAcceleratedLevel
+  # Interim trial observations metrics (for monitoring early stopping decisions)
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepMeanInterimSignal
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepMeanTrialProgress
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepMinInterimSignal
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerEpisodeNumStopActions
+  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepNumStopActions
+
+
+# Pyxie agent parameters
+pyxie_model_root_path: az://saved-gym-agent
+
+# Uncertain PTRS feature
+uncertain_ptrs:
+  enabled: true  # Master toggle for uncertain PTRS feature
+
+  # TA-specific base noise levels (very high - makes expertise critical)
+  ta_noise_config:
+    oncology: 0.45
+    respiratory and immunology: 0.38
+    vaccines and infectious disease: 0.30
+
+  # Phase noise multipliers (later phases are noisier)
+  phase_noise_multipliers:
+    phase_1: 1.0
+    phase_2: 1.5
+    phase_3: 2.0
+
+  # Experience system - aggressive decay to force specialization
+  experience_to_full_knowledge: 30.0   # Very high bar for full knowledge
+  max_expertise_boost: 0.05            # 5% PTRS boost for specialists
+  experience_to_max_boost: 40.0
+  experience_decay_rate: 0.98          # 8% decay - after 25 steps only 12% remains
+  max_total_experience: 60.0           # Hard cap on total experience (2x full knowledge)
+                                       # Forces trade-off: specialist gets 100% in 1 TA,
+                                       # generalist gets ~33% in each of 3 TAs
+
+  # Phase experience weights - low so spreading thin doesn't work
+  phase_experience_weights:
+    phase_1: 0.5
+    phase_2: 1.0
+    phase_3: 1.5
+
+  # Asset arrival bias - small bias toward experienced TAs
+  asset_arrival_temperature: 0.1  # Small bias, rewards mild specialization
+
+# Investment levels feature - variable investment intensity with capacity constraints
+investment_levels:
+  enabled: true  # Master toggle for investment levels feature
+
+  # Investment level definitions
+  # Each level affects: cost, speed, success probability, capacity usage, and experience gain
+  levels:
+    none:  # Not investing (for idle assets or pausing)
+      cost_modifier: 0.0
+      speed_modifier: 0.0
+      success_modifier: 1.0
+      capacity_cost: 0
+      experience_modifier: 0.0
+    minimal:  # Much slower and cheaper, better learning
+      cost_modifier: 0.5
+      speed_modifier: 0.5  # 2x slower
+      success_modifier: 0.85
+      capacity_cost: 1
+      experience_modifier: 2.0
+    standard:  # Normal development pace
+      cost_modifier: 1.0
+      speed_modifier: 1.0
+      success_modifier: 1.0
+      capacity_cost: 2
+      experience_modifier: 1.0
+    accelerated:  # Much faster but very expensive, minimal learning
+      cost_modifier: 2.0
+      speed_modifier: 2.0  # 2x faster
+      success_modifier: 1.10
+      capacity_cost: 4
+      experience_modifier: 0.25
+
+  # R&D Capacity system - moderate constraint on total investment intensity
+  capacity:
+    base_capacity: 4  # Tight - allows 2 standard or 4 minimal assets
+    # Overage penalties: when capacity_used > base_capacity
+    # success_modifier = 1.0 - (overage_ratio * overage_max_penalty)
+    # cost_modifier = 1.0 + (overage_ratio * overage_cost_max_penalty)
+    # where overage_ratio = (used - base) / base
+    overage_max_penalty: 0.50  # At 2x capacity, success rates drop 50%
+    overage_cost_max_penalty: 0.60  # At 2x capacity, costs increase 60%
+    overage_scaling: linear  # "linear" or "quadratic"
+
+# Interim trial observations feature - noisy signals during trials enable early stopping
+interim_trial_observations:
+  enabled: true  # Master toggle for interim trial observations
+  latent_quality_concentration: 10.0  # Beta distribution concentration (higher = tighter around PTRS)
+  initial_noise_scale: 0.3  # Initial noise in interim signals (decreases as trial progresses)

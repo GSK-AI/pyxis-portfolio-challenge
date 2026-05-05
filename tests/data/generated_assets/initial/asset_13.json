@@ -1,0 +1,29 @@
+{
+    "name": "C-Vax-Plus",
+    "therapeutic_area": "vaccines and infectious disease",
+    "type": "internal",
+    "description": "A combination vaccine for Hepatitis C, aiming for a shorter treatment duration and higher cure rate. The asset has cleared Phase 1 and is entering a crucial Phase 2 study to determine the optimal dose regimen.",
+    "max_revenue": 2800000000,
+    "time_until_max_revenue": 6,
+    "time_until_patent_expiry": 18,
+    "trials": {
+        "phase_1": {
+            "cost_remaining": 0,
+            "time_remaining": 0,
+            "ptrs": 0.65
+        },
+        "phase_2": {
+            "cost_remaining": 160000000,
+            "time_remaining": 3,
+            "ptrs": 0.42
+        },
+        "phase_3": {
+            "cost_remaining": 750000000,
+            "time_remaining": 3,
+            "ptrs": 0.55
+        }
+    },
+    "state": "Idle",
+    "pending_trial_phase": "Phase 2",
+    "time_on_market": 0
+}

@@ -1,0 +1,29 @@
+{
+    "name": "Protego-D",
+    "therapeutic_area": "vaccines and infectious disease",
+    "type": "internal",
+    "description": "A highly successful vaccine for Dengue fever that demonstrated strong efficacy and safety across all three trial phases. It has become the standard of care in many endemic countries.",
+    "max_revenue": 2500000000,
+    "time_until_max_revenue": 5,
+    "time_until_patent_expiry": 10,
+    "trials": {
+        "phase_1": {
+            "cost_remaining": 0,
+            "time_remaining": 0,
+            "ptrs": 0.7
+        },
+        "phase_2": {
+            "cost_remaining": 0,
+            "time_remaining": 0,
+            "ptrs": 0.6
+        },
+        "phase_3": {
+            "cost_remaining": 0,
+            "time_remaining": 0,
+            "ptrs": 0.65
+        }
+    },
+    "state": "On Market",
+    "pending_trial_phase": null,
+    "time_on_market": 3
+}

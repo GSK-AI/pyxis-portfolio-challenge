@@ -1,0 +1,29 @@
+{
+    "name": "CytoVax-M",
+    "therapeutic_area": "vaccines and infectious disease",
+    "type": "BD",
+    "description": "An mRNA vaccine candidate for the prevention of congenital Cytomegalovirus (CMV) infection. Acquired from a partner, this vaccine could address a major cause of birth defects.",
+    "max_revenue": 3000000000,
+    "time_until_max_revenue": 5,
+    "time_until_patent_expiry": 19,
+    "trials": {
+        "phase_1": {
+            "cost_remaining": 70000000,
+            "time_remaining": 1,
+            "ptrs": 0.62
+        },
+        "phase_2": {
+            "cost_remaining": 200000000,
+            "time_remaining": 2,
+            "ptrs": 0.4
+        },
+        "phase_3": {
+            "cost_remaining": 900000000,
+            "time_remaining": 3,
+            "ptrs": 0.5
+        }
+    },
+    "state": "Idle",
+    "pending_trial_phase": "Phase 1",
+    "time_on_market": 0
+}

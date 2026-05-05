@@ -1,0 +1,29 @@
+{
+    "name": "Oncoryn",
+    "therapeutic_area": "oncology",
+    "type": "internal",
+    "description": "A PD-1/CTLA-4 bispecific antibody to enhance anti-tumor immunity in solid tumors. Designed to balance efficacy and immune-related adverse events through selective engagement.",
+    "max_revenue": 4500000000,
+    "time_until_max_revenue": 6,
+    "time_until_patent_expiry": 15,
+    "trials": {
+        "phase_1": {
+            "cost_remaining": 0,
+            "time_remaining": 0,
+            "ptrs": 0.66
+        },
+        "phase_2": {
+            "cost_remaining": 0,
+            "time_remaining": 0,
+            "ptrs": 0.44
+        },
+        "phase_3": {
+            "cost_remaining": 260000000,
+            "time_remaining": 4,
+            "ptrs": 0.64
+        }
+    },
+    "state": "Idle",
+    "pending_trial_phase": "Phase 3",
+    "time_on_market": 0
+}

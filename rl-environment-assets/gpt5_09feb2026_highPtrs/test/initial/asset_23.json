@@ -1,0 +1,29 @@
+{
+    "name": "Kinaset",
+    "therapeutic_area": "oncology",
+    "type": "internal",
+    "description": "A selective pan-RAF inhibitor for BRAF/NRAS mutant melanoma and colorectal cancer. Engineered to avoid paradoxical activation while maintaining strong target engagement.",
+    "max_revenue": 3600000000,
+    "time_until_max_revenue": 6,
+    "time_until_patent_expiry": 19,
+    "trials": {
+        "phase_1": {
+            "cost_remaining": 18000000,
+            "time_remaining": 2,
+            "ptrs": 0.68
+        },
+        "phase_2": {
+            "cost_remaining": 50000000,
+            "time_remaining": 3,
+            "ptrs": 0.44
+        },
+        "phase_3": {
+            "cost_remaining": 230000000,
+            "time_remaining": 4,
+            "ptrs": 0.65
+        }
+    },
+    "state": "Idle",
+    "pending_trial_phase": "Phase 1",
+    "time_on_market": 0
+}

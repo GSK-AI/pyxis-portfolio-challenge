@@ -1,0 +1,68 @@
+# Stage 1: Building the code
+FROM node:20-alpine AS builder
+
+COPY ./gsk-cert.crt /usr/local/share/ca-certificates/gsk-cert.crt
+ENV NODE_EXTRA_CA_CERTS=/usr/local/share/ca-certificates/gsk-cert.crt
+
+# Install pnpm
+RUN npm install -g pnpm
+
+# Set working directory
+WORKDIR /app
+
+ARG NEXT_PUBLIC_BACKEND_URL
+ARG NEXT_PUBLIC_AZURE_CLIENT_ID
+ARG NEXT_PUBLIC_AZURE_AUTHORITY
+ARG NEXT_PUBLIC_TEST
+ARG NEXT_PUBLIC_BACKEND_URL_GAME
+
+
+# Install Prisma Client - remove if not using Prisma
+# COPY prisma ./
+
+# Copy package.json and pnpm-lock.yaml (if available)
+COPY package.json pnpm-lock.yaml* ./
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
+
+# Copy the rest of the application code
+COPY . .
+
+# Build the application
+RUN pnpm run build
+
+# Stage 2: Run the application
+FROM node:20-alpine AS runner
+
+# Copy certificate for npm registry access
+COPY ./gsk-cert.crt /usr/local/share/ca-certificates/gsk-cert.crt
+ENV NODE_EXTRA_CA_CERTS=/usr/local/share/ca-certificates/gsk-cert.crt
+
+ARG NEXT_PUBLIC_BACKEND_URL
+ARG NEXT_PUBLIC_AZURE_CLIENT_ID
+ARG NEXT_PUBLIC_AZURE_AUTHORITY
+ARG NEXT_PUBLIC_TEST
+ARG NEXT_PUBLIC_BACKEND_URL_GAME
+
+# Install pnpm
+RUN npm install -g pnpm
+
+# Set working directory
+WORKDIR /app
+
+# Copy built assets from the builder stage
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/public ./public
+
+# Set environment variables
+ENV NODE_ENV production
+ENV PORT 3000
+
+# Expose the port the app will run on
+EXPOSE 3000
+
+# Start the application
+CMD ["pnpm", "start"]

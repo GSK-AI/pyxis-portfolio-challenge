@@ -1,0 +1,29 @@
+{
+    "name": "Tumoralin",
+    "therapeutic_area": "oncology",
+    "type": "internal",
+    "description": "A systemic STING agonist intended to activate innate immunity in solid tumors. Being explored in combination with checkpoint inhibitors for additive anti-tumor effects.",
+    "max_revenue": 3800000000,
+    "time_until_max_revenue": 6,
+    "time_until_patent_expiry": 15,
+    "trials": {
+        "phase_1": {
+            "cost_remaining": 0,
+            "time_remaining": 0,
+            "ptrs": 0.66
+        },
+        "phase_2": {
+            "cost_remaining": 52000000,
+            "time_remaining": 3,
+            "ptrs": 0.39
+        },
+        "phase_3": {
+            "cost_remaining": 240000000,
+            "time_remaining": 4,
+            "ptrs": 0.62
+        }
+    },
+    "state": "Idle",
+    "pending_trial_phase": "Phase 2",
+    "time_on_market": 0
+}

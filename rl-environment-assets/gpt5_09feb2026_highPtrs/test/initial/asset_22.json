@@ -1,0 +1,29 @@
+{
+    "name": "Trivaxen",
+    "therapeutic_area": "vaccines and infectious disease",
+    "type": "internal",
+    "description": "A tetravalent dengue subunit vaccine formulated with a novel adjuvant to enhance breadth and durability. Targeted for endemic regions and travelers with a simplified two-dose schedule.",
+    "max_revenue": 2600000000,
+    "time_until_max_revenue": 7,
+    "time_until_patent_expiry": 17,
+    "trials": {
+        "phase_1": {
+            "cost_remaining": 14000000,
+            "time_remaining": 2,
+            "ptrs": 0.77
+        },
+        "phase_2": {
+            "cost_remaining": 58000000,
+            "time_remaining": 3,
+            "ptrs": 0.47
+        },
+        "phase_3": {
+            "cost_remaining": 300000000,
+            "time_remaining": 4,
+            "ptrs": 0.76
+        }
+    },
+    "state": "Idle",
+    "pending_trial_phase": "Phase 1",
+    "time_on_market": 0
+}

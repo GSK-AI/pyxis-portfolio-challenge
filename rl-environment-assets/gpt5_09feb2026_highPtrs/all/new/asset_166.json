@@ -1,0 +1,29 @@
+{
+    "name": "PRMT-Mercury",
+    "therapeutic_area": "oncology",
+    "type": "internal",
+    "description": "A selective PRMT5 inhibitor for MTAP-deleted tumors with oral dosing. Utilizes pharmacodynamic biomarkers to enable precision selection and rational combinations. Preclinical data suggest favorable CNS exposure for metastatic indications.",
+    "max_revenue": 3900000000,
+    "time_until_max_revenue": 6,
+    "time_until_patent_expiry": 18,
+    "trials": {
+        "phase_1": {
+            "cost_remaining": 20000000,
+            "time_remaining": 2,
+            "ptrs": 0.64
+        },
+        "phase_2": {
+            "cost_remaining": 57000000,
+            "time_remaining": 3,
+            "ptrs": 0.42
+        },
+        "phase_3": {
+            "cost_remaining": 245000000,
+            "time_remaining": 4,
+            "ptrs": 0.63
+        }
+    },
+    "state": "Idle",
+    "pending_trial_phase": "Phase 1",
+    "time_on_market": 0
+}

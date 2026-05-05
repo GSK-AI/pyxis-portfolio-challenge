@@ -1,0 +1,29 @@
+{
+    "name": "Psorava",
+    "therapeutic_area": "respiratory and immunology",
+    "type": "internal",
+    "description": "A topical TYK2 modulator for plaque psoriasis designed for high local efficacy. Aims to achieve strong PASI responses without systemic immunosuppression.",
+    "max_revenue": 1300000000,
+    "time_until_max_revenue": 5,
+    "time_until_patent_expiry": 14,
+    "trials": {
+        "phase_1": {
+            "cost_remaining": 0,
+            "time_remaining": 0,
+            "ptrs": 0.69
+        },
+        "phase_2": {
+            "cost_remaining": 26000000,
+            "time_remaining": 2,
+            "ptrs": 0.46
+        },
+        "phase_3": {
+            "cost_remaining": 160000000,
+            "time_remaining": 3,
+            "ptrs": 0.69
+        }
+    },
+    "state": "Idle",
+    "pending_trial_phase": "Phase 2",
+    "time_on_market": 0
+}

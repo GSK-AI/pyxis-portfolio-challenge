@@ -1,0 +1,29 @@
+{
+    "name": "RASNova",
+    "therapeutic_area": "oncology",
+    "type": "internal",
+    "description": "An oral SHP2 inhibitor to disrupt RAS/MAPK signaling in solid tumors. Developed for combination with EGFR or MEK inhibitors to counter adaptive resistance. Formulation aims for once-daily dosing with manageable tolerability.",
+    "max_revenue": 4100000000,
+    "time_until_max_revenue": 6,
+    "time_until_patent_expiry": 19,
+    "trials": {
+        "phase_1": {
+            "cost_remaining": 21000000,
+            "time_remaining": 2,
+            "ptrs": 0.65
+        },
+        "phase_2": {
+            "cost_remaining": 56000000,
+            "time_remaining": 3,
+            "ptrs": 0.41
+        },
+        "phase_3": {
+            "cost_remaining": 255000000,
+            "time_remaining": 4,
+            "ptrs": 0.64
+        }
+    },
+    "state": "Idle",
+    "pending_trial_phase": "Phase 1",
+    "time_on_market": 0
+}

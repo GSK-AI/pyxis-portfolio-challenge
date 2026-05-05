@@ -1,0 +1,29 @@
+{
+    "name": "Carcinoma-Vax",
+    "therapeutic_area": "oncology",
+    "type": "BD",
+    "description": "A therapeutic cancer vaccine for patients with early-stage colorectal cancer. Acquired to complement our immuno-oncology portfolio, it's designed to stimulate an immune response against tumor antigens.",
+    "max_revenue": 750000000,
+    "time_until_max_revenue": 7,
+    "time_until_patent_expiry": 19,
+    "trials": {
+        "phase_1": {
+            "cost_remaining": 67500000,
+            "time_remaining": 2,
+            "ptrs": 0.52
+        },
+        "phase_2": {
+            "cost_remaining": 234000000,
+            "time_remaining": 3,
+            "ptrs": 0.2
+        },
+        "phase_3": {
+            "cost_remaining": 660000000,
+            "time_remaining": 4,
+            "ptrs": 0.35
+        }
+    },
+    "state": "Idle",
+    "pending_trial_phase": "Phase 1",
+    "time_on_market": 0
+}

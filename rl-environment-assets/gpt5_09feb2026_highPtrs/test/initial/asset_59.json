@@ -1,0 +1,29 @@
+{
+    "name": "Sarconib",
+    "therapeutic_area": "oncology",
+    "type": "internal",
+    "description": "A targeted inhibitor for synovial sarcoma fusion proteins with orphan designation. Designed for oral dosing and potential combination with checkpoint inhibitors.",
+    "max_revenue": 3300000000,
+    "time_until_max_revenue": 5,
+    "time_until_patent_expiry": 8,
+    "trials": {
+        "phase_1": {
+            "cost_remaining": 0,
+            "time_remaining": 0,
+            "ptrs": 0.64
+        },
+        "phase_2": {
+            "cost_remaining": 0,
+            "time_remaining": 0,
+            "ptrs": 0.4
+        },
+        "phase_3": {
+            "cost_remaining": 230000000,
+            "time_remaining": 4,
+            "ptrs": 0.62
+        }
+    },
+    "state": "Idle",
+    "pending_trial_phase": "Phase 3",
+    "time_on_market": 0
+}

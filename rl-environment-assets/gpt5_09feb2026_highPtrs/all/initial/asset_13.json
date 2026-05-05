@@ -1,0 +1,29 @@
+{
+    "name": "Viraconis",
+    "therapeutic_area": "vaccines and infectious disease",
+    "type": "internal",
+    "description": "A multivalent conjugate vaccine against invasive Salmonella serovars. Targets regions with high disease burden and rising antibiotic resistance.",
+    "max_revenue": 3100000000,
+    "time_until_max_revenue": 7,
+    "time_until_patent_expiry": 17,
+    "trials": {
+        "phase_1": {
+            "cost_remaining": 0,
+            "time_remaining": 0,
+            "ptrs": 0.74
+        },
+        "phase_2": {
+            "cost_remaining": 54000000,
+            "time_remaining": 3,
+            "ptrs": 0.47
+        },
+        "phase_3": {
+            "cost_remaining": 280000000,
+            "time_remaining": 4,
+            "ptrs": 0.75
+        }
+    },
+    "state": "Idle",
+    "pending_trial_phase": "Phase 2",
+    "time_on_market": 0
+}

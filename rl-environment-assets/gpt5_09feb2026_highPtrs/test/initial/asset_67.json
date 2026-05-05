@@ -1,0 +1,29 @@
+{
+    "name": "Respilora",
+    "therapeutic_area": "respiratory and immunology",
+    "type": "internal",
+    "description": "An inhaled small-molecule blocker of epithelial alarmin signaling for severe eosinophilic asthma. Designed to reduce exacerbations and improve quality of life in steroid-dependent patients.",
+    "max_revenue": 1600000000,
+    "time_until_max_revenue": 5,
+    "time_until_patent_expiry": 17,
+    "trials": {
+        "phase_1": {
+            "cost_remaining": 12000000,
+            "time_remaining": 1,
+            "ptrs": 0.73
+        },
+        "phase_2": {
+            "cost_remaining": 36000000,
+            "time_remaining": 3,
+            "ptrs": 0.51
+        },
+        "phase_3": {
+            "cost_remaining": 190000000,
+            "time_remaining": 4,
+            "ptrs": 0.72
+        }
+    },
+    "state": "Idle",
+    "pending_trial_phase": "Phase 1",
+    "time_on_market": 0
+}

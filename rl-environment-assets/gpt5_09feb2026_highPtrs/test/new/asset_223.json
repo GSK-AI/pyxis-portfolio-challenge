@@ -1,0 +1,29 @@
+{
+    "name": "OncoMapra",
+    "therapeutic_area": "oncology",
+    "type": "internal",
+    "description": "An oral SHP2 inhibitor intended to interrupt RAS/MAPK signaling in solid tumors. Designed for combination with EGFR or MEK inhibitors to counter adaptive resistance with once-daily dosing.",
+    "max_revenue": 4100000000,
+    "time_until_max_revenue": 6,
+    "time_until_patent_expiry": 19,
+    "trials": {
+        "phase_1": {
+            "cost_remaining": 20000000,
+            "time_remaining": 2,
+            "ptrs": 0.66
+        },
+        "phase_2": {
+            "cost_remaining": 54000000,
+            "time_remaining": 3,
+            "ptrs": 0.41
+        },
+        "phase_3": {
+            "cost_remaining": 255000000,
+            "time_remaining": 4,
+            "ptrs": 0.64
+        }
+    },
+    "state": "Idle",
+    "pending_trial_phase": "Phase 1",
+    "time_on_market": 0
+}

@@ -1,0 +1,29 @@
+{
+    "name": "Atoperis",
+    "therapeutic_area": "respiratory and immunology",
+    "type": "internal",
+    "description": "A subcutaneous anti-IL-33 monoclonal antibody for severe asthma. Intended to reduce exacerbations and oral steroid use with quarterly dosing.",
+    "max_revenue": 1700000000,
+    "time_until_max_revenue": 5,
+    "time_until_patent_expiry": 18,
+    "trials": {
+        "phase_1": {
+            "cost_remaining": 12000000,
+            "time_remaining": 2,
+            "ptrs": 0.74
+        },
+        "phase_2": {
+            "cost_remaining": 38000000,
+            "time_remaining": 3,
+            "ptrs": 0.52
+        },
+        "phase_3": {
+            "cost_remaining": 185000000,
+            "time_remaining": 4,
+            "ptrs": 0.71
+        }
+    },
+    "state": "Idle",
+    "pending_trial_phase": "Phase 1",
+    "time_on_market": 0
+}

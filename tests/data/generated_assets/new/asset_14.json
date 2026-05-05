@@ -1,0 +1,29 @@
+{
+    "name": "NipahGuard",
+    "therapeutic_area": "vaccines and infectious disease",
+    "type": "BD",
+    "description": "An acquired monoclonal antibody therapeutic for Nipah virus, a high-priority pathogen with pandemic potential. This asset aims to be a key medical countermeasure for government stockpiles.",
+    "max_revenue": 500000000,
+    "time_until_max_revenue": 4,
+    "time_until_patent_expiry": 19,
+    "trials": {
+        "phase_1": {
+            "cost_remaining": 55000000,
+            "time_remaining": 1,
+            "ptrs": 0.7
+        },
+        "phase_2": {
+            "cost_remaining": 110000000,
+            "time_remaining": 2,
+            "ptrs": 0.58
+        },
+        "phase_3": {
+            "cost_remaining": 290000000,
+            "time_remaining": 2,
+            "ptrs": 0.66
+        }
+    },
+    "state": "Idle",
+    "pending_trial_phase": "Phase 1",
+    "time_on_market": 0
+}

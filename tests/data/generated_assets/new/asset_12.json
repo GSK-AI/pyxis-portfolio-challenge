@@ -1,0 +1,29 @@
+{
+    "name": "RenalStop",
+    "therapeutic_area": "oncology",
+    "type": "internal",
+    "description": "A novel small molecule that targets a metabolic vulnerability in clear cell renal cell carcinoma. It is being developed for patients who have progressed after checkpoint inhibitor therapy.",
+    "max_revenue": 1400000000,
+    "time_until_max_revenue": 6,
+    "time_until_patent_expiry": 19,
+    "trials": {
+        "phase_1": {
+            "cost_remaining": 33000000,
+            "time_remaining": 2,
+            "ptrs": 0.61
+        },
+        "phase_2": {
+            "cost_remaining": 170000000,
+            "time_remaining": 3,
+            "ptrs": 0.33
+        },
+        "phase_3": {
+            "cost_remaining": 600000000,
+            "time_remaining": 4,
+            "ptrs": 0.51
+        }
+    },
+    "state": "Idle",
+    "pending_trial_phase": "Phase 1",
+    "time_on_market": 0
+}

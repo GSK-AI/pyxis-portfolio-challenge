@@ -1,0 +1,29 @@
+{
+    "name": "EbolaShield-G",
+    "therapeutic_area": "vaccines and infectious disease",
+    "type": "internal",
+    "description": "A rapid-acting monoclonal antibody for post-exposure prophylaxis of Ebola virus. This asset is part of our global health initiative and is expected to have a high probability of technical success if an outbreak occurs.",
+    "max_revenue": 450000000,
+    "time_until_max_revenue": 3,
+    "time_until_patent_expiry": 19,
+    "trials": {
+        "phase_1": {
+            "cost_remaining": 38000000,
+            "time_remaining": 1,
+            "ptrs": 0.65
+        },
+        "phase_2": {
+            "cost_remaining": 100000000,
+            "time_remaining": 1,
+            "ptrs": 0.6
+        },
+        "phase_3": {
+            "cost_remaining": 250000000,
+            "time_remaining": 2,
+            "ptrs": 0.7
+        }
+    },
+    "state": "Idle",
+    "pending_trial_phase": "Phase 1",
+    "time_on_market": 0
+}

@@ -1,0 +1,29 @@
+{
+    "name": "Kinasehib-C7",
+    "therapeutic_area": "oncology",
+    "type": "internal",
+    "description": "An oral inhibitor of a novel kinase pathway implicated in drug-resistant solid tumors. This asset is entering Phase 1 to establish its safety profile and pharmacokinetics in healthy volunteers.",
+    "max_revenue": 2600000000,
+    "time_until_max_revenue": 6,
+    "time_until_patent_expiry": 19,
+    "trials": {
+        "phase_1": {
+            "cost_remaining": 40000000,
+            "time_remaining": 2,
+            "ptrs": 0.6
+        },
+        "phase_2": {
+            "cost_remaining": 190000000,
+            "time_remaining": 3,
+            "ptrs": 0.28
+        },
+        "phase_3": {
+            "cost_remaining": 650000000,
+            "time_remaining": 4,
+            "ptrs": 0.5
+        }
+    },
+    "state": "Idle",
+    "pending_trial_phase": "Phase 1",
+    "time_on_market": 0
+}

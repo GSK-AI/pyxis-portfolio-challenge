@@ -1,0 +1,35 @@
+{
+  "name": "pyxis-e2e-testing",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "cy:install": "cd cypress/auth && pnpm i",
+    "cy:auth": "cd cypress/auth && pnpm start",
+    "cy:open": "cypress open",
+    "cy:open:only": "cypress open",
+    "start": "pnpm cy:auth && pnpm cy:open",
+    "e2e:run": "cypress run",
+    "e2e": "pnpm cy:auth && cypress run",
+    "e2e:ci": "pnpm cy:auth:ci && cypress run",
+    "cy:auth:ci": "cd cypress/auth && node ci-auth.mjs",
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,css,md,html}\"",
+    "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,css,md,html}\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@testing-library/cypress": "^10.0.2",
+    "@types/node": "^22.8.7",
+    "cypress": "^13.15.1",
+    "cypress-social-logins": "^1.14.2",
+    "prettier": "^3.6.2",
+    "typescript": "^5.6.3"
+  },
+  "dependencies": {
+    "@panva/hkdf": "^1.2.1",
+    "dotenv": "^16.4.5",
+    "jose": "^5.9.6"
+  }
+}
