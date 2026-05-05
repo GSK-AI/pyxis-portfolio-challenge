@@ -6,7 +6,7 @@ const steps: Tour[] = [
     steps: [
       {
         icon: null,
-        title: "Welcome to the Investment Game",
+        title: "Welcome to the Portfolio Challenge",
         content:
           "The purpose of this game is to provide a sandbox environment to safely test and compare different investment strategies. We hope you enjoy playing Portfolio Manager and we challenge you to try and beat our AI agents!",
         side: "right",

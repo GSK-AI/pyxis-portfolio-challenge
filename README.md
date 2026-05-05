@@ -1,8 +1,8 @@
-# GSK Pyxis Investment Game
+# GSK Pyxis Portfolio Challenge
 
 ## Overview
 
-The GSK Pyxis Investment Game is a multi-agent reinforcement learning environment for sequential capital allocation under uncertainty. Agents manage a portfolio of R&D assets, each progressing through a multi-phase development pipeline with stochastic outcomes, compounding costs, and long time horizons. The objective is to maximise portfolio value through investment timing, resource allocation, and competitive positioning against other agents.
+The Pyxis Portfolio Challenge is a multi-agent reinforcement learning environment for sequential capital allocation under uncertainty. Agents manage a portfolio of R&D assets, each progressing through a multi-phase development pipeline with stochastic outcomes, compounding costs, and long time horizons. The objective is to maximise portfolio value through investment timing, resource allocation, and competitive positioning against other agents.
 
 The environment is highly stochastic, reflecting the reality of R&D pipeline investment where the majority of assets fail and individual outcomes carry outsized financial consequences. Agents face ~80% asset attrition rates, long development timelines where investment outcomes are delayed by multiple phases, and coupled investment decisions where capital committed to one asset constrains all future options. In the multi-agent setting, agents share indication markets, compete for business development acquisitions, and receive noisy intelligence about rival pipelines. Agents must balance exploration (investing in uncertain early-stage assets) against exploitation (scaling proven late-stage assets), while adapting to opponents' strategies in a high-variance environment where robust decision-making under uncertainty is essential.
 

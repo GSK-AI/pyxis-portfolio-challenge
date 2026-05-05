@@ -318,7 +318,7 @@ export default function InvestmentGame() {
             <TheTitle>
               Pyxis
               <br />
-              Investment Game
+              Portfolio Challenge
             </TheTitle>
             <p className="font-light">
               A competition advancing AI decision-making under uncertainty.

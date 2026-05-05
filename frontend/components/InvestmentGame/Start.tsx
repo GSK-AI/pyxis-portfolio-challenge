@@ -214,7 +214,7 @@ export default function StartGame({
 
         <div className="flex flex-1 items-end justify-between pb-20">
           <div>
-            <TheTitle>Welcome to the Investment Game</TheTitle>
+            <TheTitle>Welcome to the Portfolio Challenge</TheTitle>
             <p className="font-light">Select your starting settings to play</p>
           </div>
         </div>

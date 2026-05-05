@@ -184,7 +184,7 @@ export default function StartLevels({
             <TheTitle>
               Welcome to the
               <br />
-              Investment Game
+              Portfolio Challenge
             </TheTitle>
             <p className="font-light">Choose the level to play</p>
 

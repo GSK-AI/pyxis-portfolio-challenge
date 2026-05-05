@@ -12,7 +12,7 @@ type NavLink = {
 };
 
 const gameLinks: NavLink[] = [
-  { name: "Investment Game", href: "/" },
+  { name: "Portfolio Challenge", href: "/" },
   { name: "Resources", href: "/resources" },
 ];
 

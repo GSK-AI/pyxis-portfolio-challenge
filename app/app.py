@@ -95,7 +95,7 @@ origins = [
 ]
 
 app = FastAPI(
-    title="Pyxis Investment Game",
+    title="Pyxis Portfolio Challenge",
     description="Simulating investments in pharmaceutical assets",
     lifespan=lifespan,
 )
