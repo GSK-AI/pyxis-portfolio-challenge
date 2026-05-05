@@ -1,4 +1,3 @@
-import copy
 import logging
 import random
 import traceback
@@ -22,17 +21,14 @@ from aiml_pyxis_investment_game.game.asset_generators import (
 from aiml_pyxis_investment_game.game.constants import (
     CUSTOM_SEEDS,
     LEVELS,
-    MAX_NUM_ASSETS,
     InvestmentLevel,
 )
 from aiml_pyxis_investment_game.game.game_state import GameState
-from aiml_pyxis_investment_game.game.metrics import prepare_game_metrics_data
 from aiml_pyxis_investment_game.game.multi_agent_game import MultiAgentGame
 from aiml_pyxis_investment_game.logging_utils import setup_logging
 from app.endpoint_datamodels import (
     ActionType,
     AgentResponse,
-    ComparisonDashboardResponse,
     GameStateResponse,
     LevelResponse,
     MultiAgentGameStateResponse,
@@ -43,19 +39,9 @@ from app.endpoint_datamodels import (
     game_state_to_response,
     multi_agent_game_to_response,
 )
-from app.game_db import (
-    LeaderboardEntry,
-    get_global_leaderboard_data,
-    get_level_id_of_game_id,
-    get_level_leaderboard_data,
-    get_user_best_level_metrics,
-    get_user_game_metrics,
-    has_user_completed_level,
-    insert_game_metrics,
-)
 from app.middleware import (
     SecurityHeadersMiddleware,
-    UserFromJWTAuthMiddleware,
+    SessionMiddleware,
 )
 from app.opponent_runner import (
     AVAILABLE_OPPONENTS,
@@ -114,9 +100,8 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-if not settings.disable_auth_middleware:
-    app.add_middleware(SecurityHeadersMiddleware)
-    app.add_middleware(UserFromJWTAuthMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(SessionMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -158,18 +143,13 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     )
 
 
-def get_mudid_from_request(request: Request) -> str:
+def get_session_id_from_request(request: Request) -> str:
     """
-    Helper function to extract mudid from request state.
+    Helper function to extract session ID from request state.
 
     Useful to pull this out to enable mocking in tests.
-
-    If auth middleware is disabled, returns a test mudid.
     """
-    if settings.disable_auth_middleware:
-        return "test-user-mudid"
-
-    return request.state.mudid
+    return request.state.session_id
 
 
 def get_redis_cache_from_request(request: Request):
@@ -219,7 +199,7 @@ async def start_game(request: Request, payload: StartGameRequest) -> GameStateRe
             The initial game state.
 
     """
-    user = get_mudid_from_request(request)
+    user = get_session_id_from_request(request)
 
     # Get previous game id attached to user and delete corresponding key
     previous_game_id = await get_redis_cache_from_request(
@@ -343,61 +323,32 @@ async def step_game(
 
     await get_redis_cache_from_request(request).set_game_state(game_id, next_game_state)
 
-    # Save metrics if game ended
     if next_game_state.game_ended:
-        logger.info(
-            f"Game ended because {next_game_state.ended_reason} "
-            f"Saving metrics to PostgreSQL..."
-        )
-        try:
-            level_idx = await get_redis_cache_from_request(request).get_game_level(
-                game_id
-            )
-
-            game_metrics = prepare_game_metrics_data(
-                user_name=str(get_mudid_from_request(request)),
-                level_idx=level_idx,
-                previous_game_state=current_game_state,
-                game_state=next_game_state,
-                actions=actions,
-            )
-            insert_game_metrics(data=game_metrics)
-            logger.info(f"Game metrics saved: {game_metrics}")
-        except Exception as e:
-            logger.warning(f"Failed to save game metrics (non-fatal): {e}")
+        logger.info(f"Game ended because {next_game_state.ended_reason}")
 
     game_state_response = game_state_to_response(next_game_state)
     return game_state_response
 
 
 @app.get("/game/levels", response_model=list[LevelResponse])
-async def get_levels(request: Request) -> list[LevelResponse]:
+async def get_levels() -> list[LevelResponse]:
     """
     Retrieve the configurations for the game levels.
 
     This returns a list of LevelResponse instances that include parameters that
-    can be passed to the start_game endpoint, as well as whether the level has
-    been completed or not by the given user.
-
-    Args:
-        request: Request
+    can be passed to the start_game endpoint.
 
     Returns:
         list[LevelResponse]
-            A list of objects containing a boolean indicating whether the user
-            has completed the level, and the StartGameRequest values for the
-            level.
+            A list of objects containing the StartGameRequest values for the level.
 
     """
-    user = get_mudid_from_request(request)
-
     response = []
     for level_idx, level in enumerate(LEVELS):
-        user_completed = has_user_completed_level(user_id=user, level_id=level_idx)
         response.append(
             LevelResponse(
                 level_idx=level_idx,
-                user_has_completed=user_completed,
+                user_has_completed=False,
                 num_assets=level["num_assets"],
                 max_num_assets=level["max_num_assets"],
                 horizon=level["horizon"],
@@ -407,64 +358,6 @@ async def get_levels(request: Request) -> list[LevelResponse]:
         )
 
     return response
-
-
-@app.get("/game/leaderboard/global", response_model=list[LeaderboardEntry])
-async def get_global_leaderboard() -> list[LeaderboardEntry]:
-    """
-    Retrieve the global leaderboard across all game levels.
-
-    This returns a list of LeaderboardEntry instances, each representing a user's
-    overall performance across all levels.
-
-    Returns:
-        list[LeaderboardEntry]
-            A list of global leaderboard entries.
-
-    """
-    return get_global_leaderboard_data()
-
-
-@app.get("/game/leaderboard/{level_idx}", response_model=list[LeaderboardEntry])
-async def get_level_leaderboard(level_idx: int) -> list[LeaderboardEntry]:
-    """
-    Retrieve the leaderboard for a specific game level.
-
-    This returns a list of LeaderboardEntry instances, each representing a user's
-    performance in the specified level, via their best game's average eNPV.
-
-    Args:
-        level_idx : int
-            The index of the game level to retrieve the leaderboard for.
-
-    Returns:
-    list[LeaderboardEntry]
-        A list of leaderboard entries for the specified level.
-
-    """
-    return get_level_leaderboard_data(level_id=level_idx)
-
-
-@app.get("/game/highscore/{level_idx}", response_model=Optional[LeaderboardEntry])
-async def get_highscore(request: Request, level_idx: int) -> Optional[LeaderboardEntry]:
-    """
-    Retrieve the high score for a specific game level and user.
-
-    This returns a LeaderboardEntry instances, with the metrics for the user's best
-    playthrough, if any exist. Otherwise, it returns None.
-
-    Args:
-        request : Request
-        level_idx : int
-            The index of the game level to retrieve the high score for.
-
-    Returns:
-        Optional[LeaderboardEntry]
-            The high score entry for the specified level and user, or None if not found.
-
-    """
-    user = get_mudid_from_request(request=request)
-    return get_user_best_level_metrics(user_id=user, level_id=level_idx)
 
 
 @app.get("/game/agents", response_model=list[AgentResponse])
@@ -550,7 +443,7 @@ async def use_agent_hint(
             status_code=403, detail="Insufficient funds to use agent hint"
         )
 
-    user = get_mudid_from_request(request)
+    user = get_session_id_from_request(request)
     agent_hints_used = await get_redis_cache_from_request(request).get_agent_hints_used(
         user, agent_name
     )
@@ -592,147 +485,6 @@ async def use_agent_hint(
     )
 
     return agent_investment_decisions
-
-
-@app.post(
-    "/game/{game_id}/comparison_dashboard", response_model=ComparisonDashboardResponse
-)
-async def comparison_dashboard(
-    request: Request,
-    game_id: uuid.UUID,
-) -> ComparisonDashboardResponse:
-    """
-    The metrics and arrays for the table and plots in the comparison dashboard.
-
-    Args:
-        request : Request
-            The request object.
-        game_id : uuid.UUID
-            The game id.
-
-    Returns:
-        ComparisonDashboardResponse
-            An object containing the metrics and arrays needed for the
-            comparison dashboard table and plots (respectively). It contains
-            these values for the given game_id referring to a user's game play,
-            as well as for each of the agent's optimal solution.
-
-    """
-    user_id = str(get_mudid_from_request(request))
-    user_metrics = get_user_game_metrics(user_id=user_id, game_id=str(game_id))
-    if not user_metrics:
-        raise HTTPException(status_code=404, detail="User metrics not found")
-
-    level_id = get_level_id_of_game_id(game_id=str(game_id))
-    agents_list = copy.deepcopy(AGENTS)
-    if level_id == -1:
-        # Get relevant game data and recreate initial state
-        user_game_state = await get_redis_cache_from_request(request).get_game_state(
-            game_id
-        )
-        global_seed = user_game_state._global_seed
-        starting_cash = user_game_state.initial_cash
-        initial_num_assets = user_game_state.initial_num_assets
-        horizon = user_game_state.horizon
-        logger.info("Initialising game...")
-        initial_game_state = GameState.initialise_new_game(
-            asset_generator_cls=JSONAssetGenerator,
-            num_assets=initial_num_assets,
-            max_num_assets=MAX_NUM_ASSETS,
-            cash=starting_cash,
-            horizon=horizon,
-            global_seed=global_seed,
-            asset_arrival_sensitivity_below=game_config.asset_arrival_sensitivity_below,
-            asset_arrival_sensitivity_above=game_config.asset_arrival_sensitivity_above,
-            reinvestment_percentage=game_config.reinvestment_percentage,
-            ta_experience_config=game_config.ta_experience,
-            investment_levels_config=game_config.investment_levels,
-            uncertain_ptrs_config=game_config.uncertain_ptrs,
-            interim_trial_observations_config=game_config.interim_trial_observations,
-            distributional_ptrs_config=game_config.distributional_ptrs,
-            **{"assets_dir": game_config.training_data_dir},
-        )
-        logger.info("Game initialised.")
-
-        # Iterate through agents and run playthroughs for each
-        agent_metrics = {}
-        for agent_name in agents_list:
-            agent = get_agent_by_name(agent_name, level_idx=-1)
-            agent_game_state = copy.deepcopy(initial_game_state)
-            logger.info(f"Starting {agent_name} agent playthrough...")
-            result = agent.playthrough(
-                agent_game_state, level_id, agent_name, verbose=True
-            )
-            logger.info("Agent playthrough complete.")
-            agent_metrics[agent_name] = result["game_metrics"]
-    else:
-        agent_metrics = {}
-        for agent_name in agents_list:
-            agent_best_game = get_user_best_level_metrics(
-                user_id=agent_name, level_id=level_id
-            )
-            if not agent_best_game:
-                raise HTTPException(
-                    status_code=404, detail=f"Agent has not played level {level_id}"
-                )
-            agent_metrics[agent_name] = get_user_game_metrics(
-                user_id=agent_name, game_id=str(agent_best_game.game_id)
-            )
-
-    comparison_dashboard_dict = {
-        "game_id": game_id,
-        "av_enpv": {
-            user_id: user_metrics.av_enpv,
-            **{
-                agent_name: agent_metrics[agent_name].av_enpv
-                for agent_name in agents_list
-            },
-        },
-        "final_enpv": {
-            user_id: user_metrics.final_enpv,
-            **{
-                agent_name: agent_metrics[agent_name].final_enpv
-                for agent_name in agents_list
-            },
-        },
-        "final_eroi": {
-            user_id: user_metrics.final_eroi,
-            **{
-                agent_name: agent_metrics[agent_name].final_eroi
-                for agent_name in agents_list
-            },
-        },
-        "final_capital": {
-            user_id: user_metrics.final_capital,
-            **{
-                agent_name: agent_metrics[agent_name].final_capital
-                for agent_name in agents_list
-            },
-        },
-        "realised_eroi": {
-            user_id: user_metrics.realised_roi,
-            **{
-                agent_name: agent_metrics[agent_name].realised_roi
-                for agent_name in agents_list
-            },
-        },
-        "enpv_over_time": {
-            user_id: user_metrics.enpv_over_time,
-            **{
-                agent_name: agent_metrics[agent_name].enpv_over_time
-                for agent_name in agents_list
-            },
-        },
-        "eroi_over_time": {
-            user_id: user_metrics.eroi_over_time,
-            **{
-                agent_name: agent_metrics[agent_name].eroi_over_time
-                for agent_name in agents_list
-            },
-        },
-    }
-
-    return ComparisonDashboardResponse(**comparison_dashboard_dict)
 
 
 @app.get("/game/custom_seeds", response_model=int)
@@ -806,7 +558,7 @@ async def start_multi_agent_game(
     The human player is always pharma_0. Opponents are pharma_1, pharma_2, etc.
     All multi-agent config parameters come from config.yaml.
     """
-    user = get_mudid_from_request(request)
+    user = get_session_id_from_request(request)
     cache = get_redis_cache_from_request(request)
 
     if payload.num_opponents > settings.max_opponents:

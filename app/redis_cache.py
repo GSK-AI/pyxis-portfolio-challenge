@@ -4,31 +4,23 @@ import logging
 import pickle
 
 import redis.asyncio as redis
-from redis_entraid.cred_provider import (
-    ManagedIdentityType,
-    create_from_managed_identity,
-)
 
 logger = logging.getLogger(__name__)
 
 
-def create_azure_redis_client(host: str, port: int = 6380, db: int = 0) -> redis.Redis:
-    """Creates an Redis client for Azure Redis with managed identity auth."""
-    # Get host from environment variable if not provided
+def create_azure_redis_client(
+    host: str, port: int = 6380, db: int = 0, password: str | None = None
+) -> redis.Redis:
+    """Creates a Redis client for Azure Redis with password-based auth."""
     logger.info(f"Attempting to connect to Redis at: {host}:{port}")
-
-    credential_provider = create_from_managed_identity(
-        identity_type=ManagedIdentityType.SYSTEM_ASSIGNED,
-        resource="https://redis.azure.com/",
-    )
 
     return redis.Redis(
         host=host,
         port=port,
         db=db,
+        password=password,
         ssl=True,
         decode_responses=False,
-        credential_provider=credential_provider,
         socket_timeout=10,
         socket_connect_timeout=10,
     )

@@ -1,8 +1,6 @@
 import logging
-import os
-from typing import Dict, Tuple
+import uuid
 
-import jwt
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import Response
@@ -10,6 +8,8 @@ from starlette.responses import Response
 from app.settings import settings
 
 logger = logging.getLogger(__name__)
+
+SESSION_COOKIE_NAME = "pyxis_session"
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -70,126 +70,28 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
-class NoCredentialsError(Exception):
-    """Raised when no credential headers are provided."""
-
-    pass
-
-
-class UserFromJWTAuthMiddleware(BaseHTTPMiddleware):
-    """Get logged user info from JWT token."""
+class SessionMiddleware(BaseHTTPMiddleware):
+    """Assign each visitor a session ID via a cookie."""
 
     async def dispatch(
         self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
-        """
-        For each request, get the user details from JWT and then pass the request on.
+        """Read or create a session cookie, then set request.state.session_id."""
+        session_id = request.cookies.get(SESSION_COOKIE_NAME)
+        if not session_id:
+            session_id = str(uuid.uuid4())
 
-        Parameters
-        ----------
-        request
-            HTTP request object from Starlette
-
-        call_next
-            Path definition function to be called next
-
-        Returns
-        -------
-        Response
-            HTTP response after path definition function has executed
-
-        """
-        # Skip middleware if running in test mode or if it's an OPTIONS request
-        if os.getenv("TESTING", "0") == "1" or request.method == "OPTIONS":
-            return await call_next(request)
-        logger.info(f"Request path: {request.url.path}, method: {request.method}")
-        if request.url.path not in settings.auth_excluded_routes:
-            headers = request.headers
-            try:
-                email, mudid, name, session_id, roles = self.extract_auth_headers(
-                    headers
-                )
-            except NoCredentialsError:
-                return Response(status_code=401)
-
-            request.state.mudid = mudid
-            request.state.name = name
-            request.state.email = email
-            request.state.session_id = session_id
-
-            logger.info(f"These are the group memberships: {roles}")
-            logger.info(f"This is the user: {name}")
-
-            if "all" in roles:
-                request.state.access = [
-                    "all",
-                    "oncology",
-                    "vaccines",
-                    "respiratory_immunology",
-                ]
-            elif "oncology" in roles:
-                request.state.access = ["oncology"]
-            elif "vaccines" in roles:
-                request.state.access = ["vaccines"]
-            elif "respiratory_immunology" in roles:
-                request.state.access = ["respiratory_immunology"]
-            else:
-                request.state.access = ["dummy"]
+        request.state.session_id = session_id
 
         response = await call_next(request)
+
+        # Always set/refresh the cookie
+        response.set_cookie(
+            key=SESSION_COOKIE_NAME,
+            value=session_id,
+            httponly=True,
+            samesite="lax",
+            max_age=60 * 60 * 24 * 30,  # 30 days
+        )
+
         return response
-
-    @classmethod
-    def extract_auth_headers(cls, headers) -> Tuple[str, str, str, str, list[str]]:
-        """Get email, mudid, name, country from FastAPI headers containing auth info."""
-        match headers:
-            # add more cases for other keys in headers
-            case {"authorization": auth_header}:
-                logger.debug("Looking in Authorization header for user info")
-                decoded_jwt = cls._process_bearer_id_header(auth_header)
-            case _:
-                raise NoCredentialsError("No auth headers provided")
-        email = decoded_jwt["email"]
-        mudid = decoded_jwt["email"].split("@")[0]
-        name = decoded_jwt["name"]
-        session_id = decoded_jwt["sid"]
-        # Extract security group information from the token
-        roles = decoded_jwt.get("roles", [])
-        return email, mudid, name, session_id, roles
-
-    @staticmethod
-    def _process_bearer_id_header(auth_header: str) -> Dict[str, str]:
-        auth_type, token = auth_header.split(" ", 1)
-        if not auth_type.lower() == "bearer":
-            raise ValueError("Authorisation uses an unsupported auth type")
-
-        # these are app environment variables
-        tenant_id = os.environ.get("AZURE_TENANT_ID")
-        client_id = os.environ.get("AZURE_CLIENT_ID")
-        if not tenant_id or not client_id:
-            logger.error(
-                "Missing AZURE_TENANT_ID or AZURE_CLIENT_ID environment variables"
-            )
-            raise ValueError("Azure configuration is incomplete")
-
-        options = {"verify_signature": True, "verify_aud": True, "verify_exp": True}
-        try:
-            # Azure AD tokens should be verified with their public keys
-            # This approach uses the PyJWT library with auto-fetching of keys
-            jwks_client = jwt.PyJWKClient(
-                f"https://login.microsoftonline.com/{tenant_id}/discovery/v2.0/keys"
-            )
-            signing_key = jwks_client.get_signing_key_from_jwt(token)
-
-            decoded_jwt = jwt.decode(
-                token,
-                signing_key.key,
-                algorithms=["RS256"],
-                audience=client_id,
-                options=options,
-            )
-            logger.debug(f"Token decoded successfully: {decoded_jwt}")
-            return decoded_jwt
-        except jwt.InvalidTokenError as e:
-            logger.error(f"Invalid token: {str(e)}")
-            raise ValueError("Invalid token")

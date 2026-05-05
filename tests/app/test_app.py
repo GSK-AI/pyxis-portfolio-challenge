@@ -8,9 +8,6 @@ from aiml_pyxis_investment_game.game.asset_generators import JSONAssetGenerator
 from app.app import (
     get_agents,
     get_custom_seed,
-    get_global_leaderboard,
-    get_highscore,
-    get_level_leaderboard,
     lifespan,
     start_game,
     step_game,
@@ -25,21 +22,6 @@ def setup_app(app: FastAPI):
     app.add_api_route(
         "/game/get_agents",
         get_agents,
-        methods=["GET"],
-    )
-    app.add_api_route(
-        "/game/leaderboard/global",
-        get_global_leaderboard,
-        methods=["GET"],
-    )
-    app.add_api_route(
-        "/game/leaderboard/{level_idx}",
-        get_level_leaderboard,
-        methods=["GET"],
-    )
-    app.add_api_route(
-        "/game/highscore/{level_idx}",
-        get_highscore,
         methods=["GET"],
     )
     app.add_api_route(
@@ -74,53 +56,6 @@ def test_get_agents():
     ]
 
 
-def test_get_level_leaderboard():
-    with patch(
-        "app.app.get_level_leaderboard_data",
-    ) as mock_get_leaderboard:
-        response = client.get("/game/leaderboard/1")
-        assert response.status_code == 200
-        mock_get_leaderboard.assert_called_once_with(level_id=1)
-
-
-@pytest.fixture
-def mock_leaderboard_entry():
-    mock_entry = MagicMock()
-    mock_entry.game_id = "game_id"
-    mock_entry.user_id = "mudid"
-    mock_entry.av_enpv = 500000.0
-    return mock_entry
-
-
-def test_get_highscore(mock_leaderboard_entry):
-    with (
-        patch(
-            "app.app.get_user_best_level_metrics",
-            return_value=mock_leaderboard_entry,
-        ) as mock_get_user_best_level_metrics,
-        patch(
-            "app.app.get_mudid_from_request", return_value="mudid"
-        ) as mock_get_mudid_from_request,
-    ):
-        response = client.get("/game/highscore/1")
-        assert response.status_code == 200
-        data = response.json()
-        mock_get_mudid_from_request.assert_called_once()
-        mock_get_user_best_level_metrics.assert_called_once_with(
-            user_id="mudid", level_id=1
-        )
-        assert isinstance(data, dict)
-
-
-def test_get_global_leaderboard(mock_leaderboard_entry):
-    with patch(
-        "app.app.get_global_leaderboard_data", return_value=mock_leaderboard_entry
-    ) as mock_get_global_leaderboard:
-        response = client.get("/game/leaderboard/global")
-        assert response.status_code == 200
-        mock_get_global_leaderboard.assert_called_once()
-
-
 def test_get_custom_seed():
     mock_custom_seeds = MagicMock()
     d = {5: [1, 2, 3]}
@@ -140,7 +75,7 @@ async def test_start_game(
             "app.app.get_redis_cache_from_request",
             return_value=redis_cache_with_mock_client,
         ),
-        patch("app.app.get_mudid_from_request", return_value="mudid"),
+        patch("app.app.get_session_id_from_request", return_value="mudid"),
         patch(
             "app.app.GameState.initialise_new_game", return_value=mock_game_state
         ) as mock_game_state_initialise,
