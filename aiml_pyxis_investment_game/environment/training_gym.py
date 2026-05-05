@@ -1235,6 +1235,7 @@ class LevelsInvestmentGameEnv(InvestmentGameEnv):
 
         Args:
             level_idx (int): The index of the level to initialise.
+            assets_dir (upath.UPath): Path to the directory containing asset data.
             reward_fn (Reward, optional): The reward function to use.  Defaults
              to LegacyStaticNPVReward().
             shuffle_order (bool, optional): Whether to shuffle the order of
