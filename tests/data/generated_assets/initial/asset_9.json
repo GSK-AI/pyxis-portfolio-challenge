@@ -1,0 +1,29 @@
+{
+    "name": "RSV-Guard",
+    "therapeutic_area": "vaccines and infectious disease",
+    "type": "BD",
+    "description": "An acquired monoclonal antibody for the prevention of Respiratory Syncytial Virus (RSV) in infants. This asset passed its Phase 1 safety trials with the previous owner.",
+    "max_revenue": 1500000000,
+    "time_until_max_revenue": 4,
+    "time_until_patent_expiry": 18,
+    "trials": {
+        "phase_1": {
+            "cost_remaining": 0,
+            "time_remaining": 0,
+            "ptrs": 0.7
+        },
+        "phase_2": {
+            "cost_remaining": 195000000,
+            "time_remaining": 2,
+            "ptrs": 0.55
+        },
+        "phase_3": {
+            "cost_remaining": 720000000,
+            "time_remaining": 3,
+            "ptrs": 0.65
+        }
+    },
+    "state": "Idle",
+    "pending_trial_phase": "Phase 2",
+    "time_on_market": 0
+}

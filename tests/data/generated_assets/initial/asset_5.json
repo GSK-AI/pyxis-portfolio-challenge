@@ -1,0 +1,29 @@
+{
+    "name": "Pneumovax-NG",
+    "therapeutic_area": "vaccines and infectious disease",
+    "type": "internal",
+    "description": "A next-generation pneumococcal conjugate vaccine designed to cover more serotypes than existing market leaders. The primary goal is to demonstrate superior protection in elderly populations.",
+    "max_revenue": 4500000000,
+    "time_until_max_revenue": 5,
+    "time_until_patent_expiry": 19,
+    "trials": {
+        "phase_1": {
+            "cost_remaining": 35000000,
+            "time_remaining": 1,
+            "ptrs": 0.68
+        },
+        "phase_2": {
+            "cost_remaining": 120000000,
+            "time_remaining": 2,
+            "ptrs": 0.5
+        },
+        "phase_3": {
+            "cost_remaining": 1000000000,
+            "time_remaining": 3,
+            "ptrs": 0.6
+        }
+    },
+    "state": "Idle",
+    "pending_trial_phase": "Phase 1",
+    "time_on_market": 0
+}

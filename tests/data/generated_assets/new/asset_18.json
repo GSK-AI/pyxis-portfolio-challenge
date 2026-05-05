@@ -1,0 +1,29 @@
+{
+    "name": "Oeso-TCR",
+    "therapeutic_area": "oncology",
+    "type": "BD",
+    "description": "An autologous T-cell receptor (TCR) therapy for esophageal cancer targeting a prevalent cancer-testis antigen. This is a very complex and costly therapy with a high degree of scientific risk.",
+    "max_revenue": 1000000000,
+    "time_until_max_revenue": 8,
+    "time_until_patent_expiry": 19,
+    "trials": {
+        "phase_1": {
+            "cost_remaining": 120000000,
+            "time_remaining": 2,
+            "ptrs": 0.42
+        },
+        "phase_2": {
+            "cost_remaining": 380000000,
+            "time_remaining": 3,
+            "ptrs": 0.18
+        },
+        "phase_3": {
+            "cost_remaining": 900000000,
+            "time_remaining": 3,
+            "ptrs": 0.3
+        }
+    },
+    "state": "Idle",
+    "pending_trial_phase": "Phase 1",
+    "time_on_market": 0
+}

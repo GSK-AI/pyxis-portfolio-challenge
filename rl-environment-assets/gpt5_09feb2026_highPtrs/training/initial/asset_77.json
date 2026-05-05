@@ -1,0 +1,29 @@
+{
+    "name": "Eosacort",
+    "therapeutic_area": "respiratory and immunology",
+    "type": "internal",
+    "description": "An oral inhibitor of eosinophil activation pathways to reduce exacerbations in severe asthma. Designed to enable steroid-sparing control with once-daily dosing.",
+    "max_revenue": 1400000000,
+    "time_until_max_revenue": 5,
+    "time_until_patent_expiry": 12,
+    "trials": {
+        "phase_1": {
+            "cost_remaining": 0,
+            "time_remaining": 0,
+            "ptrs": 0.71
+        },
+        "phase_2": {
+            "cost_remaining": 0,
+            "time_remaining": 0,
+            "ptrs": 0.5
+        },
+        "phase_3": {
+            "cost_remaining": 190000000,
+            "time_remaining": 3,
+            "ptrs": 0.7
+        }
+    },
+    "state": "Idle",
+    "pending_trial_phase": "Phase 3",
+    "time_on_market": 0
+}

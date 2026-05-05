@@ -1,0 +1,29 @@
+{
+    "name": "Lymphocare",
+    "therapeutic_area": "oncology",
+    "type": "BD",
+    "description": "A second-generation BTK inhibitor for Chronic Lymphocytic Leukemia (CLL) that was acquired just before Phase 3. It recently launched and is gaining market share due to its superior safety profile.",
+    "max_revenue": 3200000000,
+    "time_until_max_revenue": 6,
+    "time_until_patent_expiry": 12,
+    "trials": {
+        "phase_1": {
+            "cost_remaining": 0,
+            "time_remaining": 0,
+            "ptrs": 0.6
+        },
+        "phase_2": {
+            "cost_remaining": 0,
+            "time_remaining": 0,
+            "ptrs": 0.5
+        },
+        "phase_3": {
+            "cost_remaining": 0,
+            "time_remaining": 0,
+            "ptrs": 0.58
+        }
+    },
+    "state": "On Market",
+    "pending_trial_phase": null,
+    "time_on_market": 1
+}

@@ -1,0 +1,29 @@
+{
+    "name": "Derma-Gel",
+    "therapeutic_area": "respiratory and immunology",
+    "type": "BD",
+    "description": "A topical treatment for psoriasis acquired after showing a strong safety and early efficacy signal in Phase 1. It is a non-steroidal anti-inflammatory formulation.",
+    "max_revenue": 600000000,
+    "time_until_max_revenue": 8,
+    "time_until_patent_expiry": 18,
+    "trials": {
+        "phase_1": {
+            "cost_remaining": 0,
+            "time_remaining": 0,
+            "ptrs": 0.6
+        },
+        "phase_2": {
+            "cost_remaining": 104000000,
+            "time_remaining": 2,
+            "ptrs": 0.48
+        },
+        "phase_3": {
+            "cost_remaining": 240000000,
+            "time_remaining": 3,
+            "ptrs": 0.62
+        }
+    },
+    "state": "Idle",
+    "pending_trial_phase": "Phase 2",
+    "time_on_market": 0
+}

@@ -1,0 +1,87 @@
+# Use Windows Server Core as the base image
+FROM mcr.microsoft.com/windows/servercore:ltsc2022
+
+# Set PowerShell as the shell
+SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue';"]
+
+# Set working directory
+WORKDIR C:\\app
+
+# Install certificates
+RUN powershell -Command \
+   "New-Item -ItemType Directory -Force -Path 'C:\\certificates' | Out-Null; \
+   Invoke-WebRequest -Uri 'http://pki.gsk.com/cdp/GlaxoSmithKline%20Certificate%20Authority.crt' -OutFile 'C:\\certificates\\root3.cer'; \
+   Invoke-WebRequest -Uri 'http://pki.gsk.com/cdp/WMSERVICE%20Certificate%20Authority%202.crt' -OutFile 'C:\\certificates\\int3.cer'"
+ 
+RUN powershell -Command \
+   "Import-Certificate -FilePath 'C:\\certificates\\root3.cer' -CertStoreLocation Cert:\\LocalMachine\\Root; \
+   Import-Certificate -FilePath 'C:\\certificates\\int3.cer' -CertStoreLocation Cert:\\LocalMachine\\CA"
+
+# Download and install Node.js
+RUN Write-Host "Downloading Node.js..." ; \
+    Invoke-WebRequest -Uri "https://nodejs.org/dist/v18.18.2/node-v18.18.2-x64.msi" -OutFile "nodejs.msi" ; \
+    Write-Host "Installing Node.js..." ; \
+    Start-Process -FilePath "msiexec.exe" -ArgumentList "/i", "nodejs.msi", "/quiet", "/norestart" -Wait ; \
+    Remove-Item -Path "nodejs.msi" ; \
+    Write-Host "Node.js installed successfully"
+
+# Find Node.js installation location
+COPY find-node.ps1 C:\\find-node.ps1
+RUN powershell -File C:\\find-node.ps1
+
+# Install pnpm globally
+RUN Write-Host "Installing pnpm..." ; \
+    npm install -g pnpm ; \
+    Write-Host "PNPM version: $(pnpm -v)"
+
+# Copy package.json and pnpm-lock.yaml
+COPY package.json pnpm-lock.yaml* ./
+
+# Install dependencies
+RUN Write-Host "Installing dependencies..." ; \
+    pnpm install --frozen-lockfile --shamefully-hoist
+
+# Copy certificate for Node.js
+RUN Write-Host "Copying GSK certificates"
+COPY ./gsk-cert.crt C:\\gsk-cert.crt
+ENV NODE_EXTRA_CA_CERTS=C:\\gsk-cert.crt
+
+# Copy the rest of the application code
+RUN Write-Host "Copying application code"
+COPY . .
+
+# Setup environment
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV NODE_OPTIONS="--trace-warnings"
+
+# Build the application
+RUN Write-Host "Building Next.js application..." ; \
+    pnpm run build
+
+# Verify critical files
+RUN Write-Host "Verifying critical Next.js files:" ; \
+    @('package.json', 'next.config.js', '.next', 'node_modules\next\dist\bin\next') | ForEach-Object { \
+        if (Test-Path $_) { Write-Host "✓ $_ exists" } else { Write-Host "✗ $_ missing!" } \
+    }
+
+
+RUN Write-Host "Verifying Next.js module..." ; \
+    if (Test-Path "C:\app\node_modules\next\dist\bin\next") { \
+        Write-Host "Next.js binary found" ; \
+    } else { \
+        Write-Host "Next.js binary missing - trying direct installation" ; \
+        pnpm install next --save-prod ; \
+    }
+
+# Create a startup script with console logging
+RUN Set-Content -Path start.bat -Value '@echo off' -Encoding ASCII ; \
+    Add-Content -Path start.bat -Value 'echo Starting Next.js application...' -Encoding ASCII ; \
+    Add-Content -Path start.bat -Value 'cd C:\app' -Encoding ASCII ; \
+    Add-Content -Path start.bat -Value 'node node_modules\next\dist\bin\next start' -Encoding ASCII
+
+# Expose port
+EXPOSE 3000
+
+# Start the application
+CMD ["cmd", "/c", "start.bat"]

@@ -1,0 +1,29 @@
+{
+    "name": "Ovarinib",
+    "therapeutic_area": "oncology",
+    "type": "internal",
+    "description": "A PARP inhibitor for platinum-sensitive ovarian cancer with a specific genetic biomarker. The Phase 2 study was promising, but the effect was modest, leading to a riskier Phase 3 trial.",
+    "max_revenue": 1100000000,
+    "time_until_max_revenue": 6,
+    "time_until_patent_expiry": 14,
+    "trials": {
+        "phase_1": {
+            "cost_remaining": 0,
+            "time_remaining": 0,
+            "ptrs": 0.6
+        },
+        "phase_2": {
+            "cost_remaining": 0,
+            "time_remaining": 0,
+            "ptrs": 0.35
+        },
+        "phase_3": {
+            "cost_remaining": 480000000,
+            "time_remaining": 4,
+            "ptrs": 0.42
+        }
+    },
+    "state": "Idle",
+    "pending_trial_phase": "Phase 3",
+    "time_on_market": 0
+}

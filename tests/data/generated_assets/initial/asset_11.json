@@ -1,0 +1,29 @@
+{
+    "name": "Leukecept",
+    "therapeutic_area": "oncology",
+    "type": "internal",
+    "description": "A bispecific T-cell engager (BiTE) for relapsed/refractory acute myeloid leukemia (AML). After a successful Phase 1 dose-escalation study, it is now ready for a larger Phase 2 efficacy trial.",
+    "max_revenue": 1300000000,
+    "time_until_max_revenue": 5,
+    "time_until_patent_expiry": 17,
+    "trials": {
+        "phase_1": {
+            "cost_remaining": 0,
+            "time_remaining": 0,
+            "ptrs": 0.55
+        },
+        "phase_2": {
+            "cost_remaining": 220000000,
+            "time_remaining": 2,
+            "ptrs": 0.32
+        },
+        "phase_3": {
+            "cost_remaining": 500000000,
+            "time_remaining": 3,
+            "ptrs": 0.5
+        }
+    },
+    "state": "Idle",
+    "pending_trial_phase": "Phase 2",
+    "time_on_market": 0
+}

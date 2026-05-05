@@ -1,0 +1,29 @@
+{
+    "name": "Arthro-Relief",
+    "therapeutic_area": "respiratory and immunology",
+    "type": "internal",
+    "description": "An oral, gut-restricted immunomodulator for spondyloarthritis. It aims to reduce systemic side effects by acting locally in the gastrointestinal tract, where the disease is thought to originate.",
+    "max_revenue": 1900000000,
+    "time_until_max_revenue": 7,
+    "time_until_patent_expiry": 19,
+    "trials": {
+        "phase_1": {
+            "cost_remaining": 30000000,
+            "time_remaining": 1,
+            "ptrs": 0.58
+        },
+        "phase_2": {
+            "cost_remaining": 160000000,
+            "time_remaining": 3,
+            "ptrs": 0.35
+        },
+        "phase_3": {
+            "cost_remaining": 500000000,
+            "time_remaining": 4,
+            "ptrs": 0.52
+        }
+    },
+    "state": "Idle",
+    "pending_trial_phase": "Phase 1",
+    "time_on_market": 0
+}

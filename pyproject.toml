@@ -1,0 +1,89 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyxis-portfolio-challenge"
+version = "0.1.0"
+description = "Pyxis Portfolio Challenge."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "gymnasium==1.2.0",
+    "stable-baselines3==2.7.0",
+    "sb3-contrib==2.7.0",
+    "pydantic==2.11.7",
+    "universal-pathlib>=0.3.5",
+    "pyyaml>=6.0.3",
+    "click>=8.3.0",
+    "tqdm>=4.67.1",
+    "scipy>=1.11.0",
+    "pettingzoo>=1.26.1",
+    "omegaconf>=2.3.0",
+]
+[project.optional-dependencies]
+app = [
+    "fastapi==0.115.11",
+    "uvicorn[standard]==0.26.0",
+    "redis==6.2.0",
+    "python-dotenv",
+    "pydantic-settings>=2.12.0",
+    "omegaconf==2.3.0",
+]
+experiment = [
+    "omegaconf==2.3.0",
+    "hydra-core==1.3.2",
+    "tensorboard==2.20.0"
+]
+dev = [
+    "pytest-cov==4.0.0",
+    "pytest==7.3.1",
+    "pytest-asyncio>=0.23.8",
+    "ruff>=0.14.5",
+    "httpx>=0.28.1",
+    "pre-commit>=4.5.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]  # Root directory
+include = ["*"]  # Include all packages
+namespaces = false
+
+[project.scripts]
+pyxis = "pyxis_portfolio_challenge.multi_agent_cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+asyncio_mode = "auto"
+
+[tool.ruff]
+exclude = [
+    "tests/",
+    ".venv/",
+    "train_pyxie/experiments*/",
+    "test_*.py",
+    "analyze_*.py",
+    "debug_*.py",
+    "rl-environment-assets/",
+]
+line-length = 88  # match black line length
+fix = true  # auto-fix issues where possible
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "D"]  # add I and D on top of default E and F for imports and docstrings
+ignore = [
+    "D203",   # Don't require a blank line before class docstring
+    "D212",   # Don't require summary on the first line of a multi-line docstring
+    "D401",   # Ignore imperatives in docstrings
+    "D100",   # Ignore missing docstrings in public modules
+    "D104",   # Ignore missing docstrings in public packages
+]
+
+[tool.ruff.format]
+docstring-code-format= true
+indent-style = "space"
+line-ending = "auto"
+preview = true  # enables the latest formatting, including import sort improvements

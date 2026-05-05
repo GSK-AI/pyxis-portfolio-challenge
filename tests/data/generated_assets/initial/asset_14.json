@@ -1,0 +1,29 @@
+{
+    "name": "Melanovax",
+    "therapeutic_area": "oncology",
+    "type": "internal",
+    "description": "An adjuvant therapy for resected high-risk melanoma. This asset showed a significant improvement in recurrence-free survival in a well-controlled Phase 2 trial.",
+    "max_revenue": 1700000000,
+    "time_until_max_revenue": 6,
+    "time_until_patent_expiry": 14,
+    "trials": {
+        "phase_1": {
+            "cost_remaining": 0,
+            "time_remaining": 0,
+            "ptrs": 0.58
+        },
+        "phase_2": {
+            "cost_remaining": 0,
+            "time_remaining": 0,
+            "ptrs": 0.4
+        },
+        "phase_3": {
+            "cost_remaining": 650000000,
+            "time_remaining": 4,
+            "ptrs": 0.6
+        }
+    },
+    "state": "Idle",
+    "pending_trial_phase": "Phase 3",
+    "time_on_market": 0
+}

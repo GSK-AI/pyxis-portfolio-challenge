@@ -1,0 +1,29 @@
+{
+    "name": "Gliomab",
+    "therapeutic_area": "oncology",
+    "type": "BD",
+    "description": "A radio-conjugate antibody acquired for the treatment of glioblastoma multiforme. This asset combines a tumor-targeting antibody with a potent radioisotope payload.",
+    "max_revenue": 1800000000,
+    "time_until_max_revenue": 6,
+    "time_until_patent_expiry": 19,
+    "trials": {
+        "phase_1": {
+            "cost_remaining": 75000000,
+            "time_remaining": 2,
+            "ptrs": 0.5
+        },
+        "phase_2": {
+            "cost_remaining": 260000000,
+            "time_remaining": 3,
+            "ptrs": 0.25
+        },
+        "phase_3": {
+            "cost_remaining": 840000000,
+            "time_remaining": 4,
+            "ptrs": 0.4
+        }
+    },
+    "state": "Idle",
+    "pending_trial_phase": "Phase 1",
+    "time_on_market": 0
+}

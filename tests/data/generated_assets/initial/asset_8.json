@@ -1,0 +1,29 @@
+{
+    "name": "Pancrestat",
+    "therapeutic_area": "oncology",
+    "type": "internal",
+    "description": "A small molecule inhibitor targeting the stroma in pancreatic cancer, intended to be used in combination with chemotherapy. It has shown promising results in a small Phase 1 study.",
+    "max_revenue": 2200000000,
+    "time_until_max_revenue": 5,
+    "time_until_patent_expiry": 17,
+    "trials": {
+        "phase_1": {
+            "cost_remaining": 0,
+            "time_remaining": 0,
+            "ptrs": 0.6
+        },
+        "phase_2": {
+            "cost_remaining": 180000000,
+            "time_remaining": 3,
+            "ptrs": 0.3
+        },
+        "phase_3": {
+            "cost_remaining": 800000000,
+            "time_remaining": 4,
+            "ptrs": 0.45
+        }
+    },
+    "state": "Idle",
+    "pending_trial_phase": "Phase 2",
+    "time_on_market": 0
+}

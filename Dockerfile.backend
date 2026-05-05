@@ -1,0 +1,32 @@
+# Backend Dockerfile for Pyxis Investment Game
+FROM python:3.13-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv for faster package installation
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+# Copy project files
+COPY pyproject.toml uv.lock ./
+COPY pyxis_portfolio_challenge ./pyxis_portfolio_challenge
+COPY app ./app
+COPY rl-environment-assets ./rl-environment-assets
+
+# Install dependencies with app extras
+RUN uv sync --frozen --extra app
+
+# Set environment variables for local development
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# Expose port
+EXPOSE 8000
+
+# Run the application
+CMD ["uv", "run", "uvicorn", "app.app:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -1,0 +1,81 @@
+version: '3.8'
+
+# Development docker-compose with hot reload.
+#
+# Usage:
+#   # Run everything (frontend + backend + redis):
+#   docker compose -f docker-compose.dev.yml --profile all up --build
+#
+#   # Run just backend + redis (run frontend locally with pnpm dev):
+#   docker compose -f docker-compose.dev.yml --profile backend up --build
+#
+#   # Run just infrastructure (redis only):
+#   docker compose -f docker-compose.dev.yml up
+
+services:
+  # Redis cache for game state
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # FastAPI Backend with hot reload
+  backend:
+    profiles: ["backend", "all"]
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "8000:8000"
+    environment:
+      APP_REDIS_HOST: redis
+      APP_REDIS_PORT: 6379
+      APP_REDIS_DB: 0
+      APP_USE_LOCAL_REDIS: "true"
+    volumes:
+      # Mount source code for hot reload
+      - ./pyxis_portfolio_challenge:/app/pyxis_portfolio_challenge
+      - ./app:/app/app
+      # Mount RL environment assets
+      - ./rl-environment-assets:/app/rl-environment-assets:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    # Override CMD to enable hot reload
+    command: ["uv", "run", "uvicorn", "app.app:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/docs')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Next.js Frontend
+  frontend:
+    profiles: ["frontend", "all"]
+    build:
+      context: ./frontend
+      dockerfile: linux_dockerfile_fe
+      args:
+        NEXT_PUBLIC_BACKEND_URL_GAME: http://localhost:8000
+        NEXT_PUBLIC_BACKEND_URL: http://localhost:8000
+        NEXT_PUBLIC_AZURE_CLIENT_ID: ""
+        NEXT_PUBLIC_AZURE_AUTHORITY: ""
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_BACKEND_URL_GAME: http://localhost:8000
+      NEXT_PUBLIC_BACKEND_URL: http://localhost:8000
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  redis_data:

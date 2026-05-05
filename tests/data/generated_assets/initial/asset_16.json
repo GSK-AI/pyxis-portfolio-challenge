@@ -1,0 +1,29 @@
+{
+    "name": "Malarastop",
+    "therapeutic_area": "vaccines and infectious disease",
+    "type": "internal",
+    "description": "A novel drug for the treatment of uncomplicated malaria, with potential for single-dose cure. Following positive Phase 2 data, it is now entering a large-scale pivotal Phase 3 program in endemic regions.",
+    "max_revenue": 500000000,
+    "time_until_max_revenue": 5,
+    "time_until_patent_expiry": 16,
+    "trials": {
+        "phase_1": {
+            "cost_remaining": 0,
+            "time_remaining": 0,
+            "ptrs": 0.7
+        },
+        "phase_2": {
+            "cost_remaining": 0,
+            "time_remaining": 0,
+            "ptrs": 0.55
+        },
+        "phase_3": {
+            "cost_remaining": 150000000,
+            "time_remaining": 2,
+            "ptrs": 0.65
+        }
+    },
+    "state": "Idle",
+    "pending_trial_phase": "Phase 3",
+    "time_on_market": 0
+}

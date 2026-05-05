@@ -1,0 +1,29 @@
+{
+    "name": "GlioToxin",
+    "therapeutic_area": "oncology",
+    "type": "BD",
+    "description": "An acquired, highly potent antibody-drug conjugate (ADC) for glioblastoma. This is a high-risk asset due to challenges with crossing the blood-brain barrier and potential neurotoxicity.",
+    "max_revenue": 1700000000,
+    "time_until_max_revenue": 7,
+    "time_until_patent_expiry": 19,
+    "trials": {
+        "phase_1": {
+            "cost_remaining": 95000000,
+            "time_remaining": 2,
+            "ptrs": 0.45
+        },
+        "phase_2": {
+            "cost_remaining": 320000000,
+            "time_remaining": 3,
+            "ptrs": 0.2
+        },
+        "phase_3": {
+            "cost_remaining": 880000000,
+            "time_remaining": 4,
+            "ptrs": 0.35
+        }
+    },
+    "state": "Idle",
+    "pending_trial_phase": "Phase 1",
+    "time_on_market": 0
+}

@@ -1,0 +1,29 @@
+{
+    "name": "HPIV-Vax",
+    "therapeutic_area": "vaccines and infectious disease",
+    "type": "internal",
+    "description": "A pediatric vaccine for human parainfluenza virus (HPIV), a leading cause of croup and bronchiolitis in infants. This multivalent vaccine uses a live-attenuated backbone.",
+    "max_revenue": 1200000000,
+    "time_until_max_revenue": 6,
+    "time_until_patent_expiry": 19,
+    "trials": {
+        "phase_1": {
+            "cost_remaining": 40000000,
+            "time_remaining": 1,
+            "ptrs": 0.69
+        },
+        "phase_2": {
+            "cost_remaining": 130000000,
+            "time_remaining": 2,
+            "ptrs": 0.55
+        },
+        "phase_3": {
+            "cost_remaining": 400000000,
+            "time_remaining": 3,
+            "ptrs": 0.62
+        }
+    },
+    "state": "Idle",
+    "pending_trial_phase": "Phase 1",
+    "time_on_market": 0
+}

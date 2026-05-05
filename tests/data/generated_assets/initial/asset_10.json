@@ -1,0 +1,29 @@
+{
+    "name": "Arthromod",
+    "therapeutic_area": "respiratory and immunology",
+    "type": "internal",
+    "description": "A selective BTK inhibitor for rheumatoid arthritis that failed to respond to TNF inhibitors. Phase 1 demonstrated a good safety profile, and now it enters Phase 2 to establish efficacy.",
+    "max_revenue": 1900000000,
+    "time_until_max_revenue": 6,
+    "time_until_patent_expiry": 17,
+    "trials": {
+        "phase_1": {
+            "cost_remaining": 0,
+            "time_remaining": 0,
+            "ptrs": 0.65
+        },
+        "phase_2": {
+            "cost_remaining": 120000000,
+            "time_remaining": 3,
+            "ptrs": 0.4
+        },
+        "phase_3": {
+            "cost_remaining": 450000000,
+            "time_remaining": 3,
+            "ptrs": 0.58
+        }
+    },
+    "state": "Idle",
+    "pending_trial_phase": "Phase 2",
+    "time_on_market": 0
+}
