@@ -202,11 +202,13 @@ Use the env directly for advanced training setups (self-play, population-based t
 
 ```python
 obs, infos = env.reset(seed=42)
-while env.agents:
+done = False
+while not done:
     actions = {}
     for agent_id in env.agents:
         actions[agent_id] = my_policy(obs[agent_id])
     obs, rewards, terms, truncs, infos = env.step(actions)
+    done = any(terms.values()) or any(truncs.values())
 ```
 
 ### Gym-like Trainer
@@ -270,7 +272,7 @@ Use the standalone `evaluate()` function. Agents can be strings or callables:
 ```python
 from pyxis_portfolio_challenge.environment.competition import evaluate
 
-per_agent_reports, global_report, playthrough = evaluate(
+per_agent_reports, playthrough = evaluate(
     agents=[my_agent, "knapsack(c12)"],
     num_episodes=100,
     num_workers=4,

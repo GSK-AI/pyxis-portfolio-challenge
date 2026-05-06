@@ -88,7 +88,7 @@ def _run_with_replay(agents_dict, env_kwargs, seed, agent_names, agent_labels=No
         evaluate_multi_agent,
     )
 
-    _per_agent_metrics, _global_metrics, playthrough = evaluate_multi_agent(
+    _per_agent_metrics, playthrough = evaluate_multi_agent(
         agents=agents_dict,
         worker_id=0,
         episodes_per_worker=1,

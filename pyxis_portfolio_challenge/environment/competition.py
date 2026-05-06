@@ -447,7 +447,7 @@ def evaluate(
     num_agents: int | None = None,
     capture_playthrough: bool = False,
     flat_obs: dict[int, bool] | None = None,
-) -> tuple[dict[str, dict[str, Any]], dict[str, Any], dict | None]:
+) -> tuple[dict[str, dict[str, Any]], dict | None]:
     """
     Evaluate agents in the multi-agent environment.
 
@@ -477,7 +477,7 @@ def evaluate(
     Returns
     -------
     tuple
-        ``(per_agent_reports, global_report, playthrough_dict)``
+        ``(per_agent_reports, playthrough_dict)``
         where per_agent_reports maps agent_id to metric dicts.
 
     """
@@ -608,7 +608,7 @@ def run(
             agents_with_format[agent_name] = agent
 
     cfg = config
-    agent_metrics, _global_metrics, playthrough = evaluate_multi_agent(
+    agent_metrics, playthrough = evaluate_multi_agent(
         agents=agents_with_format,
         worker_id=0,
         episodes_per_worker=1,
