@@ -50,7 +50,7 @@ def resolve_agent(spec, agent_name, **kwargs):
     return _load_agent_from_script(spec, agent_name, **kwargs)
 
 
-def _run_simple(agents_dict, env_kwargs, seed, agent_names=None):
+def _run_simple(agents_dict, env_kwargs, seed, agent_labels=None):
     """Run a single episode without replay capture (no app dependency)."""
     from pyxis_portfolio_challenge.environment.multi_agent_training_gym import (
         MultiAgentInvestmentGameEnv,
@@ -59,8 +59,8 @@ def _run_simple(agents_dict, env_kwargs, seed, agent_names=None):
     env = MultiAgentInvestmentGameEnv(**env_kwargs)
     observations, _infos = env.reset(seed=seed)
 
-    if agent_names:
-        env.multi_agent_game._display_names = agent_names
+    if agent_labels:
+        env.multi_agent_game._display_names = agent_labels
 
     for agent in agents_dict.values():
         if callable(getattr(agent, "set_env", None)):
@@ -82,7 +82,7 @@ def _run_simple(agents_dict, env_kwargs, seed, agent_names=None):
     return env
 
 
-def _run_with_replay(agents_dict, env_kwargs, seed, agent_names):
+def _run_with_replay(agents_dict, env_kwargs, seed, agent_names, agent_labels=None):
     """Run a single episode with replay capture via evaluate_multi_agent."""
     from pyxis_portfolio_challenge.environment.multi_agent_evaluate import (
         evaluate_multi_agent,
@@ -95,6 +95,7 @@ def _run_with_replay(agents_dict, env_kwargs, seed, agent_names):
         env_kwargs=env_kwargs,
         capture_playthrough=True,
         agent_names=agent_names,
+        agent_labels=agent_labels,
         seed=seed,
     )
     return playthrough
@@ -164,19 +165,29 @@ def main(agents, output, cfg_file, seed, agent_kwargs_list, names, log_level):
         else:
             per_agent_kwargs.append({})
 
-    # Build agent display names
+    # Build agent display names and labels
     agent_ids = [f"pharma_{i}" for i in range(NUM_AGENTS)]
     agent_names = {}
+    agent_labels = {}  # agent_id -> "display_name (agent_type)" for logs
     for i, aid in enumerate(agent_ids):
+        spec = agents[i]
+        # Derive short agent type from spec (script filename or built-in name)
+        if "/" in spec or spec.endswith(".py"):
+            import os
+            agent_type = os.path.basename(spec)
+        else:
+            agent_type = spec
         if i < len(names):
             agent_names[aid] = names[i]
+            agent_labels[aid] = f"{names[i]} ({agent_type})"
         else:
-            agent_names[aid] = agents[i]
+            agent_names[aid] = spec
+            agent_labels[aid] = spec
 
     # Resolve agents
     agents_dict = {}
     for i, (aid, spec) in enumerate(zip(agent_ids, agents)):
-        logger.info(f"  {aid} ({agent_names[aid]}): {spec}")
+        logger.info(f"  {agent_labels[aid]}: {spec}")
         agents_dict[aid] = resolve_agent(spec, aid, **per_agent_kwargs[i])
 
     # Build env kwargs from config
@@ -198,24 +209,24 @@ def main(agents, output, cfg_file, seed, agent_kwargs_list, names, log_level):
     finally:
         config_module.config = original_config
 
-    p0, p1 = agent_names[agent_ids[0]], agent_names[agent_ids[1]]
+    p0, p1 = agent_labels[agent_ids[0]], agent_labels[agent_ids[1]]
     logger.info(f"Starting match: {p0} vs {p1}")
 
     if output:
         playthrough = _run_with_replay(
-            agents_dict, env_kwargs, seed, agent_names
+            agents_dict, env_kwargs, seed, agent_names, agent_labels
         )
         with open(output, "w") as f:
             f.write(playthrough.model_dump_json(indent=2))
         logger.info(f"Replay written to {output}")
     else:
-        env = _run_simple(agents_dict, env_kwargs, seed, agent_names)
+        env = _run_simple(agents_dict, env_kwargs, seed, agent_labels)
         game = env.multi_agent_game
         logger.info("Match complete.")
         for aid in agent_ids:
             state = game.agent_states[aid]
             logger.info(
-                f"  {agent_names[aid]} ({aid}): "
+                f"  {agent_labels[aid]}: "
                 f"cash={state.cash:,.0f}, "
                 f"eNPV={state.enpv():,.0f}, "
                 f"bankrupt={state.bankrupt}"
