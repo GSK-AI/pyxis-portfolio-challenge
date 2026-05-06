@@ -64,7 +64,6 @@ exclude = [
     "tests/",
     ".venv/",
     "train_pyxie/experiments*/",
-    "benchmark_agents/",
     "test_*.py",
     "analyze_*.py",
     "debug_*.py",
