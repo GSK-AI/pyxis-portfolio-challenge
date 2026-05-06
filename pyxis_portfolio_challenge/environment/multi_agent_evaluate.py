@@ -114,6 +114,9 @@ def evaluate_multi_agent(
 
         observations, infos = env.reset(seed=episode_seed)
 
+        if agent_names:
+            env.multi_agent_game._display_names = agent_names
+
         # Capture initial state for playthrough
         playthrough_steps: list[StepRecord] = []
         if capture_playthrough:
