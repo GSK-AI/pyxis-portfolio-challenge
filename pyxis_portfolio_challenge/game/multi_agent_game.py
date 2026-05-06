@@ -234,9 +234,8 @@ class MultiAgentGame(BaseModel):
         ]
 
     def _label(self, agent_id: str) -> str:
-        """Return display name for an agent, falling back to agent_id."""
-        name = self._display_names.get(agent_id)
-        return f"{name} ({agent_id})" if name else agent_id
+        """Return display label for an agent, falling back to agent_id."""
+        return self._display_names.get(agent_id, agent_id)
 
     def step(
         self,

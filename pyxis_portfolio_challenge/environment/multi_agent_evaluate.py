@@ -44,6 +44,7 @@ def evaluate_multi_agent(
     progress_queue=None,
     capture_playthrough: bool = False,
     agent_names: dict[str, str] | None = None,
+    agent_labels: dict[str, str] | None = None,
     seed: int | None = None,
 ) -> tuple[
     dict[str, list[EvaluationMetric]],
@@ -114,8 +115,8 @@ def evaluate_multi_agent(
 
         observations, infos = env.reset(seed=episode_seed)
 
-        if agent_names:
-            env.multi_agent_game._display_names = agent_names
+        if agent_labels:
+            env.multi_agent_game._display_names = agent_labels
 
         # Capture initial state for playthrough
         playthrough_steps: list[StepRecord] = []
