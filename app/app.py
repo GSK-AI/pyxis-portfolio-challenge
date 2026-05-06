@@ -12,20 +12,20 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from aiml_pyxis_investment_game import config
-from aiml_pyxis_investment_game.agents import AGENTS, AGENTS_LIST, get_agent
-from aiml_pyxis_investment_game.agents.utils import get_agent_investment_decisions
-from aiml_pyxis_investment_game.game.asset_generators import (
+from pyxis_portfolio_challenge import config
+from pyxis_portfolio_challenge.agents import AGENTS, AGENTS_LIST, get_agent
+from pyxis_portfolio_challenge.agents.utils import get_agent_investment_decisions
+from pyxis_portfolio_challenge.game.asset_generators import (
     JSONAssetGenerator,
 )
-from aiml_pyxis_investment_game.game.constants import (
+from pyxis_portfolio_challenge.game.constants import (
     CUSTOM_SEEDS,
     LEVELS,
     InvestmentLevel,
 )
-from aiml_pyxis_investment_game.game.game_state import GameState
-from aiml_pyxis_investment_game.game.multi_agent_game import MultiAgentGame
-from aiml_pyxis_investment_game.logging_utils import setup_logging
+from pyxis_portfolio_challenge.game.game_state import GameState
+from pyxis_portfolio_challenge.game.multi_agent_game import MultiAgentGame
+from pyxis_portfolio_challenge.logging_utils import setup_logging
 from app.endpoint_datamodels import (
     ActionType,
     AgentResponse,

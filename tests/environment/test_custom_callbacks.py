@@ -4,7 +4,7 @@ from unittest.mock import Mock
 
 from stable_baselines3.common.callbacks import BaseCallback
 
-from aiml_pyxis_investment_game.environment.custom_callbacks import (  # noqa: E501
+from pyxis_portfolio_challenge.environment.custom_callbacks import (  # noqa: E501
     VecNormSyncCallback,
 )
 

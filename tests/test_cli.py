@@ -4,7 +4,7 @@ from functools import partial
 import pytest
 from pydantic import BaseModel
 
-from aiml_pyxis_investment_game.cli import load_agent, resolve_cfg_args, takes_kwargs
+from pyxis_portfolio_challenge.cli import load_agent, resolve_cfg_args, takes_kwargs
 
 
 def test_takes_kwargs():
@@ -81,7 +81,7 @@ def test_load_agent_no_main_function(tmp_path):
 def test_main_cli_seeded_is_reproducible(custom_agent_file):
     cmd = [
         "python",
-        "aiml_pyxis_investment_game/cli.py",
+        "pyxis_portfolio_challenge/cli.py",
         "--agent",
         custom_agent_file,
         "--seed",

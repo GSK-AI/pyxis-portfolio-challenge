@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 import upath
 
-from aiml_pyxis_investment_game.config import (
+from pyxis_portfolio_challenge.config import (
     ApprovalPhaseConfig,
     CapacityConfig,
     DistributionalPtrsConfig,
@@ -16,17 +16,17 @@ from aiml_pyxis_investment_game.config import (
     TAExperienceConfig,
     UncertainPtrsConfig,
 )
-from aiml_pyxis_investment_game.environment.competition import (
+from pyxis_portfolio_challenge.environment.competition import (
     Trainer,
     _FlatObsAgentWrapper,
     _resolve_agent,
     _validate_flat_obs_overrides,
     train,
 )
-from aiml_pyxis_investment_game.environment.multi_agent_training_gym import (
+from pyxis_portfolio_challenge.environment.multi_agent_training_gym import (
     MultiAgentInvestmentGameEnv,
 )
-from aiml_pyxis_investment_game.environment.reward import NetCashFlowReward
+from pyxis_portfolio_challenge.environment.reward import NetCashFlowReward
 
 TEST_ASSETS_DIR = upath.UPath("tests/data/generated_assets")
 
@@ -164,7 +164,7 @@ class TestTrainer:
 
     def test_trainer_is_gym_env(self):
         env = _make_env(num_agents=2)
-        from aiml_pyxis_investment_game.agents.multi_agent_do_nothing import (
+        from pyxis_portfolio_challenge.agents.multi_agent_do_nothing import (
             MultiAgentDoNothingAgent,
         )
 
@@ -174,7 +174,7 @@ class TestTrainer:
 
     def test_trainer_spaces_match_env(self):
         env = _make_env(num_agents=2)
-        from aiml_pyxis_investment_game.agents.multi_agent_do_nothing import (
+        from pyxis_portfolio_challenge.agents.multi_agent_do_nothing import (
             MultiAgentDoNothingAgent,
         )
 
@@ -185,7 +185,7 @@ class TestTrainer:
 
     def test_trainer_reset_returns_dict_obs(self):
         env = _make_env(num_agents=2)
-        from aiml_pyxis_investment_game.agents.multi_agent_do_nothing import (
+        from pyxis_portfolio_challenge.agents.multi_agent_do_nothing import (
             MultiAgentDoNothingAgent,
         )
 
@@ -198,7 +198,7 @@ class TestTrainer:
 
     def test_trainer_step_returns_five_tuple(self):
         env = _make_env(num_agents=2)
-        from aiml_pyxis_investment_game.agents.multi_agent_do_nothing import (
+        from pyxis_portfolio_challenge.agents.multi_agent_do_nothing import (
             MultiAgentDoNothingAgent,
         )
 
@@ -219,7 +219,7 @@ class TestTrainer:
 
     def test_trainer_action_masks_returns_dict(self):
         env = _make_env(num_agents=2)
-        from aiml_pyxis_investment_game.agents.multi_agent_do_nothing import (
+        from pyxis_portfolio_challenge.agents.multi_agent_do_nothing import (
             MultiAgentDoNothingAgent,
         )
 
@@ -232,7 +232,7 @@ class TestTrainer:
 
     def test_trainer_runs_full_episode(self):
         env = _make_env(num_agents=2, horizon=5)
-        from aiml_pyxis_investment_game.agents.multi_agent_do_nothing import (
+        from pyxis_portfolio_challenge.agents.multi_agent_do_nothing import (
             MultiAgentDoNothingAgent,
         )
 
@@ -254,7 +254,7 @@ class TestTrainer:
 
     def test_trainer_with_random_opponent(self):
         env = _make_env(num_agents=2)
-        from aiml_pyxis_investment_game.agents.multi_agent_random import (
+        from pyxis_portfolio_challenge.agents.multi_agent_random import (
             MultiAgentRandomAgent,
         )
 
@@ -266,7 +266,7 @@ class TestTrainer:
     def test_trainer_trainee_index_1(self):
         """Trainee can be any agent slot, not just index 0."""
         env = _make_env(num_agents=2)
-        from aiml_pyxis_investment_game.agents.multi_agent_do_nothing import (
+        from pyxis_portfolio_challenge.agents.multi_agent_do_nothing import (
             MultiAgentDoNothingAgent,
         )
 
@@ -309,7 +309,7 @@ class TestTrainFunction:
 
     def test_train_with_callable_opponent(self):
         env = _make_env(num_agents=2)
-        from aiml_pyxis_investment_game.agents.multi_agent_do_nothing import (
+        from pyxis_portfolio_challenge.agents.multi_agent_do_nothing import (
             MultiAgentDoNothingAgent,
         )
 
@@ -373,7 +373,7 @@ class TestFlatObsHandling:
 
     def test_trainer_flatten_trainee_obs(self):
         env = _make_env(num_agents=2, flatten_obs=False)
-        from aiml_pyxis_investment_game.agents.multi_agent_do_nothing import (
+        from pyxis_portfolio_challenge.agents.multi_agent_do_nothing import (
             MultiAgentDoNothingAgent,
         )
 
@@ -388,7 +388,7 @@ class TestFlatObsHandling:
 
     def test_trainer_dict_trainee_obs(self):
         env = _make_env(num_agents=2, flatten_obs=False)
-        from aiml_pyxis_investment_game.agents.multi_agent_do_nothing import (
+        from pyxis_portfolio_challenge.agents.multi_agent_do_nothing import (
             MultiAgentDoNothingAgent,
         )
 
@@ -412,7 +412,7 @@ class TestMakeMultiAgentTrainEnv:
     """Tests for make_multi_agent_train_env factory."""
 
     def test_creates_env_from_config(self):
-        from aiml_pyxis_investment_game.environment.env_factory import (
+        from pyxis_portfolio_challenge.environment.env_factory import (
             _build_multi_agent_env_kwargs,
         )
 
@@ -425,7 +425,7 @@ class TestMakeMultiAgentTrainEnv:
         assert "pricing_config" in kwargs
 
     def test_num_agents_override(self):
-        from aiml_pyxis_investment_game.environment.env_factory import (
+        from pyxis_portfolio_challenge.environment.env_factory import (
             _build_multi_agent_env_kwargs,
         )
 
@@ -438,7 +438,7 @@ class TestMultiAgentDoNothingAgent:
     """Tests for the core do-nothing agent."""
 
     def test_returns_zero_actions(self):
-        from aiml_pyxis_investment_game.agents.multi_agent_do_nothing import (
+        from pyxis_portfolio_challenge.agents.multi_agent_do_nothing import (
             MultiAgentDoNothingAgent,
         )
 
@@ -454,7 +454,7 @@ class TestMultiAgentRandomAgent:
     """Tests for the core random agent."""
 
     def test_returns_valid_actions(self):
-        from aiml_pyxis_investment_game.agents.multi_agent_random import (
+        from pyxis_portfolio_challenge.agents.multi_agent_random import (
             MultiAgentRandomAgent,
         )
 

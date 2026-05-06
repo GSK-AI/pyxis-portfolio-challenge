@@ -1,7 +1,7 @@
 import upath
 from sb3_contrib import MaskablePPO
 
-from aiml_pyxis_investment_game.agents import PyxieAgent
+from pyxis_portfolio_challenge.agents import PyxieAgent
 
 
 def pyxie_new_agent():
@@ -21,10 +21,10 @@ def pyxie_new_agent():
     agent = PyxieAgent(
         algorithm=MaskablePPO,
         model_path=upath.UPath(
-            "/Users/tomcarter/repos/aiml-pyxis-investment-game/train_pyxie/experiments/exp_uncertainPtrs_ncfRew_25_Feb_2026_171533/25_Feb_2026_171533/best_model/best_model.zip"
+            "/Users/tomcarter/repos/pyxis-portfolio-challenge/train_pyxie/experiments/exp_uncertainPtrs_ncfRew_25_Feb_2026_171533/25_Feb_2026_171533/best_model/best_model.zip"
         ),
         vecnorm_path=upath.UPath(
-            "/Users/tomcarter/repos/aiml-pyxis-investment-game/train_pyxie/experiments/exp_uncertainPtrs_ncfRew_25_Feb_2026_171533/25_Feb_2026_171533/best_model/vecnormalize.pkl"
+            "/Users/tomcarter/repos/pyxis-portfolio-challenge/train_pyxie/experiments/exp_uncertainPtrs_ncfRew_25_Feb_2026_171533/25_Feb_2026_171533/best_model/vecnormalize.pkl"
         ),
     )
 
@@ -42,11 +42,11 @@ def pyxie_ta_specialization_treatment():
     Trained for ~1.8M timesteps on 02 Mar 2026 with 40 assets / 8B starting cash.
     """
     model_path = upath.UPath(
-        "/Users/tomcarter/repos/aiml-pyxis-investment-game/train_pyxie/experiments/"
+        "/Users/tomcarter/repos/pyxis-portfolio-challenge/train_pyxie/experiments/"
         "exp_ta_specialization_treatment_02_Mar_2026_131940/02_Mar_2026_131940/best_model/best_model.zip"
     )
     vecnorm_path = upath.UPath(
-        "/Users/tomcarter/repos/aiml-pyxis-investment-game/train_pyxie/experiments/"
+        "/Users/tomcarter/repos/pyxis-portfolio-challenge/train_pyxie/experiments/"
         "exp_ta_specialization_treatment_02_Mar_2026_131940/02_Mar_2026_131940/best_model/vecnormalize.pkl"
     )
 
@@ -70,11 +70,11 @@ def pyxie_investment_levels():
     Training: exp_investmentLevels_noWarmup_h100_05_Mar_2026_225714
     """
     model_path = upath.UPath(
-        "/Users/tomcarter/repos/aiml-pyxis-investment-game/train_pyxie/experiments/"
+        "/Users/tomcarter/repos/pyxis-portfolio-challenge/train_pyxie/experiments/"
         "exp_investmentLevels_noWarmup_h100_05_Mar_2026_225714/05_Mar_2026_225714/best_model/best_model.zip"
     )
     vecnorm_path = upath.UPath(
-        "/Users/tomcarter/repos/aiml-pyxis-investment-game/train_pyxie/experiments/"
+        "/Users/tomcarter/repos/pyxis-portfolio-challenge/train_pyxie/experiments/"
         "exp_investmentLevels_noWarmup_h100_05_Mar_2026_225714/05_Mar_2026_225714/best_model/vecnormalize.pkl"
     )
 
@@ -100,11 +100,11 @@ def pyxie_interim_trial_obs():
     Training: exp_distributional_ptrs_16_Mar_2026_160825
     """
     model_path = upath.UPath(
-        "/Users/tomcarter/repos/aiml-pyxis-investment-game/train_pyxie/experiments/"
+        "/Users/tomcarter/repos/pyxis-portfolio-challenge/train_pyxie/experiments/"
         "exp_distributional_ptrs_16_Mar_2026_160825/16_Mar_2026_160825/best_model/best_model.zip"
     )
     vecnorm_path = upath.UPath(
-        "/Users/tomcarter/repos/aiml-pyxis-investment-game/train_pyxie/experiments/"
+        "/Users/tomcarter/repos/pyxis-portfolio-challenge/train_pyxie/experiments/"
         "exp_distributional_ptrs_16_Mar_2026_160825/16_Mar_2026_160825/best_model/vecnormalize.pkl"
     )
 
@@ -134,11 +134,11 @@ def pyxie_distributional_ptrs():
     Training: exp_distributional_ptrs_19_Mar_2026_131510
     """
     model_path = upath.UPath(
-        "/Users/tomcarter/repos/aiml-pyxis-investment-game/experiments/"
+        "/Users/tomcarter/repos/pyxis-portfolio-challenge/experiments/"
         "exp_distributional_ptrs_19_Mar_2026_131510/19_Mar_2026_131510/best_model/best_model.zip"
     )
     vecnorm_path = upath.UPath(
-        "/Users/tomcarter/repos/aiml-pyxis-investment-game/experiments/"
+        "/Users/tomcarter/repos/pyxis-portfolio-challenge/experiments/"
         "exp_distributional_ptrs_19_Mar_2026_131510/19_Mar_2026_131510/best_model/vecnormalize.pkl"
     )
 
@@ -166,11 +166,11 @@ def pyxie_ta_specialization_control():
     Trained for ~1.4M timesteps on 02 Mar 2026 with 40 assets / 8B starting cash.
     """
     model_path = upath.UPath(
-        "/Users/tomcarter/repos/aiml-pyxis-investment-game/train_pyxie/experiments/"
+        "/Users/tomcarter/repos/pyxis-portfolio-challenge/train_pyxie/experiments/"
         "exp_ta_specialization_control_02_Mar_2026_132723/02_Mar_2026_132723/best_model/best_model.zip"
     )
     vecnorm_path = upath.UPath(
-        "/Users/tomcarter/repos/aiml-pyxis-investment-game/train_pyxie/experiments/"
+        "/Users/tomcarter/repos/pyxis-portfolio-challenge/train_pyxie/experiments/"
         "exp_ta_specialization_control_02_Mar_2026_132723/02_Mar_2026_132723/best_model/vecnormalize.pkl"
     )
 

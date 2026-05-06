@@ -4,7 +4,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from aiml_pyxis_investment_game.game.asset_generators import JSONAssetGenerator
+from pyxis_portfolio_challenge.game.asset_generators import JSONAssetGenerator
 from app.app import (
     get_agents,
     get_custom_seed,

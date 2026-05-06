@@ -3,8 +3,8 @@ from unittest.mock import ANY, patch
 import numpy as np
 import pytest
 
-from aiml_pyxis_investment_game import PROJECT_ROOT, evaluate
-from aiml_pyxis_investment_game.environment.metrics import report_all_metrics
+from pyxis_portfolio_challenge import PROJECT_ROOT, evaluate
+from pyxis_portfolio_challenge.environment.metrics import report_all_metrics
 
 TEST_ASSETS_DIR = PROJECT_ROOT / "tests/data/generated_assets"
 
@@ -12,7 +12,7 @@ TEST_ASSETS_DIR = PROJECT_ROOT / "tests/data/generated_assets"
 @pytest.fixture
 def patched_config(monkeypatch):
     """Patch config.from_yaml to always return a patched cfg object"""
-    from aiml_pyxis_investment_game.config import config as config_mod
+    from pyxis_portfolio_challenge.config import config as config_mod
 
     return config_mod.model_copy(
         update={
@@ -40,7 +40,7 @@ def test_evaluate_deterministic(patched_config, do_nothing_agent):
     On consecutive calls with the same random seed, the results should be identical.
     """
     with patch(
-        "aiml_pyxis_investment_game.environment.evaluate.config", patched_config
+        "pyxis_portfolio_challenge.environment.evaluate.config", patched_config
     ):
         # Disable warmup for deterministic test
         results1 = report_all_metrics(
@@ -64,9 +64,9 @@ def test_evaluate_deterministic(patched_config, do_nothing_agent):
 
 def test_evaluate_calls_collect_metrics(patched_config, do_nothing_agent):
     with (
-        patch("aiml_pyxis_investment_game.environment.evaluate.config", patched_config),
+        patch("pyxis_portfolio_challenge.environment.evaluate.config", patched_config),
         patch(
-            "aiml_pyxis_investment_game.environment.evaluate.collect_metrics"
+            "pyxis_portfolio_challenge.environment.evaluate.collect_metrics"
         ) as collect_metrics,
     ):
         _ = evaluate(
@@ -83,12 +83,12 @@ def test_evaluate_calls_collect_metrics(patched_config, do_nothing_agent):
 def test_evaluate_with_warmup_enabled(patched_config, do_nothing_agent):
     """Test that evaluate applies warmup wrapper when warmup_on_reset_steps > 0."""
     with (
-        patch("aiml_pyxis_investment_game.environment.evaluate.config", patched_config),
+        patch("pyxis_portfolio_challenge.environment.evaluate.config", patched_config),
         patch(
-            "aiml_pyxis_investment_game.environment.evaluate.WarmupOnResetWrapper"
+            "pyxis_portfolio_challenge.environment.evaluate.WarmupOnResetWrapper"
         ) as mock_warmup_wrapper,
         patch(
-            "aiml_pyxis_investment_game.environment.evaluate.InvestmentGameEnv"
+            "pyxis_portfolio_challenge.environment.evaluate.InvestmentGameEnv"
         ) as mock_env,
     ):
         # Setup mock environment with dict observation (flatten_obs=False)
@@ -129,11 +129,11 @@ def test_evaluate_with_warmup_disabled(patched_config, do_nothing_agent):
 
     with (
         patch(
-            "aiml_pyxis_investment_game.environment.evaluate.config",
+            "pyxis_portfolio_challenge.environment.evaluate.config",
             patched_config_with_warmup,
         ),
         patch(
-            "aiml_pyxis_investment_game.environment.evaluate.WarmupOnResetWrapper"
+            "pyxis_portfolio_challenge.environment.evaluate.WarmupOnResetWrapper"
         ) as mock_warmup_wrapper,
     ):
         _ = evaluate(
@@ -156,14 +156,14 @@ def test_evaluate_warmup_from_config(patched_config, do_nothing_agent):
 
     with (
         patch(
-            "aiml_pyxis_investment_game.environment.evaluate.config",
+            "pyxis_portfolio_challenge.environment.evaluate.config",
             patched_config_with_warmup,
         ),
         patch(
-            "aiml_pyxis_investment_game.environment.evaluate.WarmupOnResetWrapper"
+            "pyxis_portfolio_challenge.environment.evaluate.WarmupOnResetWrapper"
         ) as mock_warmup_wrapper,
         patch(
-            "aiml_pyxis_investment_game.environment.evaluate.InvestmentGameEnv"
+            "pyxis_portfolio_challenge.environment.evaluate.InvestmentGameEnv"
         ) as mock_env,
     ):
         # Setup mock environment with dict observation (flatten_obs=False)

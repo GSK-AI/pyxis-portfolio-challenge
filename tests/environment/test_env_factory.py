@@ -4,7 +4,7 @@ from unittest.mock import Mock, patch
 
 import upath
 
-from aiml_pyxis_investment_game.environment.env_factory import (  # noqa: E501
+from pyxis_portfolio_challenge.environment.env_factory import (  # noqa: E501
     _prepare_envs,
     _prepare_level_envs,
     make_train_env,
@@ -19,9 +19,9 @@ class TestPrepareEnvs:
     We mock the config and only pass training-specific params.
     """
 
-    @patch("aiml_pyxis_investment_game.environment.env_factory.VecNormalize")
-    @patch("aiml_pyxis_investment_game.environment.env_factory.SubprocVecEnv")
-    @patch("aiml_pyxis_investment_game.environment.env_factory.InvestmentGameEnv")
+    @patch("pyxis_portfolio_challenge.environment.env_factory.VecNormalize")
+    @patch("pyxis_portfolio_challenge.environment.env_factory.SubprocVecEnv")
+    @patch("pyxis_portfolio_challenge.environment.env_factory.InvestmentGameEnv")
     def test__prepare_envs_basic_functionality(
         self,
         mock_investment_game_env,
@@ -70,9 +70,9 @@ class TestPrepareEnvs:
         assert train_env == mock_normalized_train_env
         assert eval_env == mock_normalized_eval_env
 
-    @patch("aiml_pyxis_investment_game.environment.env_factory.VecNormalize")
-    @patch("aiml_pyxis_investment_game.environment.env_factory.SubprocVecEnv")
-    @patch("aiml_pyxis_investment_game.environment.env_factory.InvestmentGameEnv")
+    @patch("pyxis_portfolio_challenge.environment.env_factory.VecNormalize")
+    @patch("pyxis_portfolio_challenge.environment.env_factory.SubprocVecEnv")
+    @patch("pyxis_portfolio_challenge.environment.env_factory.InvestmentGameEnv")
     def test__prepare_envs_eval_env_never_normalizes_rewards(
         self,
         mock_investment_game_env,
@@ -99,9 +99,9 @@ class TestPrepareEnvs:
         assert eval_call[1]["norm_reward"] is False
         assert eval_call[1]["training"] is False
 
-    @patch("aiml_pyxis_investment_game.environment.env_factory.VecNormalize")
-    @patch("aiml_pyxis_investment_game.environment.env_factory.SubprocVecEnv")
-    @patch("aiml_pyxis_investment_game.environment.env_factory.InvestmentGameEnv")
+    @patch("pyxis_portfolio_challenge.environment.env_factory.VecNormalize")
+    @patch("pyxis_portfolio_challenge.environment.env_factory.SubprocVecEnv")
+    @patch("pyxis_portfolio_challenge.environment.env_factory.InvestmentGameEnv")
     def test__prepare_envs_with_single_environment(
         self,
         mock_investment_game_env,
@@ -120,9 +120,9 @@ class TestPrepareEnvs:
         assert len(train_env_fns) == 1
         assert len(eval_env_fns) == 1
 
-    @patch("aiml_pyxis_investment_game.environment.env_factory.VecNormalize")
-    @patch("aiml_pyxis_investment_game.environment.env_factory.SubprocVecEnv")
-    @patch("aiml_pyxis_investment_game.environment.env_factory.InvestmentGameEnv")
+    @patch("pyxis_portfolio_challenge.environment.env_factory.VecNormalize")
+    @patch("pyxis_portfolio_challenge.environment.env_factory.SubprocVecEnv")
+    @patch("pyxis_portfolio_challenge.environment.env_factory.InvestmentGameEnv")
     def test__prepare_envs_with_multiple_environments(
         self,
         mock_investment_game_env,
@@ -142,9 +142,9 @@ class TestPrepareEnvs:
         assert len(train_env_fns) == n_envs
         assert len(eval_env_fns) == n_envs
 
-    @patch("aiml_pyxis_investment_game.environment.env_factory.VecNormalize")
-    @patch("aiml_pyxis_investment_game.environment.env_factory.SubprocVecEnv")
-    @patch("aiml_pyxis_investment_game.environment.env_factory.InvestmentGameEnv")
+    @patch("pyxis_portfolio_challenge.environment.env_factory.VecNormalize")
+    @patch("pyxis_portfolio_challenge.environment.env_factory.SubprocVecEnv")
+    @patch("pyxis_portfolio_challenge.environment.env_factory.InvestmentGameEnv")
     def test__prepare_envs_returns_correct_types(
         self,
         mock_investment_game_env,
@@ -173,9 +173,9 @@ class TestPrepareEnvs:
 class TestPrepareLevelEnvs:
     """Test suite for _prepare_level_envs function."""
 
-    @patch("aiml_pyxis_investment_game.environment.env_factory.VecNormalize")
-    @patch("aiml_pyxis_investment_game.environment.env_factory.SubprocVecEnv")
-    @patch("aiml_pyxis_investment_game.environment.env_factory.LevelsInvestmentGameEnv")
+    @patch("pyxis_portfolio_challenge.environment.env_factory.VecNormalize")
+    @patch("pyxis_portfolio_challenge.environment.env_factory.SubprocVecEnv")
+    @patch("pyxis_portfolio_challenge.environment.env_factory.LevelsInvestmentGameEnv")
     def test__prepare_level_envs_basic_functionality(
         self,
         mock_levels_env,
@@ -243,13 +243,13 @@ def test_make_train_env():
     """Test that make_train_env calls InvestmentGameEnv correctly."""
     with (
         patch(
-            "aiml_pyxis_investment_game.environment.env_factory.InvestmentGameEnv"
+            "pyxis_portfolio_challenge.environment.env_factory.InvestmentGameEnv"
         ) as mock_investment_game_env,
         patch(
-            "aiml_pyxis_investment_game.environment.env_factory.WarmupOnResetWrapper"
+            "pyxis_portfolio_challenge.environment.env_factory.WarmupOnResetWrapper"
         ) as mock_warmup_wrapper,
         patch(
-            "aiml_pyxis_investment_game.environment.env_factory.AutoCenterWrapper"
+            "pyxis_portfolio_challenge.environment.env_factory.AutoCenterWrapper"
         ) as mock_autocenter_wrapper,
     ):
         mock_env_instance = Mock()

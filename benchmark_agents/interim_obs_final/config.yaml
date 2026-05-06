@@ -16,62 +16,62 @@ flatten_obs: true
 warmup_on_reset_steps: 0
 warmup_on_reset_policy: do_nothing
 reward_fn:
-  _target_: aiml_pyxis_investment_game.environment.reward.NetCashFlowReward
+  _target_: pyxis_portfolio_challenge.environment.reward.NetCashFlowReward
 
 # Training parameters
-training_data_dir: /Users/tomcarter/repos/aiml-pyxis-investment-game/rl-environment-assets/gpt5_09feb2026_highPtrs/training
+training_data_dir: /Users/tomcarter/repos/pyxis-portfolio-challenge/rl-environment-assets/gpt5_09feb2026_highPtrs/training
 
 # Evaluation parameters
-evaluation_data_dir: /Users/tomcarter/repos/aiml-pyxis-investment-game/rl-environment-assets/gpt5_09feb2026_highPtrs/evaluation
+evaluation_data_dir: /Users/tomcarter/repos/pyxis-portfolio-challenge/rl-environment-assets/gpt5_09feb2026_highPtrs/evaluation
 eval_initial_seed: 891024889
 num_eval_episodes: 100
 evaluation_metrics:
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerEvaluationCumulativeReward
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerEvaluationBankruptcyRate
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerEpisodeCumulativeReward
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerEpisodeRealisedRoi
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerEpisodeFinalEroi
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerEpisodeFinalEnpv
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerEpisodeNumSteps
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepReward
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepCash
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepRevenue
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepCost
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepNetCashFlow
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepCumulativeNetCashFlow
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepCumulativeReward
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepEnpv
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepEroi
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepNumAssetsIdleState
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepNumAssetsInDevelopmentState
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepNumAssetsOnMarketState
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepNumAssetsFailedState
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepNumAssetsExpiredState
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepFractionOfPossibleInvestments
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepFractionOfPossibleInvestmentsPosEnpv
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerEvaluationCumulativeReward
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerEvaluationBankruptcyRate
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerEpisodeCumulativeReward
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerEpisodeRealisedRoi
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerEpisodeFinalEroi
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerEpisodeFinalEnpv
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerEpisodeNumSteps
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerStepReward
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerStepCash
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerStepRevenue
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerStepCost
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerStepNetCashFlow
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerStepCumulativeNetCashFlow
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerStepCumulativeReward
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerStepEnpv
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerStepEroi
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerStepNumAssetsIdleState
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerStepNumAssetsInDevelopmentState
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerStepNumAssetsOnMarketState
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerStepNumAssetsFailedState
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerStepNumAssetsExpiredState
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerStepFractionOfPossibleInvestments
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerStepFractionOfPossibleInvestmentsPosEnpv
   # Uncertain PTRS metrics (for tracking TA specialization)
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepTAExperienceOncology
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepTAExperienceRespiratoryImmunology
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepTAExperienceVaccines
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepMeanPTRSError
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepMeanExpertiseBoost
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepNumAssetsOncology
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepNumAssetsRespiratoryImmunology
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepNumAssetsVaccines
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerStepTAExperienceOncology
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerStepTAExperienceRespiratoryImmunology
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerStepTAExperienceVaccines
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerStepMeanPTRSError
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerStepMeanExpertiseBoost
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerStepNumAssetsOncology
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerStepNumAssetsRespiratoryImmunology
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerStepNumAssetsVaccines
   # Investment levels metrics (for monitoring capacity and level distribution)
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepCapacityUsed
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepCapacityRatio
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepGlobalSuccessModifier
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepGlobalCostModifier
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepNumAssetsMinimalLevel
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepNumAssetsStandardLevel
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepNumAssetsAcceleratedLevel
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerStepCapacityUsed
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerStepCapacityRatio
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerStepGlobalSuccessModifier
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerStepGlobalCostModifier
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerStepNumAssetsMinimalLevel
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerStepNumAssetsStandardLevel
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerStepNumAssetsAcceleratedLevel
   # Interim trial observations metrics (for monitoring early stopping decisions)
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepMeanInterimSignal
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepMeanTrialProgress
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepMinInterimSignal
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerEpisodeNumStopActions
-  - _target_: aiml_pyxis_investment_game.environment.metrics.PerStepNumStopActions
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerStepMeanInterimSignal
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerStepMeanTrialProgress
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerStepMinInterimSignal
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerEpisodeNumStopActions
+  - _target_: pyxis_portfolio_challenge.environment.metrics.PerStepNumStopActions
 
 
 # Pyxie agent parameters

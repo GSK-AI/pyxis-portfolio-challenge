@@ -4,9 +4,9 @@ import math
 
 import numpy as np
 
-from aiml_pyxis_investment_game.game.asset import AssetState, DrugAsset
-from aiml_pyxis_investment_game.game.constants import DISCOUNT_RATE
-from aiml_pyxis_investment_game.game.shared_market_state import indication_key
+from pyxis_portfolio_challenge.game.asset import AssetState, DrugAsset
+from pyxis_portfolio_challenge.game.constants import DISCOUNT_RATE
+from pyxis_portfolio_challenge.game.shared_market_state import indication_key
 
 
 def delta_npv(asset: DrugAsset) -> float:
@@ -262,7 +262,7 @@ class MultiAgentKnapsackAgent:
                         ms = self._expected_market_share(bd_asset)
                         if ms > 0:
                             value *= ms
-                            from aiml_pyxis_investment_game.environment.market_mechanics import (
+                            from pyxis_portfolio_challenge.environment.market_mechanics import (
                                 bd_bid_price,
                             )
 

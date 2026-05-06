@@ -1,4 +1,4 @@
-files: '^(app|aiml_pyxis_investment_game|asset_gen|scripts)\/\S*'
+files: '^(app|pyxis_portfolio_challenge|asset_gen|scripts)\/\S*'
 repos:
 - repo: local
   hooks:

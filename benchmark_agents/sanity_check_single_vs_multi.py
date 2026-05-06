@@ -14,13 +14,13 @@ import math
 
 import numpy as np
 
-from aiml_pyxis_investment_game.agents.knapsack import KnapsackAgent, delta_npv
-from aiml_pyxis_investment_game.config import from_yaml, instantiate_from_config
-from aiml_pyxis_investment_game.environment.multi_agent_training_gym import (
+from pyxis_portfolio_challenge.agents.knapsack import KnapsackAgent, delta_npv
+from pyxis_portfolio_challenge.config import from_yaml, instantiate_from_config
+from pyxis_portfolio_challenge.environment.multi_agent_training_gym import (
     MultiAgentInvestmentGameEnv,
 )
-from aiml_pyxis_investment_game.environment.training_gym import InvestmentGameEnv
-from aiml_pyxis_investment_game.game.asset import AssetState
+from pyxis_portfolio_challenge.environment.training_gym import InvestmentGameEnv
+from pyxis_portfolio_challenge.game.asset import AssetState
 
 # Load config
 cfg = from_yaml()

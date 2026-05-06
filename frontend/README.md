@@ -4,7 +4,7 @@ This guide will help developers set up, run, and understand the frontend, built 
 
 ## Useful Links
 
-- [Project Repositor: GitHub](https://github.com/gsk-tech/aiml-pyxis-investment-game)
+- [Project Repositor: GitHub](https://github.com/gsk-tech/pyxis-portfolio-challenge)
 
 ## Prerequisites
 

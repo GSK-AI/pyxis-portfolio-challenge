@@ -17,7 +17,7 @@ from compare_agents import (
     save_plots,
 )
 
-from aiml_pyxis_investment_game.file_io import load_json
+from pyxis_portfolio_challenge.file_io import load_json
 
 
 def _strip_non_numeric_per_step(metrics_list):

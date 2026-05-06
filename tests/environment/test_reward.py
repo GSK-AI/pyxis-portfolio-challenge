@@ -1,7 +1,7 @@
 import uuid
 from unittest.mock import MagicMock, patch
 
-from aiml_pyxis_investment_game.environment.reward import (
+from pyxis_portfolio_challenge.environment.reward import (
     CompositeReward,
     DeltaEnpvActionBasedReward,
     DeltaENPVReward,
@@ -17,8 +17,8 @@ from aiml_pyxis_investment_game.environment.reward import (
     SymLogNetCashFlowReward,
     TASpecializationBonus,
 )
-from aiml_pyxis_investment_game.game.asset import AssetState
-from aiml_pyxis_investment_game.game.game_state import GameEndReason
+from pyxis_portfolio_challenge.game.asset import AssetState
+from pyxis_portfolio_challenge.game.game_state import GameEndReason
 
 
 def test_composite_reward():
@@ -56,7 +56,7 @@ def test_legacy_static_npv_reward():
     post_step_game_state = MagicMock()
 
     with patch(
-        "aiml_pyxis_investment_game.environment.reward.legacy_static_npv"
+        "pyxis_portfolio_challenge.environment.reward.legacy_static_npv"
     ) as mock_legacy_static_npv:
         reward = LegacyStaticNPVReward()
         _ = reward.compute(

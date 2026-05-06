@@ -10,7 +10,7 @@ The repository provides a standardised environment with multiple baseline agents
 
 ## Play the Game
 
-Before building an agent, you can play the game yourself against a provided AI opponent at [gsk.ai/pyxis-investment-game](https://gsk.ai/pyxis-investment-game). This is the best way to develop an intuition for the environment dynamics — asset pipelines, trial outcomes, cash management, and competitive market timing.
+Before building an agent, you can play the game yourself against a provided AI opponent at [gsk.ai/pyxis-portfolio-challenge](https://gsk.ai/pyxis-portfolio-challenge). This is the best way to develop an intuition for the environment dynamics — asset pipelines, trial outcomes, cash management, and competitive market timing.
 
 ## Getting Started
 
@@ -29,13 +29,13 @@ Run a match from the CLI and generate a replay file:
 uv run pyxis knapsack(c12) random --seed 42 -o replay.json
 ```
 
-Upload `replay.json` to [gsk.ai/pyxis-investment-game](https://gsk.ai/pyxis-investment-game) to watch the replay in the browser.
+Upload `replay.json` to [gsk.ai/pyxis-portfolio-challenge](https://gsk.ai/pyxis-portfolio-challenge) to watch the replay in the browser.
 
 Or use the Python API to evaluate agents over multiple episodes:
 
 ```python
-from aiml_pyxis_investment_game.environment import make_multi_agent_train_env
-from aiml_pyxis_investment_game.environment.competition import evaluate
+from pyxis_portfolio_challenge.environment import make_multi_agent_train_env
+from pyxis_portfolio_challenge.environment.competition import evaluate
 
 env = make_multi_agent_train_env()
 reports, _, _ = evaluate(agents=["knapsack(c12)", "random"], num_episodes=100)
@@ -185,7 +185,7 @@ action["investments"] = my_decisions * masks["investments"]
 ### Creating the Environment
 
 ```python
-from aiml_pyxis_investment_game.environment import make_multi_agent_train_env
+from pyxis_portfolio_challenge.environment import make_multi_agent_train_env
 
 env = make_multi_agent_train_env()
 ```
@@ -229,7 +229,7 @@ while True:
 You can also pass your own callable as an opponent:
 
 ```python
-from aiml_pyxis_investment_game.agents import MultiAgentKnapsackAgent
+from pyxis_portfolio_challenge.agents import MultiAgentKnapsackAgent
 
 custom_opp = MultiAgentKnapsackAgent(agent_name="pharma_1", capacity=8)
 trainer = env.train([None, custom_opp])
@@ -268,7 +268,7 @@ For multi-episode statistical evaluation, use `evaluate()` below instead.
 Use the standalone `evaluate()` function. Agents can be strings or callables:
 
 ```python
-from aiml_pyxis_investment_game.environment.competition import evaluate
+from pyxis_portfolio_challenge.environment.competition import evaluate
 
 per_agent_reports, global_report, playthrough = evaluate(
     agents=[my_agent, "knapsack(c12)"],
@@ -310,8 +310,8 @@ Additional metrics cover BD deal activity (`PerEpisodeBDDealsWon`), first-mover 
 We provide optional self-play wrappers built on Stable-Baselines3 and MaskablePPO — this is how we trained the Pyxie agent. `SelfPlayWrapper` converts the PettingZoo env into a single-agent `gym.Env` where opponents use frozen policy copies, and `OpponentSyncCallback` keeps those copies in sync during training.
 
 ```python
-from aiml_pyxis_investment_game.environment import make_multi_agent_train_env, SelfPlayWrapper
-from aiml_pyxis_investment_game.environment.self_play import OpponentSyncCallback
+from pyxis_portfolio_challenge.environment import make_multi_agent_train_env, SelfPlayWrapper
+from pyxis_portfolio_challenge.environment.self_play import OpponentSyncCallback
 
 policy_kwargs = {"net_arch": [256, 256]}
 
@@ -322,7 +322,7 @@ wrapped = SelfPlayWrapper(env, policy_kwargs=policy_kwargs)
 # OpponentSyncCallback keeps opponent policy copies in sync during training
 ```
 
-See [`self_play.py`](aiml_pyxis_investment_game/environment/self_play.py) for full details.
+See [`self_play.py`](pyxis_portfolio_challenge/environment/self_play.py) for full details.
 
 ### How We Trained Pyxie
 

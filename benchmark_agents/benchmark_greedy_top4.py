@@ -14,12 +14,12 @@ import logging
 import os
 import sys
 
-from aiml_pyxis_investment_game import PROJECT_ROOT, logging_utils
-from aiml_pyxis_investment_game.config import config, instantiate_from_config
-from aiml_pyxis_investment_game.environment.multi_agent_evaluate import (
+from pyxis_portfolio_challenge import PROJECT_ROOT, logging_utils
+from pyxis_portfolio_challenge.config import config, instantiate_from_config
+from pyxis_portfolio_challenge.environment.multi_agent_evaluate import (
     parallel_evaluate_multi_agent,
 )
-from aiml_pyxis_investment_game.environment.multi_agent_training_gym import (
+from pyxis_portfolio_challenge.environment.multi_agent_training_gym import (
     MultiAgentInvestmentGameEnv,
 )
 

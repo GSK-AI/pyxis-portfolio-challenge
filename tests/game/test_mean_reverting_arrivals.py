@@ -7,9 +7,9 @@ from unittest.mock import MagicMock
 import pytest
 from scipy.stats import norm
 
-from aiml_pyxis_investment_game.config import CapacityConfig
-from aiml_pyxis_investment_game.game.asset_generators import JSONAssetGenerator
-from aiml_pyxis_investment_game.game.game_state import GameState
+from pyxis_portfolio_challenge.config import CapacityConfig
+from pyxis_portfolio_challenge.game.asset_generators import JSONAssetGenerator
+from pyxis_portfolio_challenge.game.game_state import GameState
 
 _DISABLED_RD_CAPACITY = CapacityConfig(
     enabled=False,

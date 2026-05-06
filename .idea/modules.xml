@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/aiml-pyxis-investment-game-pub.iml" filepath="$PROJECT_DIR$/.idea/aiml-pyxis-investment-game-pub.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/pyxis-portfolio-challenge-pub.iml" filepath="$PROJECT_DIR$/.idea/pyxis-portfolio-challenge-pub.iml" />
     </modules>
   </component>
 </project>

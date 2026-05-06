@@ -74,10 +74,10 @@ All environment parameters are driven by a central YAML config (`config.yaml`) v
 
 ### Key Directories
 
-- `aiml_pyxis_investment_game/` — core package (game logic, environment, agents, config)
-- `aiml_pyxis_investment_game/game/` — immutable game state, assets, trials, market state
-- `aiml_pyxis_investment_game/environment/` — Gymnasium/PettingZoo wrappers, reward, metrics, evaluation
-- `aiml_pyxis_investment_game/agents/` — agent implementations (Pyxie, Knapsack, etc.)
+- `pyxis_portfolio_challenge/` — core package (game logic, environment, agents, config)
+- `pyxis_portfolio_challenge/game/` — immutable game state, assets, trials, market state
+- `pyxis_portfolio_challenge/environment/` — Gymnasium/PettingZoo wrappers, reward, metrics, evaluation
+- `pyxis_portfolio_challenge/agents/` — agent implementations (Pyxie, Knapsack, etc.)
 - `train_multi_agent/` — multi-agent training scripts with Hydra configs
 - `app/` — FastAPI server for the interactive frontend
 - `frontend/` — Next.js frontend application

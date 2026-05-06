@@ -5,9 +5,9 @@ from typing import Optional
 import numpy as np
 import pytest
 
-from aiml_pyxis_investment_game.game.asset import AssetState, DrugAsset, revenue_formula
-from aiml_pyxis_investment_game.game.constants import DISCOUNT_RATE
-from aiml_pyxis_investment_game.game.trial import (
+from pyxis_portfolio_challenge.game.asset import AssetState, DrugAsset, revenue_formula
+from pyxis_portfolio_challenge.game.constants import DISCOUNT_RATE
+from pyxis_portfolio_challenge.game.trial import (
     Trial,
     TrialPhase,
     TrialState,

@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from aiml_pyxis_investment_game.game.trial import (
+from pyxis_portfolio_challenge.game.trial import (
     Trial,
     TrialPhase,
     TrialState,

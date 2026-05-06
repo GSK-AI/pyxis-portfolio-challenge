@@ -1,10 +1,10 @@
-from aiml_pyxis_investment_game.agents.knapsack import (
+from pyxis_portfolio_challenge.agents.knapsack import (
     DistributionalMCKAgent,
     KnapsackAgent,
     KnapsackWithStopAgent,
     MultipleChoiceKnapsackAgent,
 )
-from aiml_pyxis_investment_game.agents.multi_step_knapsack import MultiStepKnapsackAgent
+from pyxis_portfolio_challenge.agents.multi_step_knapsack import MultiStepKnapsackAgent
 
 from .do_nothing_agent import do_nothing_agent
 from .kelly_agent import (
