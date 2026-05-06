@@ -181,8 +181,8 @@ def main(agents, output, cfg_file, seed, agent_kwargs_list, names, log_level):
             agent_names[aid] = names[i]
             agent_labels[aid] = f"{names[i]} ({agent_type})"
         else:
-            agent_names[aid] = spec
-            agent_labels[aid] = spec
+            agent_names[aid] = aid
+            agent_labels[aid] = f"{aid} ({agent_type})"
 
     # Resolve agents
     agents_dict = {}
