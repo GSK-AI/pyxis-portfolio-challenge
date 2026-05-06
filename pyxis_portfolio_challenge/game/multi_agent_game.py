@@ -53,6 +53,8 @@ class MultiAgentGame(BaseModel):
     # Cached per-drug market shares from last step, keyed by agent.
     # Avoids recomputing in observation building.
     _cached_market_shares: dict[str, dict] = PrivateAttr(default_factory=dict)
+    # Optional display names for agents (agent_id -> display_name)
+    _display_names: dict[str, str] = PrivateAttr(default_factory=dict)
 
     @classmethod
     def initialise(
@@ -231,6 +233,11 @@ class MultiAgentGame(BaseModel):
             agent for agent, state in self.agent_states.items() if not state.game_ended
         ]
 
+    def _label(self, agent_id: str) -> str:
+        """Return display name for an agent, falling back to agent_id."""
+        name = self._display_names.get(agent_id)
+        return f"{name} ({agent_id})" if name else agent_id
+
     def step(
         self,
         investor_actions: dict[
@@ -385,6 +392,11 @@ class MultiAgentGame(BaseModel):
                 if agent_pricing:
                     all_pricing_multipliers.update(agent_pricing)
 
+        step_num = self.time + 1
+        active = [a for a in self.active_agents if not new_agent_states[a].game_ended]
+        active_labels = [self._label(a) for a in active]
+        logger.info(f"Step {step_num}/{self.horizon} — active agents: {', '.join(active_labels)}")
+
         for agent in self.active_agents:
             if new_agent_states[agent].game_ended:
                 continue
@@ -422,6 +434,13 @@ class MultiAgentGame(BaseModel):
                 pricing_multipliers=agent_pricing,
             )
             new_agent_states[agent] = new_state
+
+            if new_state.game_ended and not self.agent_states[agent].game_ended:
+                if new_state.bankrupt:
+                    logger.info(
+                        f"  {self._label(agent)} bankrupt at step {step_num}: "
+                        f"{new_state.ended_reason}"
+                    )
 
             # Detect phase transitions and generate leaks
             for asset_id, new_asset in new_state.assets.items():
@@ -495,6 +514,13 @@ class MultiAgentGame(BaseModel):
                     or {}
                 )
 
+        # Log final summary when game reaches horizon
+        if step_num >= self.horizon:
+            logger.info("Game complete — final standings:")
+            for agent, state in new_agent_states.items():
+                status = "BANKRUPT" if state.bankrupt else f"cash={state.cash:,.0f}"
+                logger.info(f"  {self._label(agent)}: {status}, eNPV={state.enpv():,.0f}")
+
         new_game = MultiAgentGame(
             agent_states=new_agent_states,
             shared_market=new_shared_market,
@@ -507,4 +533,5 @@ class MultiAgentGame(BaseModel):
         )
         new_game._rng = self._rng
         new_game._cached_market_shares = post_step_shares
+        new_game._display_names = self._display_names
         return new_game
