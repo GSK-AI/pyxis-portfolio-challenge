@@ -70,7 +70,6 @@ def evaluate_multi_agent(
     Returns:
         Tuple of:
         - Per-agent metrics: {agent_id: [EvaluationMetric, ...]}
-        - Global env metrics: [EvaluationMetric, ...]
         - PlaythroughData if capture_playthrough=True, else None
 
     """
@@ -95,15 +94,9 @@ def evaluate_multi_agent(
             instantiate_from_config(m) for m in cfg.evaluation_metrics
         ]
 
-    # Global metrics for the whole environment
-    global_metrics: list[EvaluationMetric] = [
-        instantiate_from_config(m) for m in cfg.evaluation_metrics
-    ]
-
     # Begin evaluation
     for metrics_list in agent_metrics.values():
         collect_metrics("on_evaluation_begin", metrics=metrics_list, context=None)
-    collect_metrics("on_evaluation_begin", metrics=global_metrics, context=None)
 
     base_seed = cfg.eval_initial_seed
     for local_idx in range(episodes_per_worker):
@@ -257,7 +250,6 @@ def evaluate_multi_agent(
     # End evaluation
     for metrics_list in agent_metrics.values():
         collect_metrics("on_evaluation_end", metrics=metrics_list, context=None)
-    collect_metrics("on_evaluation_end", metrics=global_metrics, context=None)
 
     # Build playthrough data if capturing
     playthrough: PlaythroughData | None = None
@@ -271,7 +263,7 @@ def evaluate_multi_agent(
             agent_names=agent_names,
         )
 
-    return agent_metrics, global_metrics, playthrough
+    return agent_metrics, playthrough
 
 
 def parallel_evaluate_multi_agent(
@@ -282,7 +274,7 @@ def parallel_evaluate_multi_agent(
     capture_playthrough: bool = False,
     agent_names: dict[str, str] | None = None,
     num_episodes: int | None = None,
-) -> tuple[dict[str, dict[str, Any]], dict[str, Any], dict | None]:
+) -> tuple[dict[str, dict[str, Any]], dict | None]:
     """
     Evaluate agents in parallel using multiple worker processes.
 
@@ -300,7 +292,6 @@ def parallel_evaluate_multi_agent(
     Returns:
         Tuple of:
         - Per-agent reported metrics: {agent_id: {metric_name: value}}
-        - Global reported metrics: {metric_name: value}
         - Playthrough dict (JSON-serializable) if capture_playthrough=True, else None
 
     """
@@ -320,7 +311,7 @@ def parallel_evaluate_multi_agent(
             )
 
     if num_workers == 1:
-        agent_metrics, global_metrics, playthrough = evaluate_multi_agent(
+        agent_metrics, playthrough = evaluate_multi_agent(
             agents,
             worker_id=0,
             episodes_per_worker=total_episodes,
@@ -332,11 +323,8 @@ def parallel_evaluate_multi_agent(
         per_agent_reports = {}
         for agent_id, metrics in agent_metrics.items():
             per_agent_reports[agent_id] = report_all_metrics(metrics)
-        # Global metrics are not populated with episode data in
-        # evaluate_multi_agent, so reporting them would fail.
-        global_report: list[dict[str, Any]] = []
         playthrough_dict = playthrough.model_dump(mode="json") if playthrough else None
-        return per_agent_reports, global_report, playthrough_dict
+        return per_agent_reports, playthrough_dict
 
     with ProcessPoolExecutor(max_workers=num_workers) as pool:
         futures = [
@@ -352,16 +340,14 @@ def parallel_evaluate_multi_agent(
         ]
 
         all_agent_metrics: dict[str, list[list[EvaluationMetric]]] = {}
-        all_global_metrics: list[list[EvaluationMetric]] = []
 
         with tqdm(total=num_workers, desc="Workers", unit="worker") as pbar:
             for future in as_completed(futures):
-                agent_metrics, global_metrics, _ = future.result()
+                agent_metrics, _ = future.result()
                 for agent_id, metrics in agent_metrics.items():
                     if agent_id not in all_agent_metrics:
                         all_agent_metrics[agent_id] = []
                     all_agent_metrics[agent_id].append(metrics)
-                all_global_metrics.append(global_metrics)
                 pbar.update(1)
 
     # Merge per-agent metrics across workers
@@ -370,8 +356,4 @@ def parallel_evaluate_multi_agent(
         merged = merge_all_metrics(metrics_lists)
         per_agent_reports[agent_id] = report_all_metrics(merged)
 
-    # Global metrics are not populated with episode data in evaluate_multi_agent,
-    # so merging them would fail. Return empty global report.
-    global_report: list[dict[str, Any]] = []
-
-    return per_agent_reports, global_report, None
+    return per_agent_reports, None
