@@ -77,7 +77,7 @@ def resolve_bd_bid(
         rng.shuffle(top_bidders)
 
     winner_agent, _, winner_price = top_bidders[0]
-    logger.info(
+    logger.debug(
         f"BD Auction: {winner_agent} wins {asset.name} "
         f"(level {highest_level}/{num_levels - 1}, price ${winner_price:,.0f})"
     )

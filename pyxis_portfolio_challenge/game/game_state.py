@@ -923,10 +923,11 @@ class GameState(BaseModel):
                 normalized_actions[asset_id] = action
             # None or missing = no action
 
-        # Log TA experience at start of step
-        logger.info("TA Experience (post-decay from previous step):")
-        for ta, exp in sorted(self.ta_experience.items()):
-            logger.info(f"  {ta}: {exp:.4f}")
+        # Log TA experience at start of step (only when enabled)
+        if self._ta_experience_config is not None and self._ta_experience_config.enabled:
+            logger.info("TA Experience (post-decay from previous step):")
+            for ta, exp in sorted(self.ta_experience.items()):
+                logger.info(f"  {ta}: {exp:.4f}")
 
         logger.debug("Current game state before step:")
         logger.debug(
