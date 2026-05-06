@@ -26,7 +26,7 @@ uv sync
 Run a match from the CLI and generate a replay file:
 
 ```bash
-uv run pyxis knapsack(c12) random --seed 42 -o replay.json
+uv run pyxis 'knapsack(c12)' random --seed 42 -o replay.json
 ```
 
 Upload `replay.json` to [gsk.ai/pyxis-portfolio-challenge](https://gsk.ai/pyxis-portfolio-challenge) to watch the replay in the browser.
@@ -58,13 +58,13 @@ Run matches from the command line with `pyxis`. Specify two agents by name or sc
 
 ```bash
 # Named agents
-uv run pyxis knapsack(c12) random --seed 42
+uv run pyxis 'knapsack(c12)' random --seed 42
 
 # Custom agent script vs named agent
-uv run pyxis ./my_bot.py knapsack(c12) -o replay.json
+uv run pyxis ./my_bot.py 'knapsack(c12)' -o replay.json
 
 # Export replay with custom display names
-uv run pyxis knapsack(c12) random -o replay.json -n "Alpha" -n "Beta"
+uv run pyxis 'knapsack(c12)' random -o replay.json -n "Alpha" -n "Beta"
 ```
 
 Custom agent scripts must define a `create_agent(agent_name, **kwargs)` factory function returning a callable with an optional `set_env(env)` method.

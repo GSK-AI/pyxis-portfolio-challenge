@@ -92,6 +92,7 @@ def _run_with_replay(agents_dict, env_kwargs, seed, agent_names):
         env_kwargs=env_kwargs,
         capture_playthrough=True,
         agent_names=agent_names,
+        seed=seed,
     )
     return playthrough
 
