@@ -912,7 +912,7 @@ class GameState(BaseModel):
             GameState: New game state.
 
         """
-        logger.info(f"STARTING STEP: {self.time + 1} out of {self.horizon}")
+        logger.debug(f"STARTING STEP: {self.time + 1} out of {self.horizon}")
 
         # Convert legacy "invest" actions to InvestmentLevel.STANDARD
         normalized_actions: dict[uuid.UUID, InvestmentLevel] = {}
@@ -990,7 +990,7 @@ class GameState(BaseModel):
             current_realised_cost += cost
 
         if current_cash <= 0.0:
-            logger.info(f"GAME ENDED: {GameEndReason.ONGOING_INVESTMENTS.value}")
+            logger.debug(f"GAME ENDED: {GameEndReason.ONGOING_INVESTMENTS.value}")
             return self._create_ended_state(
                 current_cash, GameEndReason.ONGOING_INVESTMENTS, self.assets
             )
@@ -1054,7 +1054,7 @@ class GameState(BaseModel):
                     )
 
         if current_cash < 0.0:
-            logger.info(f"GAME ENDED: {GameEndReason.NEW_INVESTMENTS.value}")
+            logger.debug(f"GAME ENDED: {GameEndReason.NEW_INVESTMENTS.value}")
             return self._create_ended_state(
                 current_cash, GameEndReason.NEW_INVESTMENTS, assets_for_step
             )
@@ -1270,7 +1270,7 @@ class GameState(BaseModel):
         # check horizon
         if current_time >= self.horizon:
             # Game ended return game state with status ended and reason
-            logger.info(f"GAME ENDED: {GameEndReason.HORIZON_REACHED.value}")
+            logger.debug(f"GAME ENDED: {GameEndReason.HORIZON_REACHED.value}")
             final_state = GameState(
                 id=self.id,
                 cash=current_cash,
@@ -1316,7 +1316,7 @@ class GameState(BaseModel):
             return final_state._post_init_update_enpv_eroi()
 
         # otherwise return new game state
-        logger.info(f"COMPLETED STEP: {current_time} out of {self.horizon}")
+        logger.debug(f"COMPLETED STEP: {current_time} out of {self.horizon}")
         new_game_state = GameState(
             id=self.id,
             cash=current_cash,
