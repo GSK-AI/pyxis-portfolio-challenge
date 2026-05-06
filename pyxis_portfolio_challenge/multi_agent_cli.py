@@ -50,7 +50,7 @@ def resolve_agent(spec, agent_name, **kwargs):
     return _load_agent_from_script(spec, agent_name, **kwargs)
 
 
-def _run_simple(agents_dict, env_kwargs, seed):
+def _run_simple(agents_dict, env_kwargs, seed, agent_names=None):
     """Run a single episode without replay capture (no app dependency)."""
     from pyxis_portfolio_challenge.environment.multi_agent_training_gym import (
         MultiAgentInvestmentGameEnv,
@@ -58,6 +58,9 @@ def _run_simple(agents_dict, env_kwargs, seed):
 
     env = MultiAgentInvestmentGameEnv(**env_kwargs)
     observations, _infos = env.reset(seed=seed)
+
+    if agent_names:
+        env.multi_agent_game._display_names = agent_names
 
     for agent in agents_dict.values():
         if callable(getattr(agent, "set_env", None)):
@@ -206,7 +209,7 @@ def main(agents, output, cfg_file, seed, agent_kwargs_list, names, log_level):
             f.write(playthrough.model_dump_json(indent=2))
         logger.info(f"Replay written to {output}")
     else:
-        env = _run_simple(agents_dict, env_kwargs, seed)
+        env = _run_simple(agents_dict, env_kwargs, seed, agent_names)
         game = env.multi_agent_game
         logger.info("Match complete.")
         for aid in agent_ids:
