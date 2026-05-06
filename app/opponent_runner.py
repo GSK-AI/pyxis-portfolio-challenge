@@ -11,12 +11,12 @@ import uuid
 
 import numpy as np
 
-from aiml_pyxis_investment_game import config as cfg_module
-from aiml_pyxis_investment_game.agents.knapsack import KnapsackAgent
-from aiml_pyxis_investment_game.agents.utils import get_agent_investment_decisions
-from aiml_pyxis_investment_game.game.asset import AssetState
-from aiml_pyxis_investment_game.game.constants import InvestmentLevel
-from aiml_pyxis_investment_game.game.multi_agent_game import MultiAgentGame
+from pyxis_portfolio_challenge import config as cfg_module
+from pyxis_portfolio_challenge.agents.knapsack import KnapsackAgent
+from pyxis_portfolio_challenge.agents.utils import get_agent_investment_decisions
+from pyxis_portfolio_challenge.game.asset import AssetState
+from pyxis_portfolio_challenge.game.constants import InvestmentLevel
+from pyxis_portfolio_challenge.game.multi_agent_game import MultiAgentGame
 
 logger = logging.getLogger(__name__)
 
@@ -150,7 +150,7 @@ def _get_inference_env(num_agents: int):
     if num_agents in _inference_envs:
         return _inference_envs[num_agents]
 
-    from aiml_pyxis_investment_game.environment.multi_agent_training_gym import (
+    from pyxis_portfolio_challenge.environment.multi_agent_training_gym import (
         MultiAgentInvestmentGameEnv,
     )
 
@@ -220,12 +220,12 @@ def _get_pyxie_agent(agent_name: str):
 
     from pathlib import Path
 
-    from aiml_pyxis_investment_game.agents.multi_agent_pyxie import (
+    from pyxis_portfolio_challenge.agents.multi_agent_pyxie import (
         MultiAgentPyxieAgent,
     )
 
     model_dir = Path(__file__).parent.parent / (
-        "aiml_pyxis_investment_game/agents/saved_multi_agent_model"
+        "pyxis_portfolio_challenge/agents/saved_multi_agent_model"
     )
     agent = MultiAgentPyxieAgent(
         agent_name=agent_name,

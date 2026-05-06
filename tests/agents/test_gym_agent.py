@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
-from aiml_pyxis_investment_game.agents.pyxie import (
+from pyxis_portfolio_challenge.agents.pyxie import (
     InferenceNormalizer,
     PyxieAgent,
 )
@@ -106,7 +106,7 @@ def test_inference_normalizer_clipping(dummy_vecnorm_path):
 
 # --- Tests for PyxieAgent ---
 
-@patch("aiml_pyxis_investment_game.agents.pyxie.download_file")
+@patch("pyxis_portfolio_challenge.agents.pyxie.download_file")
 def test_pyxie_agent_initialization(mock_download, mock_algorithm,
                                     dummy_vecnorm_path):
     """Test that the agent initializes the model and normalizer."""
@@ -130,7 +130,7 @@ def test_pyxie_agent_initialization(mock_download, mock_algorithm,
     assert np.allclose(agent.normalizer.obs_rms.mean, [10.0, 10.0])
 
 
-@patch("aiml_pyxis_investment_game.agents.pyxie.download_file")
+@patch("pyxis_portfolio_challenge.agents.pyxie.download_file")
 def test_pyxie_agent_call_flow(
         mock_download,
         mock_algorithm,

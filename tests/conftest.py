@@ -4,16 +4,16 @@ import uuid
 
 import pytest
 
-from aiml_pyxis_investment_game import PROJECT_ROOT
-from aiml_pyxis_investment_game.config import CapacityConfig
-from aiml_pyxis_investment_game.game.asset import AssetState, DrugAsset
-from aiml_pyxis_investment_game.game.asset_generators import (
+from pyxis_portfolio_challenge import PROJECT_ROOT
+from pyxis_portfolio_challenge.config import CapacityConfig
+from pyxis_portfolio_challenge.game.asset import AssetState, DrugAsset
+from pyxis_portfolio_challenge.game.asset_generators import (
     DUMMY_LIST_DATA,
     FixedListAssetGenerator,
     JSONAssetGenerator,
 )
-from aiml_pyxis_investment_game.game.game_state import GameState
-from aiml_pyxis_investment_game.game.trial import (
+from pyxis_portfolio_challenge.game.game_state import GameState
+from pyxis_portfolio_challenge.game.trial import (
     Trial,
     TrialPhase,
     TrialState,

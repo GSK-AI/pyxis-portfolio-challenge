@@ -8,7 +8,7 @@ Bids on BD assets at 50% eNPV if affordable.
 
 import numpy as np
 
-from aiml_pyxis_investment_game.game.asset import AssetState
+from pyxis_portfolio_challenge.game.asset import AssetState
 
 
 class MultiAgentGreedyAgent:

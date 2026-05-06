@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "aiml-pyxis-investment-game"
+name = "pyxis-portfolio-challenge"
 version = "0.1.0"
 description = "Pyxis Portfolio Challenge."
 readme = "README.md"
@@ -50,7 +50,7 @@ include = ["*"]  # Include all packages
 namespaces = false
 
 [project.scripts]
-pyxis = "aiml_pyxis_investment_game.multi_agent_cli:main"
+pyxis = "pyxis_portfolio_challenge.multi_agent_cli:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -1,5 +1,5 @@
-from aiml_pyxis_investment_game.game.asset import AssetState
-from aiml_pyxis_investment_game.game.trial import TrialPhase, TrialState
+from pyxis_portfolio_challenge.game.asset import AssetState
+from pyxis_portfolio_challenge.game.trial import TrialPhase, TrialState
 from app.endpoint_datamodels import (
     asset_to_response,
     game_state_to_response,

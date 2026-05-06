@@ -3,8 +3,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from aiml_pyxis_investment_game.environment.metrics import MetricsContext
-from aiml_pyxis_investment_game.environment.multi_agent_metrics import (
+from pyxis_portfolio_challenge.environment.metrics import MetricsContext
+from pyxis_portfolio_challenge.environment.multi_agent_metrics import (
     PerEpisodeBDDealsWon,
     PerEpisodeDrugReleases,
     PerEpisodeIndicationSpread,
@@ -29,8 +29,8 @@ from aiml_pyxis_investment_game.environment.multi_agent_metrics import (
     PerStepRelativeEnpv,
     PerStepTotalOnMarketPerIndication,
 )
-from aiml_pyxis_investment_game.game.asset import AssetState
-from aiml_pyxis_investment_game.game.shared_market_state import (
+from pyxis_portfolio_challenge.game.asset import AssetState
+from pyxis_portfolio_challenge.game.shared_market_state import (
     Alert,
     AlertType,
     IndicationMarketState,
@@ -894,7 +894,7 @@ class TestPerStepMeanMarketShare:
 
         from unittest.mock import patch
         with patch(
-            "aiml_pyxis_investment_game.environment.market_mechanics"
+            "pyxis_portfolio_challenge.environment.market_mechanics"
             ".calculate_agent_market_shares",
             return_value=mock_shares,
         ):

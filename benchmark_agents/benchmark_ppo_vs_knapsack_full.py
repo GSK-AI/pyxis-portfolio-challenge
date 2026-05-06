@@ -13,16 +13,16 @@ import numpy as np
 import torch
 from sb3_contrib import MaskablePPO
 
-from aiml_pyxis_investment_game import PROJECT_ROOT, logging_utils
-from aiml_pyxis_investment_game.config import config, instantiate_from_config
-from aiml_pyxis_investment_game.environment.metrics import (
+from pyxis_portfolio_challenge import PROJECT_ROOT, logging_utils
+from pyxis_portfolio_challenge.config import config, instantiate_from_config
+from pyxis_portfolio_challenge.environment.metrics import (
     MetricsContext,
     collect_metrics,
 )
-from aiml_pyxis_investment_game.environment.multi_agent_training_gym import (
+from pyxis_portfolio_challenge.environment.multi_agent_training_gym import (
     MultiAgentInvestmentGameEnv,
 )
-from aiml_pyxis_investment_game.environment.warmup_wrapper import (
+from pyxis_portfolio_challenge.environment.warmup_wrapper import (
     MultiAgentWarmupOnResetWrapper,
 )
 

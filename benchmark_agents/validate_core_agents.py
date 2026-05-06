@@ -13,17 +13,17 @@ import time
 
 import numpy as np
 
-from aiml_pyxis_investment_game import PROJECT_ROOT, logging_utils
-from aiml_pyxis_investment_game.agents.multi_agent_knapsack import (
+from pyxis_portfolio_challenge import PROJECT_ROOT, logging_utils
+from pyxis_portfolio_challenge.agents.multi_agent_knapsack import (
     MultiAgentKnapsackAgent,
 )
-from aiml_pyxis_investment_game.agents.multi_agent_pyxie import MultiAgentPyxieAgent
-from aiml_pyxis_investment_game.config import config, instantiate_from_config
-from aiml_pyxis_investment_game.environment.multi_agent_evaluate import (
+from pyxis_portfolio_challenge.agents.multi_agent_pyxie import MultiAgentPyxieAgent
+from pyxis_portfolio_challenge.config import config, instantiate_from_config
+from pyxis_portfolio_challenge.environment.multi_agent_evaluate import (
     evaluate_multi_agent,
     parallel_evaluate_multi_agent,
 )
-from aiml_pyxis_investment_game.environment.multi_agent_training_gym import (
+from pyxis_portfolio_challenge.environment.multi_agent_training_gym import (
     MultiAgentInvestmentGameEnv,
 )
 
@@ -173,7 +173,7 @@ def run_ppo_vs_knapsack():
 
     model_dir = (
         PROJECT_ROOT
-        / "aiml_pyxis_investment_game"
+        / "pyxis_portfolio_challenge"
         / "agents"
         / "saved_multi_agent_model"
     )
@@ -214,7 +214,7 @@ def run_ppo_vs_knapsack():
     )
     elapsed = time.time() - t0
 
-    from aiml_pyxis_investment_game.environment.metrics import report_all_metrics
+    from pyxis_portfolio_challenge.environment.metrics import report_all_metrics
 
     print(f"\nCompleted in {elapsed:.1f}s")
 

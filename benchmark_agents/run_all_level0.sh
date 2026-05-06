@@ -41,7 +41,7 @@ echo "Running knapsack benchmark..."
 python "${SCRIPT_DIR}/benchmark.py" legacy_knapsack_agent --output "$OUTPUT/knapsack.json"
 
 echo "Copying evaluation config..."
-cp "${SCRIPT_DIR}/../aiml_pyxis_investment_game/config.yaml" "$OUTPUT"
+cp "${SCRIPT_DIR}/../pyxis_portfolio_challenge/config.yaml" "$OUTPUT"
 
 echo "All benchmarks completed successfully."
 

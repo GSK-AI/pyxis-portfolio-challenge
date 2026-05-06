@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 from gymnasium.wrappers import FlattenObservation
 
-from aiml_pyxis_investment_game.config import (
+from pyxis_portfolio_challenge.config import (
     CapacityConfig,
     DistributionalPtrsConfig,
     InterimTrialObservationsConfig,
@@ -17,24 +17,24 @@ from aiml_pyxis_investment_game.config import (
     TAExperienceConfig,
     UncertainPtrsConfig,
 )
-from aiml_pyxis_investment_game.environment.metrics import legacy_static_npv
-from aiml_pyxis_investment_game.environment.obs_layout import (
+from pyxis_portfolio_challenge.environment.metrics import legacy_static_npv
+from pyxis_portfolio_challenge.environment.obs_layout import (
     NUM_TRIAL_PHASES,
     ObsLayout,
 )
-from aiml_pyxis_investment_game.environment.reward import LegacyStaticNPVReward
-from aiml_pyxis_investment_game.environment.training_gym import (
+from pyxis_portfolio_challenge.environment.reward import LegacyStaticNPVReward
+from pyxis_portfolio_challenge.environment.training_gym import (
     InvestmentGameEnv,
     LevelsInvestmentGameEnv,
 )
-from aiml_pyxis_investment_game.game.asset import AssetState
-from aiml_pyxis_investment_game.game.constants import (
+from pyxis_portfolio_challenge.game.asset import AssetState
+from pyxis_portfolio_challenge.game.constants import (
     LEVELS,
     MAX_NUM_ASSETS,
     TRIAL_PHASES,
 )
-from aiml_pyxis_investment_game.game.trial import Trial, TrialPhase, TrialState
-from aiml_pyxis_investment_game import PROJECT_ROOT
+from pyxis_portfolio_challenge.game.trial import Trial, TrialPhase, TrialState
+from pyxis_portfolio_challenge import PROJECT_ROOT
 from tests.game.test_asset import drug_asset_factory
 
 _TEST_ASSETS_DIR = PROJECT_ROOT / "tests" / "data" / "generated_assets"
@@ -454,7 +454,7 @@ def test_action_masks_mixed_states(test_env):
 
 
 def test_binary_masking(test_env):
-    with patch("aiml_pyxis_investment_game.environment.training_gym.InvestmentGameEnv.action_masks") as mock_action_masks:
+    with patch("pyxis_portfolio_challenge.environment.training_gym.InvestmentGameEnv.action_masks") as mock_action_masks:
         # Mock action mask to have incorrect size
         mock_action_masks.return_value = [[True, True], [True, False], [False, False]]  # Only 2 assets
 
@@ -1038,7 +1038,7 @@ def test_env_reset_calls_collect_metrics_on_episode_begin(test_env):
     mock_metric = MagicMock()
     test_env.metrics = [mock_metric]
 
-    with patch("aiml_pyxis_investment_game.environment.training_gym.collect_metrics") as collect_metrics:
+    with patch("pyxis_portfolio_challenge.environment.training_gym.collect_metrics") as collect_metrics:
         test_env.reset()
         collect_metrics.assert_called_once_with(
             collection_fn="on_episode_begin",
@@ -1049,7 +1049,7 @@ def test_env_step_calls_collect_metrics_on_step_begin(test_env):
     mock_metric = MagicMock()
     test_env.metrics = [mock_metric]
 
-    with patch("aiml_pyxis_investment_game.environment.training_gym.collect_metrics") as collect_metrics:
+    with patch("pyxis_portfolio_challenge.environment.training_gym.collect_metrics") as collect_metrics:
         test_env.step(np.array([0]*25))
         collect_metrics.assert_any_call(
             collection_fn="on_step_begin",
@@ -1060,7 +1060,7 @@ def test_env_step_calls_collect_metrics_on_step_end(test_env):
     mock_metric = MagicMock()
     test_env.metrics = [mock_metric]
 
-    with patch("aiml_pyxis_investment_game.environment.training_gym.collect_metrics") as collect_metrics:
+    with patch("pyxis_portfolio_challenge.environment.training_gym.collect_metrics") as collect_metrics:
         test_env.step(np.array([0]*25))
         collect_metrics.assert_any_call(
             collection_fn="on_step_end",
@@ -1092,7 +1092,7 @@ def test_env_step_calls_collect_metrics_on_episode_end_when_terminated(test_env)
     test_env.game_state.game_ended = True
     test_env.game_state.cash = -100_000_000
 
-    with patch("aiml_pyxis_investment_game.environment.training_gym.collect_metrics") as collect_metrics:
+    with patch("pyxis_portfolio_challenge.environment.training_gym.collect_metrics") as collect_metrics:
         test_env.step(np.array([0]*25))
         collect_metrics.assert_any_call(
             collection_fn="on_episode_end",

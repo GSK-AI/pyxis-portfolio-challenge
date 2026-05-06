@@ -3,13 +3,13 @@ import random
 
 import pytest
 
-from aiml_pyxis_investment_game.agents.knapsack import (
+from pyxis_portfolio_challenge.agents.knapsack import (
     KnapsackAgent,
     delta_npv,
 )
-from aiml_pyxis_investment_game.game.asset import AssetState
-from aiml_pyxis_investment_game.game.constants import DISCOUNT_RATE
-from aiml_pyxis_investment_game.game.trial import Trial, TrialPhase, TrialState
+from pyxis_portfolio_challenge.game.asset import AssetState
+from pyxis_portfolio_challenge.game.constants import DISCOUNT_RATE
+from pyxis_portfolio_challenge.game.trial import Trial, TrialPhase, TrialState
 from tests.game.test_asset import drug_asset_factory
 
 

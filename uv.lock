@@ -16,7 +16,7 @@ wheels = [
 ]
 
 [[package]]
-name = "aiml-pyxis-investment-game"
+name = "pyxis-portfolio-challenge"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

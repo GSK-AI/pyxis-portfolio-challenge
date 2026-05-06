@@ -15,12 +15,12 @@ import click
 import numpy as np
 from tqdm import tqdm
 
-from aiml_pyxis_investment_game import PROJECT_ROOT, logging_utils
-from aiml_pyxis_investment_game.config import config, instantiate_from_config
-from aiml_pyxis_investment_game.environment.multi_agent_training_gym import (
+from pyxis_portfolio_challenge import PROJECT_ROOT, logging_utils
+from pyxis_portfolio_challenge.config import config, instantiate_from_config
+from pyxis_portfolio_challenge.environment.multi_agent_training_gym import (
     MultiAgentInvestmentGameEnv,
 )
-from aiml_pyxis_investment_game.environment.warmup_wrapper import (
+from pyxis_portfolio_challenge.environment.warmup_wrapper import (
     MultiAgentWarmupOnResetWrapper,
 )
 
@@ -37,9 +37,9 @@ def _run_single_agent_worker(
     base_seed: int,
 ) -> list[dict]:
     """Worker function for parallel single-agent evaluation."""
-    from aiml_pyxis_investment_game.agents.knapsack import KnapsackAgent
-    from aiml_pyxis_investment_game.environment.training_gym import InvestmentGameEnv
-    from aiml_pyxis_investment_game.environment.warmup_wrapper import (
+    from pyxis_portfolio_challenge.agents.knapsack import KnapsackAgent
+    from pyxis_portfolio_challenge.environment.training_gym import InvestmentGameEnv
+    from pyxis_portfolio_challenge.environment.warmup_wrapper import (
         WarmupOnResetWrapper,
     )
 

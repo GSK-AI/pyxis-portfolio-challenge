@@ -2,12 +2,12 @@
 
 import uuid
 
-from aiml_pyxis_investment_game.agents import get_agent
-from aiml_pyxis_investment_game.agents.utils import (
+from pyxis_portfolio_challenge.agents import get_agent
+from pyxis_portfolio_challenge.agents.utils import (
     get_agent_investment_decisions,
     get_all_agents_investment_decisions,
 )
-from aiml_pyxis_investment_game.config import CapacityConfig
+from pyxis_portfolio_challenge.config import CapacityConfig
 
 
 def test_get_agent_investment_decisions_knapsack(
@@ -117,8 +117,8 @@ def test_get_all_agents_investment_decisions(
 
 def test_get_agent_investment_decisions_empty_game_state(valid_json_assets_path):
     """Test with a game state that has no investable assets."""
-    from aiml_pyxis_investment_game.game.asset_generators import JSONAssetGenerator
-    from aiml_pyxis_investment_game.game.game_state import GameState
+    from pyxis_portfolio_challenge.game.asset_generators import JSONAssetGenerator
+    from pyxis_portfolio_challenge.game.game_state import GameState
 
     # Create a game state with all assets in non-idle state
     game_state = GameState.initialise_new_game(

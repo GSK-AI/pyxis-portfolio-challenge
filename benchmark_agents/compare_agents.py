@@ -14,7 +14,7 @@ from plotting import (
     plot_per_step_timeseries,
 )
 
-from aiml_pyxis_investment_game.file_io import load_json
+from pyxis_portfolio_challenge.file_io import load_json
 
 
 def compare_per_evaluation_metrics(

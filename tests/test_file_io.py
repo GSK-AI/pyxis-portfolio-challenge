@@ -1,7 +1,7 @@
 import json
 
-from aiml_pyxis_investment_game import PROJECT_ROOT
-from aiml_pyxis_investment_game.file_io import _load_bytes_bulk, load_json_bulk
+from pyxis_portfolio_challenge import PROJECT_ROOT
+from pyxis_portfolio_challenge.file_io import _load_bytes_bulk, load_json_bulk
 
 TEST_JSON_DIR = PROJECT_ROOT / "tests" / "data" / "file_io"
 

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="Black">
-    <option name="sdkName" value="uv (aiml-pyxis-investment-game-pub)" />
+    <option name="sdkName" value="uv (pyxis-portfolio-challenge-pub)" />
   </component>
-  <component name="ProjectRootManager" version="2" project-jdk-name="uv (aiml-pyxis-investment-game-pub)" project-jdk-type="Python SDK" />
+  <component name="ProjectRootManager" version="2" project-jdk-name="uv (pyxis-portfolio-challenge-pub)" project-jdk-type="Python SDK" />
 </project>

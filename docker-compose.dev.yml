@@ -41,7 +41,7 @@ services:
       APP_USE_LOCAL_REDIS: "true"
     volumes:
       # Mount source code for hot reload
-      - ./aiml_pyxis_investment_game:/app/aiml_pyxis_investment_game
+      - ./pyxis_portfolio_challenge:/app/pyxis_portfolio_challenge
       - ./app:/app/app
       # Mount RL environment assets
       - ./rl-environment-assets:/app/rl-environment-assets:ro

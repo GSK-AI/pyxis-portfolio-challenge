@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 import upath
 
-from aiml_pyxis_investment_game.config import (
+from pyxis_portfolio_challenge.config import (
     ApprovalPhaseConfig,
     CapacityConfig,
     DistributionalPtrsConfig,
@@ -18,23 +18,23 @@ from aiml_pyxis_investment_game.config import (
     TAExperienceConfig,
     UncertainPtrsConfig,
 )
-from aiml_pyxis_investment_game.environment.market_mechanics import (
+from pyxis_portfolio_challenge.environment.market_mechanics import (
     calculate_agent_market_shares,
 )
-from aiml_pyxis_investment_game.environment.multi_agent_reward import (
+from pyxis_portfolio_challenge.environment.multi_agent_reward import (
     AbsolutePerformanceReward,
     RelativeRankReward,
     ZeroSumReward,
     create_reward_function,
 )
-from aiml_pyxis_investment_game.environment.multi_agent_training_gym import (
+from pyxis_portfolio_challenge.environment.multi_agent_training_gym import (
     _ALERT_FEATURES,
     _BD_OBS_FEATURES_PER_SLOT,
     _INDICATION_FEATURES,
     MultiAgentInvestmentGameEnv,
 )
-from aiml_pyxis_investment_game.environment.reward import NetCashFlowReward
-from aiml_pyxis_investment_game.game.shared_market_state import (
+from pyxis_portfolio_challenge.environment.reward import NetCashFlowReward
+from pyxis_portfolio_challenge.game.shared_market_state import (
     THERAPEUTIC_AREAS,
     AlertType,
     SharedMarketState,
@@ -300,7 +300,7 @@ class TestActionMasks:
             for i, asset_id in enumerate(asset_order):
                 if asset_id is not None and asset_id in game_state.assets:
                     asset = game_state.assets[asset_id]
-                    from aiml_pyxis_investment_game.game.asset import AssetState
+                    from pyxis_portfolio_challenge.game.asset import AssetState
 
                     if asset.state == AssetState.Idle:
                         assert masks["investments"][i] == 1
@@ -391,7 +391,7 @@ class TestSharedMarketState:
 
     def test_alerts(self):
         state = SharedMarketState.initialize(**_SHARED_MARKET_DEFAULTS)
-        from aiml_pyxis_investment_game.game.shared_market_state import Alert
+        from pyxis_portfolio_challenge.game.shared_market_state import Alert
 
         alert = Alert(
             step=0,

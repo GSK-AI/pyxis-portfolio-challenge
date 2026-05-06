@@ -1,4 +1,4 @@
-from aiml_pyxis_investment_game import PROJECT_ROOT, config
+from pyxis_portfolio_challenge import PROJECT_ROOT, config
 
 
 def test_config_loading():
@@ -13,7 +13,7 @@ def test_config_loading():
 
 
 def test_from_yaml_default_arg_loads_correct_file():
-    default_path = f"{PROJECT_ROOT}/aiml_pyxis_investment_game/config.yaml"
+    default_path = f"{PROJECT_ROOT}/pyxis_portfolio_challenge/config.yaml"
     cfg1 = config.from_yaml()
     cfg2 = config.from_yaml(path=default_path)
     assert cfg1 == cfg2

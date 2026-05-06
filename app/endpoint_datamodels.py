@@ -4,17 +4,17 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel
 
-from aiml_pyxis_investment_game.game.asset import AssetState, DrugAsset
-from aiml_pyxis_investment_game.game.constants import InvestmentLevel
-from aiml_pyxis_investment_game.game.game_state import GameState
-from aiml_pyxis_investment_game.game.multi_agent_game import MultiAgentGame
-from aiml_pyxis_investment_game.game.shared_market_state import (
+from pyxis_portfolio_challenge.game.asset import AssetState, DrugAsset
+from pyxis_portfolio_challenge.game.constants import InvestmentLevel
+from pyxis_portfolio_challenge.game.game_state import GameState
+from pyxis_portfolio_challenge.game.multi_agent_game import MultiAgentGame
+from pyxis_portfolio_challenge.game.shared_market_state import (
     Alert,
     AlertType,
     IndicationMarketState,
     indication_key,
 )
-from aiml_pyxis_investment_game.game.trial import Trial, TrialPhase, TrialState
+from pyxis_portfolio_challenge.game.trial import Trial, TrialPhase, TrialState
 
 logger = logging.getLogger(__name__)
 
@@ -393,7 +393,7 @@ def indication_market_to_response(
 
 def _compute_bd_bid_prices(game: MultiAgentGame) -> list[list[float]]:
     """Compute per-asset bid prices: outer list = assets, inner list = bid levels."""
-    from aiml_pyxis_investment_game.environment.market_mechanics import bd_bid_price
+    from pyxis_portfolio_challenge.environment.market_mechanics import bd_bid_price
 
     sm = game.shared_market
     if not sm.bd_enabled or not sm.current_bd_assets:

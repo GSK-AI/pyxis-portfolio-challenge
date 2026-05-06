@@ -9,9 +9,9 @@ from pathlib import Path
 import click
 import numpy as np
 
-from aiml_pyxis_investment_game import PROJECT_ROOT, logging_utils
-from aiml_pyxis_investment_game.config import config, instantiate_from_config
-from aiml_pyxis_investment_game.environment.multi_agent_evaluate import (
+from pyxis_portfolio_challenge import PROJECT_ROOT, logging_utils
+from pyxis_portfolio_challenge.config import config, instantiate_from_config
+from pyxis_portfolio_challenge.environment.multi_agent_evaluate import (
     evaluate_multi_agent,
 )
 
@@ -148,10 +148,10 @@ def main(model_dir, num_episodes, knapsack_bd, knapsack_cap):
     obs_rms_var = vecnorm.obs_rms.var.copy()
 
     # Build env to create agents (they need env reference for masks)
-    from aiml_pyxis_investment_game.environment.multi_agent_training_gym import (
+    from pyxis_portfolio_challenge.environment.multi_agent_training_gym import (
         MultiAgentInvestmentGameEnv,
     )
-    from aiml_pyxis_investment_game.environment.warmup_wrapper import (
+    from pyxis_portfolio_challenge.environment.warmup_wrapper import (
         MultiAgentWarmupOnResetWrapper,
     )
 
@@ -198,7 +198,7 @@ def main(model_dir, num_episodes, knapsack_bd, knapsack_cap):
     object.__setattr__(cfg, "num_eval_episodes", original_num)
 
     # Report
-    from aiml_pyxis_investment_game.environment.metrics import report_all_metrics
+    from pyxis_portfolio_challenge.environment.metrics import report_all_metrics
 
     print("\n" + "=" * 80)
     print(f"PPO vs KNAPSACK  ({num_episodes} episodes, {cap_label}, knapsack_bd={knapsack_bd})")

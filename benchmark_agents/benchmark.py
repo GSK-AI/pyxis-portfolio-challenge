@@ -5,7 +5,7 @@ import os
 import click
 from agents import AGENTS
 
-from aiml_pyxis_investment_game import logging_utils, parallel_evaluate
+from pyxis_portfolio_challenge import logging_utils, parallel_evaluate
 
 logging_utils.setup_logging(logging.CRITICAL)
 

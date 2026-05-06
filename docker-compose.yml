@@ -31,7 +31,7 @@ services:
       APP_GAME_ASSETS_DIR: /app/rl-environment-assets/gpt5_09feb2026_highPtrs/training
     volumes:
       # Mount source code for development (hot reload)
-      - ./aiml_pyxis_investment_game:/app/aiml_pyxis_investment_game:ro
+      - ./pyxis_portfolio_challenge:/app/pyxis_portfolio_challenge:ro
       - ./app:/app/app:ro
       # Mount RL environment assets
       - ./rl-environment-assets:/app/rl-environment-assets:ro

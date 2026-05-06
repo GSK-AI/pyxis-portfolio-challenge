@@ -6,9 +6,9 @@ from itertools import combinations
 import pytest
 import upath
 
-from aiml_pyxis_investment_game import PROJECT_ROOT
-from aiml_pyxis_investment_game.game.asset import DrugAsset
-from aiml_pyxis_investment_game.game.asset_generators import (
+from pyxis_portfolio_challenge import PROJECT_ROOT
+from pyxis_portfolio_challenge.game.asset import DrugAsset
+from pyxis_portfolio_challenge.game.asset_generators import (
     DUMMY_LIST_DATA,
     FixedListAssetGenerator,
     JSONAssetGenerator,

@@ -9,9 +9,9 @@ covers total trial costs, per drug.
 import numpy as np
 from upath import UPath
 
-from aiml_pyxis_investment_game.config import config
-from aiml_pyxis_investment_game.game.asset_generators import JSONAssetGenerator
-from aiml_pyxis_investment_game.game.constants import DISCOUNT_RATE
+from pyxis_portfolio_challenge.config import config
+from pyxis_portfolio_challenge.game.asset_generators import JSONAssetGenerator
+from pyxis_portfolio_challenge.game.constants import DISCOUNT_RATE
 
 cfg = config
 

@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, PropertyMock
 
 import pytest
 
-from aiml_pyxis_investment_game.environment.metrics import (
+from pyxis_portfolio_challenge.environment.metrics import (
     MergeHistoryMixin,
     MetricsContext,
     PerEpisodeCumulativeReward,
@@ -36,7 +36,7 @@ from aiml_pyxis_investment_game.environment.metrics import (
     merge_all_metrics,
     report_all_metrics,
 )
-from aiml_pyxis_investment_game.game.asset import AssetState
+from pyxis_portfolio_challenge.game.asset import AssetState
 
 
 @pytest.fixture

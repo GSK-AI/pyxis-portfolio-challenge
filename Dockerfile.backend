@@ -14,7 +14,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 # Copy project files
 COPY pyproject.toml uv.lock ./
-COPY aiml_pyxis_investment_game ./aiml_pyxis_investment_game
+COPY pyxis_portfolio_challenge ./pyxis_portfolio_challenge
 COPY app ./app
 COPY rl-environment-assets ./rl-environment-assets
 
