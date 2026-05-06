@@ -73,7 +73,7 @@ class PlaythroughMetadata(BaseModel):
     agent_ids: list[str]
     agent_names: dict[str, str]  # agent_id -> display name
     horizon: int
-    seed: int
+    seed: int | None
     captured_at: str
 
 
@@ -337,7 +337,7 @@ def _delta_compress_expired_assets(
 
 def build_playthrough_data(
     env,
-    seed: int,
+    seed: int | None,
     initial_agent_states: dict[str, dict[str, Any]],
     initial_shared_market: SharedMarketSnapshot,
     steps: list[StepRecord],
