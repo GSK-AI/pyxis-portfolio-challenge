@@ -120,7 +120,9 @@ def test_get_agent_investment_decisions_empty_game_state(valid_json_assets_path)
     from pyxis_portfolio_challenge.game.asset_generators import JSONAssetGenerator
     from pyxis_portfolio_challenge.game.game_state import GameState
 
+    from pyxis_portfolio_challenge.rng import init_game_rng
     # Create a game state with all assets in non-idle state
+    init_game_rng(42)
     game_state = GameState.initialise_new_game(
         asset_generator_cls=JSONAssetGenerator,
         num_assets=3,

@@ -7,7 +7,6 @@ from fastapi.testclient import TestClient
 from pyxis_portfolio_challenge.game.asset_generators import JSONAssetGenerator
 from app.app import (
     get_agents,
-    get_custom_seed,
     lifespan,
     start_game,
     step_game,
@@ -22,11 +21,6 @@ def setup_app(app: FastAPI):
     app.add_api_route(
         "/game/get_agents",
         get_agents,
-        methods=["GET"],
-    )
-    app.add_api_route(
-        "/game/custom_seeds",
-        get_custom_seed,
         methods=["GET"],
     )
     app.add_api_route(
@@ -55,16 +49,6 @@ def test_get_agents():
         {"name": "Pyxie", "cost": 5000000.0},
     ]
 
-
-def test_get_custom_seed():
-    mock_custom_seeds = MagicMock()
-    d = {5: [1, 2, 3]}
-    mock_custom_seeds.__getitem__.side_effect = d.__getitem__
-    with patch("app.app.CUSTOM_SEEDS", new=mock_custom_seeds):
-        response = client.get("/game/custom_seeds", params={"initial_num_assets": 5})
-        assert response.status_code == 200
-        data = response.json()
-        assert data in [1, 2, 3]
 
 
 async def test_start_game(

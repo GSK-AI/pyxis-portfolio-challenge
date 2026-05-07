@@ -121,8 +121,6 @@ export const endpoints = {
       `${getGameBaseEndpoint()}/game/${gameId}/comparison_dashboard`,
     highscore: (levelId: number) =>
       `${getGameBaseEndpoint()}/game/highscore/${levelId}`,
-    customSeed: (numAssets: number) =>
-      `${getGameBaseEndpoint()}/game/custom_seeds?initial_num_assets=${numAssets}`,
   },
 };
 

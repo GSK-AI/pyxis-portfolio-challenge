@@ -19,9 +19,11 @@ from pyxis_portfolio_challenge.game.trial import (
     TrialState,
     trials_json_to_trials_sequence,
 )
+from pyxis_portfolio_challenge.rng import init_game_rng
 
 
 def make_asset_dict(global_seed):
+    init_game_rng(global_seed)
     asset_dict = {}
     for asset_data in copy.deepcopy(DUMMY_LIST_DATA):
         asset_id = uuid.uuid4()
@@ -38,7 +40,7 @@ def make_asset_dict(global_seed):
             )
         else:
             trial = trials_json_to_trials_sequence(
-                asset_data["trials"], seed=global_seed,
+                asset_data["trials"],
                 asset_id=asset_id,
                 pending_trial_phase="Phase 1",
                 approval_phase_config=None,
@@ -58,8 +60,6 @@ def make_asset_dict(global_seed):
             trial=trial,
         )
 
-        # Initialise rng after since it is private attribute
-        asset._rng = random.Random(global_seed)
         asset_dict[asset.id] = asset
     return asset_dict
 
@@ -69,6 +69,7 @@ def game_state_factory_fixed_list_asset_gen():
     def _make(
         id=uuid.uuid4(), cash=10000, time=0, horizon=10, assets=None, equilibrium_num_assets=None, max_num_assets=None, asset_arrival_sensitivity_below=1.5, asset_arrival_sensitivity_above=3.0, reinvestment_percentage=1.0, expired_assets=None, global_seed=42, game_ended=False
     ):
+        init_game_rng(global_seed)
         if expired_assets is None:
             expired_assets = {}
 
@@ -99,8 +100,6 @@ def game_state_factory_fixed_list_asset_gen():
         game_state._asset_generator = FixedListAssetGenerator(
             global_seed=global_seed, assets_data_list=copy.deepcopy(DUMMY_LIST_DATA)
         )
-        game_state._rng = random.Random(global_seed)
-        game_state._global_seed = global_seed
         game_state._new_asset_arrival_rate = 1 / 25
         return game_state._post_init_update_enpv_eroi()
 
@@ -112,6 +111,7 @@ def game_state_factory_json_asset_gen(valid_json_assets_path):
     def _make(
         id=uuid.uuid4(), cash=10000, time=0, horizon=10, assets=None, expired_assets={}, global_seed=42
     ):
+        init_game_rng(global_seed)
         if assets is None:
             assets = make_asset_dict(global_seed)
 
@@ -143,8 +143,6 @@ def game_state_factory_json_asset_gen(valid_json_assets_path):
             indication_drift_speed=1.0,
             trial_cost_multiplier=1.0,
         )
-        game_state._rng = random.Random(global_seed)
-        game_state._global_seed = global_seed
         game_state._new_asset_arrival_rate = 1 / 25
         return game_state
 
@@ -162,6 +160,7 @@ def json_game_state_factory(valid_json_assets_path):
     """Create a test game state using JSONAssetGenerator."""
 
     def _make(num_assets=5):
+        init_game_rng(42)
         game_state = GameState.initialise_new_game(
             asset_generator_cls=JSONAssetGenerator,
             num_assets=num_assets,

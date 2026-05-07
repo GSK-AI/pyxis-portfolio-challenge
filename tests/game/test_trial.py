@@ -1,5 +1,5 @@
 import uuid
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -9,6 +9,7 @@ from pyxis_portfolio_challenge.game.trial import (
     TrialState,
     trials_json_to_trials_sequence,
 )
+from pyxis_portfolio_challenge.rng import init_game_rng
 
 
 def test_trial_init():
@@ -147,7 +148,8 @@ def dummy_trial_json():
 
 
 def test_asset_json_to_trials_sequence(dummy_trial_json):
-    trial = trials_json_to_trials_sequence(dummy_trial_json, seed=42, asset_id="some-uuid", pending_trial_phase="Phase 1", approval_phase_config=None, trial_cost_multiplier=1.0)
+    init_game_rng(42)
+    trial = trials_json_to_trials_sequence(dummy_trial_json, asset_id="some-uuid", pending_trial_phase="Phase 1", approval_phase_config=None, trial_cost_multiplier=1.0)
     assert isinstance(trial, Trial)
     assert trial.phase == TrialPhase.PHASE_1
     assert trial.next_trial_on_success is not None
@@ -161,24 +163,24 @@ def test_trial_success_ptrs_1():
     trial = Trial(cost_remaining=100, time_remaining=1, ptrs=1.0, state=TrialState.PENDING, phase=TrialPhase.PHASE_1, next_trial_on_success=None)
     mock_rng = MagicMock()
     mock_rng.random.return_value = 0.5
-    trial._rng = mock_rng
-    assert trial.success() is True
+    with patch("pyxis_portfolio_challenge.game.trial.get_game_rng", return_value=mock_rng):
+        assert trial.success() is True
 
 
 def test_trial_success_ptrs_0():
     trial = Trial(cost_remaining=100, time_remaining=1, ptrs=0.0, state=TrialState.PENDING, phase=TrialPhase.PHASE_1, next_trial_on_success=None)
     mock_rng = MagicMock()
     mock_rng.random.return_value = 0.5
-    trial._rng = mock_rng
-    assert trial.success() is False
+    with patch("pyxis_portfolio_challenge.game.trial.get_game_rng", return_value=mock_rng):
+        assert trial.success() is False
 
 
 def test_trial_success_rng_lt_ptrs():
     trial = Trial(cost_remaining=100, time_remaining=1, ptrs=0.5, state=TrialState.PENDING, phase=TrialPhase.PHASE_1, next_trial_on_success=None)
     mock_rng = MagicMock()
     mock_rng.random.return_value = 0.4
-    trial._rng = mock_rng
-    assert trial.success() is True
+    with patch("pyxis_portfolio_challenge.game.trial.get_game_rng", return_value=mock_rng):
+        assert trial.success() is True
 
 
 def test_trial_cost_this_step_calculation():
@@ -192,29 +194,23 @@ def test_trial_cost_this_step_zero_time():
 
 
 @pytest.fixture
-def trial_with_sequence_mock__rng_always_success():
+def trial_with_sequence_always_success():
     next_next_trial = Trial(cost_remaining=50, time_remaining=1, ptrs=0.4, state=TrialState.PHASE_SUCCESS, phase=TrialPhase.PHASE_3, next_trial_on_success=None)
-    mock_rng_next_next_trial = MagicMock()
-    mock_rng_next_next_trial.random.return_value = 0.3
-    next_next_trial._rng = mock_rng_next_next_trial
 
     next_trial = Trial(cost_remaining=50, time_remaining=2, ptrs=0.6, state=TrialState.PENDING, phase=TrialPhase.PHASE_2, next_trial_on_success=next_next_trial)
-    mock_rng_next_trial = MagicMock()
-    mock_rng_next_trial.random.return_value = 0.5
-    next_trial._rng = mock_rng_next_trial
 
     trial = Trial(cost_remaining=100, time_remaining=5, ptrs=0.5, state=TrialState.PENDING, phase=TrialPhase.PHASE_1, next_trial_on_success=next_trial)
-    mock_rng_trial = MagicMock()
-    mock_rng_trial.random.return_value = 0.4
-    trial._rng = mock_rng_trial
 
     return trial
 
 
-def test_trial_evolve_full_sequence(trial_with_sequence_mock__rng_always_success):
-    trial_with_sequence = trial_with_sequence_mock__rng_always_success
-    for _ in range(8): # Total steps to complete all phases
-        trial_with_sequence = trial_with_sequence.evolve()
+def test_trial_evolve_full_sequence(trial_with_sequence_always_success):
+    trial_with_sequence = trial_with_sequence_always_success
+    mock_rng = MagicMock()
+    mock_rng.random.return_value = 0.3  # Always below ptrs to succeed
+    with patch("pyxis_portfolio_challenge.game.trial.get_game_rng", return_value=mock_rng):
+        for _ in range(8): # Total steps to complete all phases
+            trial_with_sequence = trial_with_sequence.evolve()
 
     assert trial_with_sequence.state == TrialState.PHASE_SUCCESS
     assert trial_with_sequence.next_trial_on_success is None
@@ -224,11 +220,14 @@ def test_trial_evolve_full_sequence(trial_with_sequence_mock__rng_always_success
     assert trial_with_sequence.time_remaining == 0
 
 
-def test_trial_evolve_incomplete_phase(trial_with_sequence_mock__rng_always_success):
-    trial_with_sequence = trial_with_sequence_mock__rng_always_success
-    # Evolve only 3 times, should still be in Phase 1
-    for _ in range(3):
-        trial_with_sequence = trial_with_sequence.evolve()
+def test_trial_evolve_incomplete_phase(trial_with_sequence_always_success):
+    trial_with_sequence = trial_with_sequence_always_success
+    mock_rng = MagicMock()
+    mock_rng.random.return_value = 0.3
+    with patch("pyxis_portfolio_challenge.game.trial.get_game_rng", return_value=mock_rng):
+        # Evolve only 3 times, should still be in Phase 1
+        for _ in range(3):
+            trial_with_sequence = trial_with_sequence.evolve()
 
     assert trial_with_sequence.phase == TrialPhase.PHASE_1
     assert trial_with_sequence.state == TrialState.IN_PROGRESS
@@ -238,26 +237,21 @@ def test_trial_evolve_incomplete_phase(trial_with_sequence_mock__rng_always_succ
 
 def test_single_trial_evolve_success():
     next_trial = Trial(cost_remaining=0, time_remaining=0, ptrs=0.0, state=TrialState.PENDING, phase=TrialPhase.PHASE_2, next_trial_on_success=None)
-    mock_rng_next_trial = MagicMock()
-    mock_rng_next_trial.random.return_value = 0.0
-    next_trial._rng = mock_rng_next_trial
 
     trial = Trial(cost_remaining=20, time_remaining=1, ptrs=1.0, state=TrialState.PENDING, phase=TrialPhase.PHASE_1, next_trial_on_success=next_trial)
-    mock_rng_trial = MagicMock()
-    mock_rng_trial.random.return_value = 0.0
-    trial._rng = mock_rng_trial
-
-    evolved_trial = trial.evolve()
+    mock_rng = MagicMock()
+    mock_rng.random.return_value = 0.0
+    with patch("pyxis_portfolio_challenge.game.trial.get_game_rng", return_value=mock_rng):
+        evolved_trial = trial.evolve()
     assert evolved_trial == next_trial
 
 
 def test_single_trial_evolve_failure():
     trial = Trial(cost_remaining=20, time_remaining=1, ptrs=0.5, state=TrialState.PENDING, phase=TrialPhase.PHASE_1, next_trial_on_success=None)
-    mock_rng_trial = MagicMock()
-    mock_rng_trial.random.return_value = 0.5  # draw above ptrs to fail
-    trial._rng = mock_rng_trial
-
-    evolved_trial = trial.evolve()
+    mock_rng = MagicMock()
+    mock_rng.random.return_value = 0.5  # draw above ptrs to fail
+    with patch("pyxis_portfolio_challenge.game.trial.get_game_rng", return_value=mock_rng):
+        evolved_trial = trial.evolve()
     assert evolved_trial.state == TrialState.PHASE_FAILED
     assert evolved_trial.cost_remaining == 0.0
     assert evolved_trial.time_remaining == 0
@@ -288,9 +282,9 @@ def test_trials_json_to_trials_sequence_returns_phase_2_head():
     }
 
     # Act
+    init_game_rng(seed)
     head_trial = trials_json_to_trials_sequence(
         json=trials_json,
-        seed=seed,
         asset_id=asset_id,
         pending_trial_phase="Phase 2",
         approval_phase_config=None,

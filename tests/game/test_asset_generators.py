@@ -14,6 +14,7 @@ from pyxis_portfolio_challenge.game.asset_generators import (
     JSONAssetGenerator,
     generate_asset_id,
 )
+from pyxis_portfolio_challenge.rng import init_game_rng
 
 
 def test_generate_asset_id():
@@ -49,6 +50,7 @@ def test_fixed_list_asset_generator_init(global_seed, data_list, should_raise):
 
 
 def test_fixed_list_asset_generator_call():
+    init_game_rng(42)
     generator = FixedListAssetGenerator(42, DUMMY_LIST_DATA)
     assets = generator(5, "initial")
     assert len(assets) == 5
@@ -74,8 +76,11 @@ def test_fixed_list_asset_generator_reproducibility():
     generator2 = FixedListAssetGenerator(seed0, DUMMY_LIST_DATA)
     generator3 = FixedListAssetGenerator(seed1, DUMMY_LIST_DATA)
 
+    init_game_rng(seed0)
     assets1 = generator1(5, "initial")
+    init_game_rng(seed0)
     assets2 = generator2(5, "initial")
+    init_game_rng(seed1)
     assets3 = generator3(5, "initial")
 
     assert assets1.keys() == assets2.keys()
@@ -84,8 +89,11 @@ def test_fixed_list_asset_generator_reproducibility():
 
     assert assets1.keys() != assets3.keys()
 
+    init_game_rng(seed0)
     new_assets1 = generator1(1, "new")
+    init_game_rng(seed0)
     new_assets2 = generator2(1, "new")
+    init_game_rng(seed1)
     new_assets3 = generator3(1, "new")
 
     assert new_assets1.keys() == new_assets2.keys()
@@ -108,6 +116,7 @@ _TEST_COST_MULT = 1.0
 
 def _make_generator(seed, path=None, **kwargs):
     """Helper to create JSONAssetGenerator with test defaults for required params."""
+    init_game_rng(seed)
     if path is None:
         path = valid_path
     kwargs.setdefault("indication_spread", _TEST_SPREAD)

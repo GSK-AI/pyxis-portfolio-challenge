@@ -1,7 +1,7 @@
 import pickle
 import random
 import uuid
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -13,6 +13,7 @@ from pyxis_portfolio_challenge.game.asset_generators import (
 )
 from pyxis_portfolio_challenge.game.game_state import GameEndReason, GameState
 from pyxis_portfolio_challenge.game.trial import Trial, TrialPhase, TrialState
+from pyxis_portfolio_challenge.rng import init_game_rng
 from tests.game.test_asset import drug_asset_factory
 from tests.utils_for_tests import (
     game_states_equivalent,
@@ -69,6 +70,7 @@ initial_cash=10000,
 
 
 def test_initialise_new_game_without_seed():
+    init_game_rng(0)
     game_state = GameState.initialise_new_game(
         asset_generator_cls=FixedListAssetGenerator,
         num_assets=3,
@@ -102,6 +104,7 @@ def test_initialise_new_game_reproducibility():
     cash = 100000
     horizon = 10
 
+    init_game_rng(seed0)
     game_state_1 = GameState.initialise_new_game(
         asset_generator_cls=FixedListAssetGenerator,
         num_assets=num_assets,
@@ -119,6 +122,7 @@ def test_initialise_new_game_reproducibility():
         ),
     )
 
+    init_game_rng(seed0)
     game_state_2 = GameState.initialise_new_game(
         asset_generator_cls=FixedListAssetGenerator,
         num_assets=num_assets,
@@ -136,6 +140,7 @@ def test_initialise_new_game_reproducibility():
         ),
     )
 
+    init_game_rng(seed1)
     game_state_3 = GameState.initialise_new_game(
         asset_generator_cls=FixedListAssetGenerator,
         num_assets=num_assets,
@@ -360,6 +365,7 @@ def test_game_state_custom_max_num_assets_constructor():
 def test_game_state_custom_max_num_assets_initialise_new_game():
     # Custom max_num_assets via classmethod
     custom_max = 5
+    init_game_rng(42)
     game_state = GameState.initialise_new_game(
         asset_generator_cls=FixedListAssetGenerator,
         num_assets=3,
@@ -615,7 +621,6 @@ def test_game_state_step_game_ends_ongoing_investments(
         state=TrialState.IN_PROGRESS,
         next_trial_on_success=None
     )
-    trial._rng = random.Random()
     asset_in_dev = drug_asset_factory(
         state=AssetState.InDevelopment,
         time_until_patent_expiry=10,
@@ -623,7 +628,6 @@ def test_game_state_step_game_ends_ongoing_investments(
         time_until_max_revenue=1,
         trial=trial,
     )
-    asset_in_dev._rng = random.Random()
     game_state = game_state_factory_fixed_list_asset_gen(
         time=9,  # One step before horizo, however should end due to ongoing investments
         horizon=10,
@@ -662,7 +666,6 @@ def test_game_state_step_game_ends_new_investments(
         state=TrialState.PENDING,
         next_trial_on_success=None
     )
-    trial._rng = random.Random()
     asset_idle = drug_asset_factory(
         state=AssetState.Idle,
         time_until_patent_expiry=10,
@@ -670,7 +673,6 @@ def test_game_state_step_game_ends_new_investments(
         time_until_max_revenue=1,
         trial=trial,
     )
-    asset_idle._rng = random.Random()
     game_state = game_state_factory_fixed_list_asset_gen(
         time=9,  # One step before horizo, however should end due to new investments
         horizon=10,
@@ -711,7 +713,6 @@ def test_game_state_step_game_ends_horizon_reached(
         state=TrialState.PENDING,
         next_trial_on_success=None
     )
-    trial._rng = random.Random()
     asset_idle = drug_asset_factory(
         state=AssetState.Idle,
         time_until_patent_expiry=10,
@@ -719,7 +720,6 @@ def test_game_state_step_game_ends_horizon_reached(
         time_until_max_revenue=1,
         trial=trial,
     )
-    asset_idle._rng = random.Random()
     game_state = game_state_factory_fixed_list_asset_gen(
         time=0,  # One step before horizon
         horizon=1,
@@ -753,12 +753,11 @@ def test_game_state_step_no_game_end(
     trial = Trial(
         cost_remaining=10000.,
         time_remaining=1,
-        ptrs=0.5,
+        ptrs=1.0,  # force success so asset goes on-market deterministically
         phase=TrialPhase.PHASE_3,
         state=TrialState.PENDING,
         next_trial_on_success=None
     )
-    trial._rng = random.Random(1)  # seed=1 gives first draw < 0.5 → trial succeeds
     asset_idle = drug_asset_factory(
         state=AssetState.Idle,
         time_until_patent_expiry=10,
@@ -766,7 +765,6 @@ def test_game_state_step_no_game_end(
         time_until_max_revenue=1,
         trial=trial,
     )
-    asset_idle._rng = random.Random(1)
     game_state = game_state_factory_fixed_list_asset_gen(
         time=0,
         horizon=5,
@@ -807,7 +805,6 @@ def test_game_state_step_asset_expires_during_step(
         state=TrialState.PHASE_SUCCESS,
         next_trial_on_success=None
     )
-    trial._rng = random.Random()
     asset_on_market = drug_asset_factory(
         state=AssetState.OnMarket,
         time_until_patent_expiry=1,
@@ -815,7 +812,6 @@ def test_game_state_step_asset_expires_during_step(
         time_until_max_revenue=1,
         trial=trial,
     )
-    asset_on_market._rng = random.Random()
     game_state = game_state_factory_fixed_list_asset_gen(
         time=0,
         horizon=5,
@@ -852,11 +848,10 @@ def test_game_step_new_asset_arrives(
     # Mock RNG to trigger asset arrival once, then fail
     mock_rng = MagicMock(spec=random.Random)
     mock_rng.random.side_effect = [0.0, 0.99]  # First succeeds, second fails
-    game_state._rng = mock_rng
-
-    game_state_stepped = game_state.step(
-        investor_actions={}
-    )  # No new investment
+    with patch("pyxis_portfolio_challenge.game.game_state.get_game_rng", return_value=mock_rng):
+        game_state_stepped = game_state.step(
+            investor_actions={}
+        )  # No new investment
 
     # New asset should have arrived
     mock_asset_gen.assert_called_once_with(
@@ -879,7 +874,6 @@ def test_game_state_invest_in_idle_asset_reduces_cash(
         state=TrialState.PENDING,
         next_trial_on_success=None
     )
-    trial._rng = random.Random()
     asset_idle = drug_asset_factory(
         state=AssetState.Idle,
         time_until_patent_expiry=10,
@@ -887,7 +881,6 @@ def test_game_state_invest_in_idle_asset_reduces_cash(
         time_until_max_revenue=1,
         trial=trial,
     )
-    asset_idle._rng = random.Random()
     initial_cash = 20000
     game_state = game_state_factory_fixed_list_asset_gen(
         time=0,

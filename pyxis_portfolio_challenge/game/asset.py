@@ -108,9 +108,7 @@ class DrugAsset(BaseModel):
         Current state of the asset.
     time_on_market: int = 0
         Number of time steps the asset has been on the market.
-    _rng : random.Random
-        Per-asset RNG for reproducibility. Created with a fixed seed
-        random.Random(f"{global_seed}_{asset_id}"}) by the AssetGenerator.
+    The game-wide RNG is accessed via `get_game_rng()` from the `rng` module.
 
     """
 
@@ -135,14 +133,13 @@ class DrugAsset(BaseModel):
     state: AssetState
     time_on_market: int
     current_investment_level: InvestmentLevel = InvestmentLevel.NONE
-    _rng: random.Random = PrivateAttr()
 
     def __eq__(self, other: "DrugAsset") -> bool:
         """Check equality of two DrugAsset objects."""
         if not isinstance(other, DrugAsset):
             return NotImplemented
-        # don't compare id and _rng state
-        attrs_to_ignore = {"id", "_rng"}
+        # don't compare id
+        attrs_to_ignore = {"id"}
         return self.model_dump(exclude=attrs_to_ignore) == other.model_dump(
             exclude=attrs_to_ignore
         )
@@ -284,7 +281,6 @@ class DrugAsset(BaseModel):
                 ),
             }
         )
-        new_asset._rng = self._rng
         return new_asset
 
     @model_validator(mode="after")
@@ -439,7 +435,6 @@ class DrugAsset(BaseModel):
                 "current_investment_level": level,
             }
         )
-        new_asset._rng = self._rng
         return new_asset
 
     def set_investment_level(self, level: InvestmentLevel) -> "DrugAsset":
@@ -450,7 +445,6 @@ class DrugAsset(BaseModel):
                 f"as it is not InDevelopment (current state: {self.state})."
             )
         new_asset = self.model_copy(update={"current_investment_level": level})
-        new_asset._rng = self._rng
         return new_asset
 
     def stop_development(self) -> "DrugAsset":
@@ -492,7 +486,6 @@ class DrugAsset(BaseModel):
             trial=self.trial.stop_trial(),
             current_investment_level=InvestmentLevel.NONE,
         )
-        new_asset._rng = self._rng
         return new_asset
 
     def evolve(self) -> "DrugAsset":
@@ -552,7 +545,6 @@ class DrugAsset(BaseModel):
             trial=new_trial,
             current_investment_level=InvestmentLevel.NONE,
         )
-        new_asset._rng = self._rng
         return new_asset
 
     def evolve_with_level(
@@ -640,5 +632,4 @@ class DrugAsset(BaseModel):
             trial=new_trial,
             current_investment_level=new_investment_level,
         )
-        new_asset._rng = self._rng
         return new_asset

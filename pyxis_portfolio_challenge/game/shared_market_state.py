@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, PrivateAttr
 
 from pyxis_portfolio_challenge.game.asset import AssetState, DrugAsset
 from pyxis_portfolio_challenge.game.asset_generators import AssetGeneratorBase
+from pyxis_portfolio_challenge.rng import get_game_rng
 
 logger = logging.getLogger(__name__)
 
@@ -250,7 +251,6 @@ class SharedMarketState(BaseModel):
 
     # Private attributes
     _bd_asset_generator: Optional[AssetGeneratorBase] = PrivateAttr(default=None)
-    _rng: random.Random = PrivateAttr(default_factory=random.Random)
 
     @classmethod
     def initialize(
@@ -259,7 +259,6 @@ class SharedMarketState(BaseModel):
         first_mover_bonus: float,
         alert_history_length: int,
         disable_market_share_competition: bool,
-        seed: int,
         num_indications_per_ta: int,
         bd_enabled: bool,
         bd_base_lambda: float,
@@ -275,7 +274,7 @@ class SharedMarketState(BaseModel):
         congestion_incumbent_penalty: float,
     ) -> "SharedMarketState":
         """Initialize a new shared market state."""
-        rng = random.Random(seed)
+        rng = get_game_rng()
 
         if bd_phase_weights is None:
             bd_phase_weights = [0.2, 0.4, 0.4]
@@ -327,7 +326,6 @@ class SharedMarketState(BaseModel):
             indications_per_ta=num_indications_per_ta,
             indication_name_map=ind_name_map,
         )
-        state._rng = rng
         return state
 
     def add_alert(self, alert: Alert) -> None:
@@ -426,7 +424,7 @@ class SharedMarketState(BaseModel):
             return
 
         leak_prob = self.leak_phase_probabilities[new_phase_index]
-        if self._rng.random() < leak_prob:
+        if get_game_rng().random() < leak_prob:
             phase_names = ["Phase 2", "Phase 3", "Approval"]
             new_phase_name = (
                 phase_names[new_phase_index]
@@ -515,7 +513,7 @@ class SharedMarketState(BaseModel):
 
         # Single Poisson draw determines how many assets spawn (capped by max_slots)
         # Manual inverse-CDF sampling: P(X=k) = e^{-λ} λ^k / k!
-        u = self._rng.random()
+        u = get_game_rng().random()
         cumulative = 0.0
         num_to_spawn = 0
         p_k = math.exp(-effective_lambda)  # P(X=0)
@@ -530,7 +528,7 @@ class SharedMarketState(BaseModel):
 
         for _slot in range(num_to_spawn):
             # Weighted sample for indication
-            r = self._rng.random() * total_w
+            r = get_game_rng().random() * total_w
             cumulative = 0.0
             selected_key = keys[-1]
             for k, w in zip(keys, weights):
@@ -545,7 +543,7 @@ class SharedMarketState(BaseModel):
 
             # Sample phase (weighted)
             phase_weights = self.bd_phase_weights
-            r = self._rng.random() * sum(phase_weights)
+            r = get_game_rng().random() * sum(phase_weights)
             cumulative = 0.0
             target_phase = 0
             for i, w in enumerate(phase_weights):
