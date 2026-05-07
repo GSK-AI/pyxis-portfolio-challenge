@@ -9,7 +9,6 @@ import {
   leaderboardEntrySchema,
   agentsResponseSchema,
   gameComparisonSchema,
-  customSeedSchema,
   opponentAgentSchema,
   multiAgentGameStepSchema,
   MultiAgentGameStart,
@@ -133,11 +132,6 @@ async function endpointGameHighscore(levelId: number): Promise<string> {
   return `${baseUrl}/game/level/${levelId}/highscore`;
 }
 
-async function endpointGameCustomSeed(numAssets: number): Promise<string> {
-  const baseUrl = await getBackendGameUrl();
-  return `${baseUrl}/game/custom_seeds?initial_num_assets=${numAssets}`;
-}
-
 export async function startGame(body: GameStart) {
   return await fetchAndValidate(
     await endpointGameStart(),
@@ -215,13 +209,6 @@ export async function getLevelHighScore(levelId: number) {
   return await fetchAndValidate(
     await endpointGameHighscore(levelId),
     leaderboardEntrySchema,
-  );
-}
-
-export async function getCustomSeed(numAsset: number) {
-  return await fetchAndValidate(
-    await endpointGameCustomSeed(numAsset),
-    customSeedSchema,
   );
 }
 

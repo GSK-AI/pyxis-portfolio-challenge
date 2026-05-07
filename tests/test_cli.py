@@ -1,4 +1,5 @@
 import subprocess
+import sys
 from functools import partial
 
 import pytest
@@ -80,7 +81,7 @@ def test_load_agent_no_main_function(tmp_path):
 
 def test_main_cli_seeded_is_reproducible(custom_agent_file):
     cmd = [
-        "python",
+        sys.executable,
         "pyxis_portfolio_challenge/cli.py",
         "--agent",
         custom_agent_file,

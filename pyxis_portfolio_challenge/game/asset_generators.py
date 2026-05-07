@@ -25,6 +25,7 @@ from pyxis_portfolio_challenge.game.trial import (
     TrialState,
     trials_json_to_trials_sequence,
 )
+from pyxis_portfolio_challenge.rng import get_game_rng
 
 logger = logging.getLogger(__name__)
 
@@ -946,7 +947,6 @@ class JSONAssetGenerator(AssetGeneratorBase):
         else:
             trial = trials_json_to_trials_sequence(
                 asset_data["trials"],
-                seed=self.global_seed,
                 asset_id=asset_id,
                 pending_trial_phase=asset_data["pending_trial_phase"],
                 approval_phase_config=self.approval_phase_config,
@@ -958,15 +958,11 @@ class JSONAssetGenerator(AssetGeneratorBase):
                 self.uncertain_ptrs_config is not None
                 and self.uncertain_ptrs_config.enabled
             ):
-                # Create a reproducible RNG for this asset's uncertain PTRS
-                uncertain_ptrs_rng = random.Random(
-                    f"{self.global_seed}_{asset_id}_uncertain_ptrs"
-                )
                 apply_uncertain_ptrs_to_trial_chain(
                     head_trial=trial,
                     therapeutic_area=therapeutic_area,
                     uncertain_ptrs_config=self.uncertain_ptrs_config,
-                    rng=uncertain_ptrs_rng,
+                    rng=get_game_rng(),
                 )
 
             # Apply distributional PTRS if enabled (new feature)
@@ -976,16 +972,12 @@ class JSONAssetGenerator(AssetGeneratorBase):
             ):
                 # Get TA quality modifier (sampled at episode start)
                 ta_modifier = self.ta_quality_modifiers[therapeutic_area]
-                # Create a reproducible RNG for this asset's distributional PTRS
-                distributional_ptrs_rng = random.Random(
-                    f"{self.global_seed}_{asset_id}_distributional_ptrs"
-                )
                 apply_distributional_ptrs_to_trial_chain(
                     head_trial=trial,
                     therapeutic_area=therapeutic_area,
                     ta_quality_modifier=ta_modifier,
                     distributional_ptrs_config=self.distributional_ptrs_config,
-                    rng=distributional_ptrs_rng,
+                    rng=get_game_rng(),
                 )
 
         # Assign indication based on TA with time-dependent drift
@@ -1009,8 +1001,6 @@ class JSONAssetGenerator(AssetGeneratorBase):
             time_on_market=asset_data["time_on_market"],
             trial=trial,
         )
-        # Initialise rng after since it is private attribute
-        asset._rng = random.Random(f"{self.global_seed}_{asset.id}")
         logger.debug(f"Created asset: {asset}")
         return asset
 
@@ -1128,7 +1118,6 @@ class JSONAssetGenerator(AssetGeneratorBase):
 
         trial = trials_json_to_trials_sequence(
             asset_data["trials"],
-            seed=self.global_seed,
             asset_id=asset_id,
             pending_trial_phase=pending_phase,
             approval_phase_config=self.approval_phase_config,
@@ -1149,7 +1138,6 @@ class JSONAssetGenerator(AssetGeneratorBase):
             time_on_market=0,
             trial=trial,
         )
-        asset._rng = random.Random(f"{self.global_seed}_{asset.id}")
         return asset
 
 
@@ -1312,7 +1300,6 @@ class FixedListAssetGenerator(AssetGeneratorBase):
                 therapeutic_area = asset_data["therapeutic_area"]
                 trial = trials_json_to_trials_sequence(
                     asset_data["trials"],
-                    seed=self.global_seed,
                     asset_id=asset_id,
                     pending_trial_phase=asset_data["pending_trial_phase"],
                     approval_phase_config=self.approval_phase_config,
@@ -1324,14 +1311,11 @@ class FixedListAssetGenerator(AssetGeneratorBase):
                     self.uncertain_ptrs_config is not None
                     and self.uncertain_ptrs_config.enabled
                 ):
-                    uncertain_ptrs_rng = random.Random(
-                        f"{self.global_seed}_{asset_id}_uncertain_ptrs"
-                    )
                     apply_uncertain_ptrs_to_trial_chain(
                         head_trial=trial,
                         therapeutic_area=therapeutic_area,
                         uncertain_ptrs_config=self.uncertain_ptrs_config,
-                        rng=uncertain_ptrs_rng,
+                        rng=get_game_rng(),
                     )
 
                 # Apply distributional PTRS if enabled (new feature)
@@ -1340,15 +1324,12 @@ class FixedListAssetGenerator(AssetGeneratorBase):
                     and self.distributional_ptrs_config.enabled
                 ):
                     ta_modifier = self.ta_quality_modifiers[therapeutic_area]
-                    distributional_ptrs_rng = random.Random(
-                        f"{self.global_seed}_{asset_id}_distributional_ptrs"
-                    )
                     apply_distributional_ptrs_to_trial_chain(
                         head_trial=trial,
                         therapeutic_area=therapeutic_area,
                         ta_quality_modifier=ta_modifier,
                         distributional_ptrs_config=self.distributional_ptrs_config,
-                        rng=distributional_ptrs_rng,
+                        rng=get_game_rng(),
                     )
 
             # Assign indication based on TA
@@ -1380,7 +1361,5 @@ class FixedListAssetGenerator(AssetGeneratorBase):
                 trial=trial,
             )
 
-            # Initialise rng after since it is private attribute
-            asset._rng = random.Random(f"{self.global_seed}_{asset.id}")
             assets[asset.id] = asset
         return assets

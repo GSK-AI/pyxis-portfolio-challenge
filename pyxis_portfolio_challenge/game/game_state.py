@@ -24,6 +24,7 @@ from pyxis_portfolio_challenge.game.asset_generators import (
 )
 from pyxis_portfolio_challenge.game.constants import MAX_NUM_ASSETS, InvestmentLevel
 from pyxis_portfolio_challenge.game.trial import TrialPhase
+from pyxis_portfolio_challenge.rng import get_game_rng
 
 logger = logging.getLogger(__name__)
 
@@ -71,8 +72,7 @@ class GameState(BaseModel):
         A list of revenues already realised in previous time steps of the game.
     _asset_generator : AssetGeneratorBase
         The asset generator used to create new assets.
-    _rng : random.Random
-        A random number generator for any stochastic elements in the game.
+    The game-wide RNG is accessed via `get_game_rng()` from the `rng` module.
 
     """
 
@@ -111,8 +111,6 @@ class GameState(BaseModel):
     ta_quality_confidences: dict[str, float] = {}  # Posterior confidence (0-1)
 
     _asset_generator: AssetGeneratorBase = PrivateAttr()
-    _rng: random.Random = PrivateAttr()
-    _global_seed: int = PrivateAttr()
     _ta_experience_config: Optional[object] = PrivateAttr(default=None)
     _uncertain_ptrs_config: Optional[object] = PrivateAttr(default=None)
     _investment_levels_config: Optional[object] = PrivateAttr(default=None)
@@ -459,7 +457,7 @@ class GameState(BaseModel):
         ta_quality_modifiers = {}
         ta_quality_estimates = {}
         ta_quality_confidences = {}
-        ta_rng = random.Random(f"{global_seed}_ta_quality")
+        ta_rng = get_game_rng()
 
         if (
             distributional_ptrs_config is not None
@@ -542,9 +540,6 @@ class GameState(BaseModel):
         )
         # Initialise asset generator after since it is private attribute
         game_state._asset_generator = asset_generator
-        # Initialise rng after since it is private attribute
-        game_state._rng = random.Random(global_seed)
-        game_state._global_seed = global_seed
         # Store TA experience config if provided
         game_state._ta_experience_config = ta_experience_config
         # Store uncertain PTRS config if provided
@@ -617,7 +612,7 @@ class GameState(BaseModel):
                 mode = "above-equilibrium"
 
             # Draw random number and decide whether to add asset
-            random_draw = self._rng.random()
+            random_draw = get_game_rng().random()
             if random_draw < probability:
                 # Pass ta_experience for TA bias in asset arrival
                 new_asset = self._asset_generator(
@@ -924,7 +919,10 @@ class GameState(BaseModel):
             # None or missing = no action
 
         # Log TA experience at start of step (only when enabled)
-        if self._ta_experience_config is not None and self._ta_experience_config.enabled:
+        if (
+            self._ta_experience_config is not None
+            and self._ta_experience_config.enabled
+        ):
             logger.info("TA Experience (post-decay from previous step):")
             for ta, exp in sorted(self.ta_experience.items()):
                 logger.info(f"  {ta}: {exp:.4f}")
@@ -1350,8 +1348,6 @@ class GameState(BaseModel):
             ta_quality_confidences=self.ta_quality_confidences.copy(),
         )
         new_game_state._asset_generator = self._asset_generator
-        new_game_state._rng = self._rng
-        new_game_state._global_seed = self._global_seed
         new_game_state._ta_experience_config = self._ta_experience_config
         new_game_state._uncertain_ptrs_config = self._uncertain_ptrs_config
         new_game_state._investment_levels_config = self._investment_levels_config

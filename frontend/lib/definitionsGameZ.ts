@@ -221,8 +221,6 @@ export const gameComparisonSchema = z.object({
 });
 export type GameComparison = z.infer<typeof gameComparisonSchema>;
 
-export const customSeedSchema = z.number();
-
 // --- Multi-Agent Schemas ---
 
 export const opponentAgentSchema = z.object({

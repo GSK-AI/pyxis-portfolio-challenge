@@ -17,7 +17,9 @@ class MyBot:
         bd_mask = masks["bd_bids"]
 
         # Random binary investments, masked to only valid (Idle) assets
-        investments = (np.random.randint(0, 2, size=len(inv_mask)) * inv_mask).astype(np.int8)
+        investments = (np.random.randint(0, 2, size=len(inv_mask)) * inv_mask).astype(
+            np.int8
+        )
 
         # Random BD bids, picking uniformly from valid bid levels per slot
         bd_bids = np.zeros(len(bd_mask), dtype=np.int64)

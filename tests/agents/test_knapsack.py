@@ -1,5 +1,4 @@
 import copy
-import random
 
 import pytest
 
@@ -10,6 +9,7 @@ from pyxis_portfolio_challenge.agents.knapsack import (
 from pyxis_portfolio_challenge.game.asset import AssetState
 from pyxis_portfolio_challenge.game.constants import DISCOUNT_RATE
 from pyxis_portfolio_challenge.game.trial import Trial, TrialPhase, TrialState
+from pyxis_portfolio_challenge.rng import init_game_rng
 from tests.game.test_asset import drug_asset_factory
 
 
@@ -37,7 +37,6 @@ def test_delta_npv_non_positive():
     asset = drug_asset_factory(
         state=AssetState.Idle, time_until_patent_expiry=3
     )
-    asset._rng = random.Random(42)
     assert asset.enpv < 0
     value = delta_npv(asset)
     assert value == 0.0

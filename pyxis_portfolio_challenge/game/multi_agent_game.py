@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import random
 import uuid
 from typing import Literal
 
@@ -19,6 +18,7 @@ from pyxis_portfolio_challenge.game.shared_market_state import (
     SharedMarketState,
 )
 from pyxis_portfolio_challenge.game.trial import TrialPhase
+from pyxis_portfolio_challenge.rng import get_game_rng, init_game_rng
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +49,6 @@ class MultiAgentGame(BaseModel):
     bd_max_slots: int
     pricing_elasticity: float
 
-    _rng: random.Random = PrivateAttr()
     # Cached per-drug market shares from last step, keyed by agent.
     # Avoids recomputing in observation building.
     _cached_market_shares: dict[str, dict] = PrivateAttr(default_factory=dict)
@@ -111,7 +110,7 @@ class MultiAgentGame(BaseModel):
         Each agent gets its own GameState via GameState.initialise_new_game().
         """
         agent_names = [f"pharma_{i}" for i in range(num_agents)]
-        rng = random.Random(seed)
+        rng = init_game_rng(seed)
 
         if bd_phase_weights is None:
             bd_phase_weights = [0.2, 0.4, 0.4]
@@ -135,7 +134,6 @@ class MultiAgentGame(BaseModel):
         # Create per-agent GameState instances
         agent_states = {}
         for i, agent_name in enumerate(agent_names):
-            agent_seed = seed + i
             game_state = GameState.initialise_new_game(
                 asset_generator_cls=JSONAssetGenerator,
                 num_assets=equilibrium_num_assets,
@@ -145,7 +143,7 @@ class MultiAgentGame(BaseModel):
                 asset_arrival_sensitivity_below=asset_arrival_sensitivity_below,
                 asset_arrival_sensitivity_above=asset_arrival_sensitivity_above,
                 reinvestment_percentage=reinvestment_percentage,
-                global_seed=agent_seed,
+                global_seed=seed,
                 assets_dir=assets_dir,
                 ta_experience_config=ta_experience_config,
                 uncertain_ptrs_config=uncertain_ptrs_config,
@@ -171,7 +169,6 @@ class MultiAgentGame(BaseModel):
             first_mover_bonus=first_mover_bonus,
             alert_history_length=alert_history_length,
             disable_market_share_competition=disable_market_share_competition,
-            seed=seed,
             num_indications_per_ta=indications_per_ta,
             bd_enabled=bd_enabled,
             bd_base_lambda=bd_base_lambda,
@@ -189,10 +186,9 @@ class MultiAgentGame(BaseModel):
 
         # Create BD asset generator
         if bd_enabled and bd_assets_dir is not None:
-            bd_seed = rng.randint(0, 2**31)
             ta_quality_modifiers = agent_states[agent_names[0]]._ta_quality_modifiers
             bd_generator = JSONAssetGenerator(
-                bd_seed,
+                seed,
                 bd_assets_dir,
                 distributional_ptrs_config=distributional_ptrs_config,
                 ta_quality_modifiers=ta_quality_modifiers,
@@ -218,7 +214,6 @@ class MultiAgentGame(BaseModel):
             bd_max_slots=bd_max_slots,
             pricing_elasticity=pricing_elasticity,
         )
-        game._rng = rng
         return game
 
     @property
@@ -298,7 +293,7 @@ class MultiAgentGame(BaseModel):
                     num_levels=num_levels,
                     break_even_level=break_even_level,
                     reinvestment_percentage=reinv_pct,
-                    rng=self._rng,
+                    rng=get_game_rng(),
                 )
 
                 if winner is not None:
@@ -356,8 +351,6 @@ class MultiAgentGame(BaseModel):
                     )
                     ns = new_agent_states[winner]
                     ns._asset_generator = state._asset_generator
-                    ns._rng = state._rng
-                    ns._global_seed = state._global_seed
                     ns._ta_experience_config = state._ta_experience_config
                     ns._uncertain_ptrs_config = state._uncertain_ptrs_config
                     ns._investment_levels_config = state._investment_levels_config
@@ -394,7 +387,9 @@ class MultiAgentGame(BaseModel):
         step_num = self.time + 1
         active = [a for a in self.active_agents if not new_agent_states[a].game_ended]
         active_labels = [self._label(a) for a in active]
-        logger.info(f"Step {step_num}/{self.horizon} — active agents: {', '.join(active_labels)}")
+        logger.info(
+            f"Step {step_num}/{self.horizon} — active agents: {', '.join(active_labels)}"
+        )
 
         for agent in self.active_agents:
             if new_agent_states[agent].game_ended:
@@ -518,7 +513,9 @@ class MultiAgentGame(BaseModel):
             logger.info("Game complete — final standings:")
             for agent, state in new_agent_states.items():
                 status = "BANKRUPT" if state.bankrupt else f"cash={state.cash:,.0f}"
-                logger.info(f"  {self._label(agent)}: {status}, eNPV={state.enpv():,.0f}")
+                logger.info(
+                    f"  {self._label(agent)}: {status}, eNPV={state.enpv():,.0f}"
+                )
 
         new_game = MultiAgentGame(
             agent_states=new_agent_states,
@@ -530,7 +527,6 @@ class MultiAgentGame(BaseModel):
             bd_max_slots=self.bd_max_slots,
             pricing_elasticity=self.pricing_elasticity,
         )
-        new_game._rng = self._rng
         new_game._cached_market_shares = post_step_shares
         new_game._display_names = self._display_names
         return new_game

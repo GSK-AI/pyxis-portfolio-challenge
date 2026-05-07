@@ -219,131 +219,6 @@ describe("Investment Game Utilities API Tests", () => {
   });
 
   // =============================================================================
-  // CUSTOM SEEDS ENDPOINTS
-  // =============================================================================
-
-  context("Custom Seeds API", () => {
-    it("should get custom seed with valid number of assets", () => {
-      const numAssets = 5;
-
-      makeAuthenticatedRequest(
-        "GET",
-        endpoints.investmentGame.customSeed(numAssets),
-      ).then((response) => {
-        assertStatusCode(response, 200);
-
-        assertResponseBody(response, (body) => {
-          // Custom seed should return a number (the seed value)
-          expect(body).to.be.a("number");
-          expect(body).to.be.at.least(0);
-        });
-      });
-    });
-
-    it("should handle different asset counts", () => {
-      const assetCounts = [1, 3, 5, 10, 15];
-
-      assetCounts.forEach((count) => {
-        makeAuthenticatedRequest(
-          "GET",
-          endpoints.investmentGame.customSeed(count),
-        ).then((response) => {
-          assertStatusCode(response, 200);
-
-          assertResponseBody(response, (body) => {
-            expect(body).to.be.a("number");
-            expect(body).to.be.at.least(0);
-          });
-        });
-      });
-    });
-
-    it("should handle edge cases for asset counts", () => {
-      const edgeCases = [0, 1, 100];
-
-      edgeCases.forEach((count) => {
-        makeAuthenticatedRequest(
-          "GET",
-          endpoints.investmentGame.customSeed(count),
-        ).then((response) => {
-          // Should either succeed or return appropriate error
-          if (count <= 0) {
-            expect([400, 422]).to.include(response.status);
-          } else {
-            expect([200, 400]).to.include(response.status);
-
-            if (response.status === 200) {
-              expect(response.body).to.be.a("number");
-            }
-          }
-        });
-      });
-    });
-
-    it("should handle invalid asset counts gracefully", () => {
-      const invalidCounts = [-1, -5, 0];
-
-      invalidCounts.forEach((count) => {
-        makeAuthenticatedRequest(
-          "GET",
-          endpoints.investmentGame.customSeed(count),
-        ).then((response) => {
-          expect([400, 422]).to.include(response.status);
-        });
-      });
-    });
-
-    it("should handle very large asset counts", () => {
-      const largeCount = 1000;
-
-      makeAuthenticatedRequest(
-        "GET",
-        endpoints.investmentGame.customSeed(largeCount),
-      ).then((response) => {
-        // Should handle gracefully - either succeed or return reasonable error
-        expect([200, 400, 413, 422]).to.include(response.status);
-
-        if (response.status === 200) {
-          expect(response.body).to.be.a("number");
-        }
-      });
-    });
-
-    it("should generate different seeds for same asset count", () => {
-      const numAssets = 5;
-      let firstSeed: number;
-      let secondSeed: number;
-
-      makeAuthenticatedRequest(
-        "GET",
-        endpoints.investmentGame.customSeed(numAssets),
-      )
-        .then((response) => {
-          assertStatusCode(response, 200);
-          firstSeed = response.body;
-
-          // Get another seed
-          return makeAuthenticatedRequest(
-            "GET",
-            endpoints.investmentGame.customSeed(numAssets),
-          );
-        })
-        .then((response) => {
-          assertStatusCode(response, 200);
-          secondSeed = response.body;
-
-          // Seeds might be different (depending on implementation)
-          expect(firstSeed).to.be.a("number");
-          expect(secondSeed).to.be.a("number");
-
-          // Both should be valid numbers
-          expect(firstSeed).to.be.at.least(0);
-          expect(secondSeed).to.be.at.least(0);
-        });
-    });
-  });
-
-  // =============================================================================
   // PERFORMANCE TESTS
   // =============================================================================
 
@@ -369,20 +244,6 @@ describe("Investment Game Utilities API Tests", () => {
       });
     });
 
-    it("should respond to custom seed request within reasonable time", () => {
-      const startTime = Date.now();
-
-      makeAuthenticatedRequest(
-        "GET",
-        endpoints.investmentGame.customSeed(5),
-      ).then((response) => {
-        const endTime = Date.now();
-        const responseTime = endTime - startTime;
-
-        assertStatusCode(response, 200);
-        expect(responseTime).to.be.below(5000); // Should respond within 5 seconds
-      });
-    });
   });
 
   // =============================================================================
@@ -453,31 +314,6 @@ describe("Investment Game Utilities API Tests", () => {
         });
     });
 
-    it("should generate reasonable custom seeds for different scenarios", () => {
-      const scenarios = [
-        { assets: 1, description: "minimal assets" },
-        { assets: 5, description: "standard assets" },
-        { assets: 10, description: "many assets" },
-      ];
-
-      scenarios.forEach((scenario) => {
-        makeAuthenticatedRequest(
-          "GET",
-          endpoints.investmentGame.customSeed(scenario.assets),
-        ).then((response) => {
-          assertStatusCode(response, 200);
-
-          assertResponseBody(response, (seed) => {
-            expect(seed).to.be.a("number");
-            expect(seed).to.be.at.least(0);
-
-            // Seeds should be reasonable integers
-            expect(seed % 1).to.equal(0); // Should be integer
-            expect(seed).to.be.below(Number.MAX_SAFE_INTEGER);
-          });
-        });
-      });
-    });
   });
 
   // =============================================================================
@@ -520,22 +356,5 @@ describe("Investment Game Utilities API Tests", () => {
       );
     });
 
-    it("should handle concurrent custom seed requests", () => {
-      const concurrentRequests = [
-        makeAuthenticatedRequest("GET", endpoints.investmentGame.customSeed(5)),
-        makeAuthenticatedRequest("GET", endpoints.investmentGame.customSeed(5)),
-        makeAuthenticatedRequest("GET", endpoints.investmentGame.customSeed(3)),
-      ];
-
-      Promise.all(concurrentRequests).then(
-        (responses: Cypress.Response<any>[]) => {
-          responses.forEach((response) => {
-            assertStatusCode(response, 200);
-            expect(response.body).to.be.a("number");
-            expect(response.body).to.be.at.least(0);
-          });
-        },
-      );
-    });
   });
 });

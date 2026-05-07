@@ -13,6 +13,7 @@ from pyxis_portfolio_challenge.game.trial import (
     TrialState,
     trials_json_to_trials_sequence,
 )
+from pyxis_portfolio_challenge.rng import init_game_rng
 
 
 def test_revenue_formula():
@@ -44,6 +45,7 @@ def drug_asset_factory(
     the creation of the trial sequence and the random number generator.
     """
     asset_id = id or uuid.uuid4()
+    init_game_rng(seed)
 
     if trial and trials_schema is not None:
         raise ValueError("Provide either 'trial' or 'trials_schema', not both.")
@@ -83,10 +85,9 @@ def drug_asset_factory(
             state=TrialState.IN_PROGRESS,
             next_trial_on_success=None,
         )
-        trial._rng = random.Random(f"{seed}_{asset_id}_{trial.phase.name}")
 
     elif trial is None:
-        trial = trials_json_to_trials_sequence(trials_schema, seed, asset_id, pending_trial_phase="Phase 1", approval_phase_config=None, trial_cost_multiplier=1.0)
+        trial = trials_json_to_trials_sequence(trials_schema, asset_id=asset_id, pending_trial_phase="Phase 1", approval_phase_config=None, trial_cost_multiplier=1.0)
 
     asset = DrugAsset(
         id=asset_id,
@@ -101,9 +102,6 @@ def drug_asset_factory(
         state=state,
         time_on_market=time_on_market,
     )
-
-    # Set the private _rng attribute
-    asset._rng = random.Random(f"{seed}_{asset_id}")
 
     return asset
 
@@ -393,7 +391,6 @@ def test_asset_evolve_in_development_success_final_trial():
         state=TrialState.IN_PROGRESS,
         next_trial_on_success=None,
     )
-    trial._rng = random.Random()
     asset = drug_asset_factory(state=AssetState.InDevelopment, trial=trial)
     # Force trial to succeed by setting PTRS to 1.0
     evolved_asset = asset.evolve()
@@ -419,7 +416,6 @@ def test_asset_evolve_in_development_failure():
         state=TrialState.IN_PROGRESS,
         next_trial_on_success=None,
     )
-    trial._rng = random.Random()
     asset = drug_asset_factory(state=AssetState.InDevelopment, trial=trial)
     # Force trial to fail by setting PTRS to 0.0
     evolved_asset = asset.evolve()
@@ -438,7 +434,6 @@ def test_asset_evolve_in_development_ongoing():
         state=TrialState.PENDING,
         next_trial_on_success=None,
     )
-    next_trial_on_success._rng = random.Random(42)
     trial = Trial(
         cost_remaining=200.0,
         time_remaining=2,
@@ -447,7 +442,6 @@ def test_asset_evolve_in_development_ongoing():
         state=TrialState.IN_PROGRESS,
         next_trial_on_success=next_trial_on_success,
     )
-    trial._rng = random.Random(42)
     asset = drug_asset_factory(state=AssetState.InDevelopment, trial=trial)
 
     # first evolve
@@ -528,7 +522,6 @@ def test_asset_cost_this_step_in_development():
         state=TrialState.IN_PROGRESS,
         next_trial_on_success=None,
     )
-    trial._rng = random.Random()
     asset = drug_asset_factory(state=AssetState.InDevelopment, trial=trial)
     assert asset.cost_this_step == 50.0  # 150 / 3 steps
 

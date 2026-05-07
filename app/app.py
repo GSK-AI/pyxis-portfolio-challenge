@@ -19,7 +19,6 @@ from pyxis_portfolio_challenge.game.asset_generators import (
     JSONAssetGenerator,
 )
 from pyxis_portfolio_challenge.game.constants import (
-    CUSTOM_SEEDS,
     LEVELS,
     InvestmentLevel,
 )
@@ -486,24 +485,6 @@ async def use_agent_hint(
 
     return agent_investment_decisions
 
-
-@app.get("/game/custom_seeds", response_model=int)
-def get_custom_seed(initial_num_assets: int) -> int:
-    """
-    Get a custom seed for the given number of assets.
-
-    Selects from lists of pre-explored seeds that yield at least one On Market asset.
-
-    Args:
-        initial_num_assets : int
-            The initial number of assets.
-
-    Returns:
-        int
-            A random custom seed for the given number of assets.
-
-    """
-    return random.choice(CUSTOM_SEEDS[initial_num_assets])
 
 
 # --- Multi-Agent Endpoints ---

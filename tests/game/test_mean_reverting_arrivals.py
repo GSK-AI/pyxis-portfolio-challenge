@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import random
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from scipy.stats import norm
@@ -10,6 +10,7 @@ from scipy.stats import norm
 from pyxis_portfolio_challenge.config import CapacityConfig
 from pyxis_portfolio_challenge.game.asset_generators import JSONAssetGenerator
 from pyxis_portfolio_challenge.game.game_state import GameState
+from pyxis_portfolio_challenge.rng import init_game_rng
 
 _DISABLED_RD_CAPACITY = CapacityConfig(
     enabled=False,
@@ -102,6 +103,7 @@ class TestRepeatedSamplingBehavior:
     def test_multiple_assets_added_when_far_below(self, valid_json_assets_path):
         """Test that multiple assets can be added when far below target."""
         # Create game state with target=5 but only 2 assets
+        init_game_rng(42)
         game_state = GameState.initialise_new_game(
             asset_generator_cls=JSONAssetGenerator,
             num_assets=2,
@@ -122,19 +124,21 @@ class TestRepeatedSamplingBehavior:
         game_state.equilibrium_num_assets = 5
 
         # Mock RNG to always return success (low values)
-        game_state._rng = MagicMock(spec=random.Random)
-        game_state._rng.random.side_effect = [0.1, 0.1, 0.1, 0.9]  # First 3 succeed, 4th fails
+        mock_rng = MagicMock(spec=random.Random)
+        mock_rng.random.side_effect = [0.1, 0.1, 0.1, 0.9]  # First 3 succeed, 4th fails
 
         initial_assets = {k: v for k, v in game_state.assets.items()}
 
         # Call the method
-        result = game_state._add_new_assets_mean_reverting(initial_assets)
+        with patch("pyxis_portfolio_challenge.game.game_state.get_game_rng", return_value=mock_rng):
+            result = game_state._add_new_assets_mean_reverting(initial_assets)
 
         # Should have added 3 assets (stopped on 4th draw)
         assert len(result) == 5  # 2 initial + 3 new
 
     def test_stops_at_max_assets(self, valid_json_assets_path):
         """Test that loop stops when reaching max_num_assets."""
+        init_game_rng(42)
         game_state = GameState.initialise_new_game(
             asset_generator_cls=JSONAssetGenerator,
             num_assets=3,
@@ -154,17 +158,19 @@ class TestRepeatedSamplingBehavior:
         game_state.equilibrium_num_assets = 10  # Target above max
 
         # Mock RNG to always succeed
-        game_state._rng = MagicMock(spec=random.Random)
-        game_state._rng.random.return_value = 0.01  # Always succeed
+        mock_rng = MagicMock(spec=random.Random)
+        mock_rng.random.return_value = 0.01  # Always succeed
 
         initial_assets = {k: v for k, v in game_state.assets.items()}
-        result = game_state._add_new_assets_mean_reverting(initial_assets)
+        with patch("pyxis_portfolio_challenge.game.game_state.get_game_rng", return_value=mock_rng):
+            result = game_state._add_new_assets_mean_reverting(initial_assets)
 
         # Should stop at max_num_assets
         assert len(result) == 5
 
     def test_stops_on_first_failed_draw(self, valid_json_assets_path):
         """Test that loop stops on first failed random draw."""
+        init_game_rng(42)
         game_state = GameState.initialise_new_game(
             asset_generator_cls=JSONAssetGenerator,
             num_assets=3,
@@ -184,11 +190,12 @@ class TestRepeatedSamplingBehavior:
         game_state.equilibrium_num_assets = 5
 
         # Mock RNG to fail immediately
-        game_state._rng = MagicMock(spec=random.Random)
-        game_state._rng.random.return_value = 0.99  # Always fail
+        mock_rng = MagicMock(spec=random.Random)
+        mock_rng.random.return_value = 0.99  # Always fail
 
         initial_assets = {k: v for k, v in game_state.assets.items()}
-        result = game_state._add_new_assets_mean_reverting(initial_assets)
+        with patch("pyxis_portfolio_challenge.game.game_state.get_game_rng", return_value=mock_rng):
+            result = game_state._add_new_assets_mean_reverting(initial_assets)
 
         # Should not add any assets
         assert len(result) == 3
@@ -199,6 +206,7 @@ class TestEdgeCases:
 
     def test_empty_portfolio_rapid_recovery(self, valid_json_assets_path):
         """Test that empty portfolio recovers quickly."""
+        init_game_rng(42)
         game_state = GameState.initialise_new_game(
             asset_generator_cls=JSONAssetGenerator,
             num_assets=1,
@@ -221,17 +229,19 @@ class TestEdgeCases:
         empty_portfolio = {}
 
         # Mock RNG to succeed multiple times
-        game_state._rng = MagicMock(spec=random.Random)
+        mock_rng = MagicMock(spec=random.Random)
         # High probabilities when far below target should lead to many successes
-        game_state._rng.random.side_effect = [0.1, 0.1, 0.1, 0.1, 0.1, 0.9]
+        mock_rng.random.side_effect = [0.1, 0.1, 0.1, 0.1, 0.1, 0.9]
 
-        result = game_state._add_new_assets_mean_reverting(empty_portfolio)
+        with patch("pyxis_portfolio_challenge.game.game_state.get_game_rng", return_value=mock_rng):
+            result = game_state._add_new_assets_mean_reverting(empty_portfolio)
 
         # Should have added multiple assets
         assert len(result) >= 3
 
     def test_at_max_capacity_no_overflow(self, valid_json_assets_path):
         """Test that being at max capacity prevents any additions."""
+        init_game_rng(42)
         game_state = GameState.initialise_new_game(
             asset_generator_cls=JSONAssetGenerator,
             num_assets=5,
@@ -250,11 +260,12 @@ class TestEdgeCases:
         )
 
         # Mock RNG to always succeed (shouldn't matter)
-        game_state._rng = MagicMock(spec=random.Random)
-        game_state._rng.random.return_value = 0.01
+        mock_rng = MagicMock(spec=random.Random)
+        mock_rng.random.return_value = 0.01
 
         initial_assets = {k: v for k, v in game_state.assets.items()}
-        result = game_state._add_new_assets_mean_reverting(initial_assets)
+        with patch("pyxis_portfolio_challenge.game.game_state.get_game_rng", return_value=mock_rng):
+            result = game_state._add_new_assets_mean_reverting(initial_assets)
 
         # Should not add any assets
         assert len(result) == 5

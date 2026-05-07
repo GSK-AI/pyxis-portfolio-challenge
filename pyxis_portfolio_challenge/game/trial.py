@@ -14,6 +14,8 @@ from pydantic import (
 )
 from scipy.stats import beta as beta_dist
 
+from pyxis_portfolio_challenge.rng import get_game_rng
+
 logger = logging.getLogger(__name__)
 
 
@@ -85,7 +87,6 @@ class Trial(BaseModel):
     state: TrialState
     next_trial_on_success: Trial | None
     progress_accumulated: float = 0.0  # For investment level speed tracking
-    _rng: random.Random = PrivateAttr()
 
     # Uncertain PTRS attributes (used when uncertain_ptrs feature is enabled)
     _true_ptrs: float | None = PrivateAttr(default=None)  # Hidden true PTRS
@@ -120,7 +121,6 @@ class Trial(BaseModel):
         if not isinstance(other, Trial):
             return NotImplemented
         attrs_to_ignore = {
-            "_rng",
             "_true_ptrs",
             "_initial_observed_ptrs",
             "_effective_true_ptrs",
@@ -278,11 +278,11 @@ class Trial(BaseModel):
         Parameters
         ----------
         rng : random.Random | None
-            Random number generator. Uses self._rng if not provided.
+            Random number generator. Uses get_game_rng() if not provided.
 
         """
         if rng is None:
-            rng = self._rng
+            rng = get_game_rng()
 
         # Use effective true PTRS if available (distributional/uncertain PTRS feature)
         # This ensures latent quality reflects hidden TA quality modifiers
@@ -338,7 +338,7 @@ class Trial(BaseModel):
         noise_scale = 0.3 * (1 - self.progress)
 
         # Generate noise using the trial's RNG
-        noise = self._rng.gauss(0, noise_scale)
+        noise = get_game_rng().gauss(0, noise_scale)
 
         # Return noisy signal, clipped to [0, 1]
         signal = self._latent_quality + noise
@@ -360,7 +360,7 @@ class Trial(BaseModel):
             return self.success()
 
         # Success is probabilistic based on latent quality
-        return self._rng.random() < self._latent_quality
+        return get_game_rng().random() < self._latent_quality
 
     def start_trial(self, enable_interim_observations: bool = False) -> "Trial":
         """
@@ -381,20 +381,7 @@ class Trial(BaseModel):
             state=TrialState.IN_PROGRESS,
             next_trial_on_success=self.next_trial_on_success,
         )
-        new_trial._rng = self._rng
-        # Copy uncertain PTRS attributes
-        new_trial._true_ptrs = self._true_ptrs
-        new_trial._initial_observed_ptrs = self._initial_observed_ptrs
-        new_trial._effective_true_ptrs = self._effective_true_ptrs
-        # Copy distributional PTRS attributes
-        new_trial._ptrs_prior_alpha = self._ptrs_prior_alpha
-        new_trial._ptrs_prior_beta = self._ptrs_prior_beta
-        new_trial._ptrs_true_alpha = self._ptrs_true_alpha
-        new_trial._ptrs_true_beta = self._ptrs_true_beta
-        # Copy cached percentiles and experience fraction
-        new_trial._ptrs_range_low_cached = self._ptrs_range_low_cached
-        new_trial._ptrs_range_high_cached = self._ptrs_range_high_cached
-        new_trial._last_exp_fraction = self._last_exp_fraction
+        self._copy_private_attrs(new_trial)
 
         # Initialize interim observations if enabled
         if enable_interim_observations:
@@ -434,32 +421,27 @@ class Trial(BaseModel):
         2. Uncertain PTRS: Use effective_true_ptrs point value
         3. Default: Use observed ptrs
         """
-        if not hasattr(self, "_rng"):
-            raise RuntimeError(
-                "Tried to call _rng.random() on trial without `_rng` attribute"
-                "which signifies it is failed. This should never happen."
-            )
+        rng = get_game_rng()
 
         # Distributional PTRS: sample from true Beta distribution
         if self._ptrs_true_alpha is not None and self._ptrs_true_beta is not None:
             # Sample PTRS from the true (hidden) distribution
-            np_rng = np.random.RandomState(self._rng.randint(0, 2**31))
+            np_rng = np.random.RandomState(rng.randint(0, 2**31))
             sampled_ptrs = float(
                 np_rng.beta(self._ptrs_true_alpha, self._ptrs_true_beta)
             )
             # Compare to random draw
-            return self._rng.random() < sampled_ptrs
+            return rng.random() < sampled_ptrs
 
         # Uncertain PTRS: use effective true PTRS point value
         if self._effective_true_ptrs is not None:
-            return self._rng.random() < self._effective_true_ptrs
+            return rng.random() < self._effective_true_ptrs
 
         # Default: use observed PTRS
-        return self._rng.random() < self.ptrs
+        return rng.random() < self.ptrs
 
     def _copy_private_attrs(self, new_trial: "Trial") -> None:
         """Copy all private attributes to a new trial instance."""
-        new_trial._rng = self._rng
         # Copy uncertain PTRS attributes
         new_trial._true_ptrs = self._true_ptrs
         new_trial._initial_observed_ptrs = self._initial_observed_ptrs
@@ -672,19 +654,16 @@ class Trial(BaseModel):
             True if trial succeeds, False otherwise.
 
         """
-        if not hasattr(self, "_rng"):
-            raise RuntimeError(
-                "Tried to call _rng.random() on trial without `_rng` attribute"
-            )
+        rng = get_game_rng()
 
         # Distributional PTRS: sample from true Beta distribution, apply modifier
         if self._ptrs_true_alpha is not None and self._ptrs_true_beta is not None:
-            np_rng = np.random.RandomState(self._rng.randint(0, 2**31))
+            np_rng = np.random.RandomState(rng.randint(0, 2**31))
             sampled_ptrs = float(
                 np_rng.beta(self._ptrs_true_alpha, self._ptrs_true_beta)
             )
             modified_prob = min(1.0, sampled_ptrs * success_modifier)
-            return self._rng.random() < modified_prob
+            return rng.random() < modified_prob
 
         # Uncertain PTRS or default: use point estimate
         base_prob = (
@@ -696,12 +675,11 @@ class Trial(BaseModel):
         # Apply modifier but cap at 1.0
         modified_prob = min(1.0, base_prob * success_modifier)
 
-        return self._rng.random() < modified_prob
+        return rng.random() < modified_prob
 
 
 def trials_json_to_trials_sequence(
     json: dict,
-    seed: int,
     asset_id: uuid.UUID,
     pending_trial_phase: str,
     approval_phase_config,
@@ -759,12 +737,12 @@ def trials_json_to_trials_sequence(
 
     # If approval phase is enabled, create it first (it's the last in the chain)
     if approval_phase_config is not None and approval_phase_config.enabled:
-        approval_rng = random.Random(f"{seed}_{asset_id}_approval")
-        duration = approval_rng.randint(
+        rng = get_game_rng()
+        duration = rng.randint(
             approval_phase_config.duration_min,
             approval_phase_config.duration_max,
         )
-        success_rate = approval_rng.uniform(
+        success_rate = rng.uniform(
             approval_phase_config.success_rate_min,
             approval_phase_config.success_rate_max,
         )
@@ -776,7 +754,6 @@ def trials_json_to_trials_sequence(
             state=TrialState.PENDING,
             next_trial_on_success=None,
         )
-        approval_trial._rng = approval_rng
         trials_by_phase["Approval"] = approval_trial
         next_trial = approval_trial
 
@@ -792,8 +769,6 @@ def trials_json_to_trials_sequence(
             next_trial_on_success=next_trial,
             phase=TrialPhase(json_phase_to_trial_phase[key]),
         )
-
-        current_trial._rng = random.Random(f"{seed}_{asset_id}_{key}")
 
         trials_by_phase[json_phase_to_trial_phase[key]] = current_trial
         next_trial = current_trial

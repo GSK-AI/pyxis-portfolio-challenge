@@ -6,7 +6,7 @@ import LayoutContainer from "@/components/LayoutContainer";
 import TheTitle from "@/components/TheTitle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { startGame, getCustomSeed } from "@/lib/backendCallsGame";
+import { startGame } from "@/lib/backendCallsGame";
 
 import type {
   GameStart,
@@ -86,9 +86,8 @@ export default function StartGame({
     setError(""); // Clear any previous errors
     try {
       // Get custom seed based on number of assets
-      const customSeed = await getCustomSeed(form.num_assets);
-      // Update form with the custom seed
-      const updatedForm = { ...form, global_seed: customSeed };
+      const randomSeed = Math.floor(Math.random() * 2 ** 32);
+      const updatedForm = { ...form, global_seed: randomSeed };
       const response = await startGame(updatedForm);
       setStarting(false);
       handleStartGameCallback(response);
