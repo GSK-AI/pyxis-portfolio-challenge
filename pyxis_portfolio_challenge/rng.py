@@ -16,6 +16,4 @@ def get_game_rng() -> random.Random:
     try:
         return _game_rng.get()
     except LookupError:
-        raise RuntimeError(
-            "Game RNG not initialized. Call init_game_rng(seed) first."
-        )
+        raise RuntimeError("Game RNG not initialized. Call init_game_rng(seed) first.")

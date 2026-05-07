@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import random
 import uuid
 from typing import Literal
 
@@ -388,7 +387,9 @@ class MultiAgentGame(BaseModel):
         step_num = self.time + 1
         active = [a for a in self.active_agents if not new_agent_states[a].game_ended]
         active_labels = [self._label(a) for a in active]
-        logger.info(f"Step {step_num}/{self.horizon} — active agents: {', '.join(active_labels)}")
+        logger.info(
+            f"Step {step_num}/{self.horizon} — active agents: {', '.join(active_labels)}"
+        )
 
         for agent in self.active_agents:
             if new_agent_states[agent].game_ended:
@@ -512,7 +513,9 @@ class MultiAgentGame(BaseModel):
             logger.info("Game complete — final standings:")
             for agent, state in new_agent_states.items():
                 status = "BANKRUPT" if state.bankrupt else f"cash={state.cash:,.0f}"
-                logger.info(f"  {self._label(agent)}: {status}, eNPV={state.enpv():,.0f}")
+                logger.info(
+                    f"  {self._label(agent)}: {status}, eNPV={state.enpv():,.0f}"
+                )
 
         new_game = MultiAgentGame(
             agent_states=new_agent_states,

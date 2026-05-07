@@ -39,6 +39,7 @@ from pyxis_portfolio_challenge.game.shared_market_state import (
     AlertType,
     SharedMarketState,
 )
+from pyxis_portfolio_challenge.rng import init_game_rng
 
 TEST_ASSETS_DIR = upath.UPath("tests/data/generated_assets")
 
@@ -86,7 +87,11 @@ def _make_env(
         flatten_obs=True,
         distributional_ptrs_config=DistributionalPtrsConfig(
             enabled=False,
-            ta_quality_variance={"oncology": 0.08, "respiratory and immunology": 0.05, "vaccines and infectious disease": 0.03},
+            ta_quality_variance={
+                "oncology": 0.08,
+                "respiratory and immunology": 0.05,
+                "vaccines and infectious disease": 0.03,
+            },
             asset_noise_std=0.03,
             prior_concentration=5.0,
             observation_noise=0.1,
@@ -98,19 +103,45 @@ def _make_env(
             experience_to_max_boost=40.0,
             experience_decay_rate=0.98,
             max_total_experience=60.0,
-            phase_experience_weights={"phase_1": 0.5, "phase_2": 1.0, "phase_3": 1.5, "approval": 0.5},
+            phase_experience_weights={
+                "phase_1": 0.5,
+                "phase_2": 1.0,
+                "phase_3": 1.5,
+                "approval": 0.5,
+            },
             asset_arrival_temperature=0.1,
         ),
         uncertain_ptrs_config=UncertainPtrsConfig(
             enabled=False,
-            ta_noise_config={"oncology": 0.12, "respiratory and immunology": 0.10, "vaccines and infectious disease": 0.08},
-            phase_noise_multipliers={"phase_1": 1.5, "phase_2": 1.0, "phase_3": 0.75, "approval": 0.5},
+            ta_noise_config={
+                "oncology": 0.12,
+                "respiratory and immunology": 0.10,
+                "vaccines and infectious disease": 0.08,
+            },
+            phase_noise_multipliers={
+                "phase_1": 1.5,
+                "phase_2": 1.0,
+                "phase_3": 0.75,
+                "approval": 0.5,
+            },
         ),
         investment_levels_config=InvestmentLevelsConfig(
             enabled=False,
             levels={
-                "none": InvestmentLevelParams(cost_modifier=0.0, speed_modifier=0.0, success_modifier=1.0, capacity_cost=0, experience_modifier=0.0),
-                "standard": InvestmentLevelParams(cost_modifier=1.0, speed_modifier=1.0, success_modifier=1.0, capacity_cost=2, experience_modifier=1.0),
+                "none": InvestmentLevelParams(
+                    cost_modifier=0.0,
+                    speed_modifier=0.0,
+                    success_modifier=1.0,
+                    capacity_cost=0,
+                    experience_modifier=0.0,
+                ),
+                "standard": InvestmentLevelParams(
+                    cost_modifier=1.0,
+                    speed_modifier=1.0,
+                    success_modifier=1.0,
+                    capacity_cost=2,
+                    experience_modifier=1.0,
+                ),
             },
         ),
         interim_trial_observations_config=InterimTrialObservationsConfig(
@@ -126,8 +157,12 @@ def _make_env(
             overage_scaling="linear",
         ),
         approval_phase_config=ApprovalPhaseConfig(
-            enabled=False, duration_min=1, duration_max=3,
-            success_rate_min=0.85, success_rate_max=0.95, cost=50_000_000,
+            enabled=False,
+            duration_min=1,
+            duration_max=3,
+            success_rate_min=0.85,
+            success_rate_max=0.95,
+            cost=50_000_000,
         ),
         max_indications_per_ta=7,
         target_drugs_per_indication=2.0,
@@ -228,8 +263,7 @@ class TestMultiAgentEnvStep:
         env.reset(seed=42)
 
         actions = {
-            agent: np.zeros(env.max_num_assets, dtype=np.int8)
-            for agent in env.agents
+            agent: np.zeros(env.max_num_assets, dtype=np.int8) for agent in env.agents
         }
 
         obs, rewards, terms, truncs, infos = env.step(actions)
@@ -367,7 +401,6 @@ _SHARED_MARKET_DEFAULTS = dict(
     first_mover_bonus=0.3,
     alert_history_length=5,
     disable_market_share_competition=False,
-    seed=42,
     num_indications_per_ta=0,
     bd_enabled=False,
     bd_base_lambda=0.3,
@@ -386,10 +419,12 @@ _SHARED_MARKET_DEFAULTS = dict(
 
 class TestSharedMarketState:
     def test_initialize(self):
+        init_game_rng(42)
         state = SharedMarketState.initialize(**_SHARED_MARKET_DEFAULTS)
         assert len(state.ta_markets) == len(THERAPEUTIC_AREAS)
 
     def test_alerts(self):
+        init_game_rng(42)
         state = SharedMarketState.initialize(**_SHARED_MARKET_DEFAULTS)
         from pyxis_portfolio_challenge.game.shared_market_state import Alert
 
@@ -410,6 +445,8 @@ class TestSharedMarketState:
 
     def test_exclusivity(self):
         import uuid as _uuid
+
+        init_game_rng(42)
         state = SharedMarketState.initialize(**_SHARED_MARKET_DEFAULTS)
         ta_market = state.ta_markets["oncology"]
 
@@ -535,10 +572,11 @@ class TestDictObservation:
 
     def test_dict_matches_flat_on_reset(self):
         """Dict obs flattened should match flat obs from same seed."""
+        # Run sequentially to avoid shared RNG interference between envs
         env_dict = _make_env(flatten_obs=False)
-        env_flat = _make_env(flatten_obs=True)
-
         dict_obs, _ = env_dict.reset(seed=42)
+
+        env_flat = _make_env(flatten_obs=True)
         flat_obs, _ = env_flat.reset(seed=42)
 
         for agent in env_dict.possible_agents:
@@ -551,41 +589,53 @@ class TestDictObservation:
             )
 
     def test_dict_matches_flat_over_steps(self):
-        """Dict↔flat equivalence holds across multiple steps."""
+        """
+        Dict↔flat equivalence holds across multiple steps.
+
+        Run each env independently (reset+step fully) then compare,
+        because both envs share the process-wide game RNG.
+        """
+        num_steps = 5
+
+        # Collect dict observations
         env_dict = _make_env(flatten_obs=False)
-        env_flat = _make_env(flatten_obs=True)
-
         dict_obs, _ = env_dict.reset(seed=42)
-        flat_obs, _ = env_flat.reset(seed=42)
-
-        for step in range(5):
-            # Do-nothing actions
+        dict_obs_history = [dict_obs]
+        for _ in range(num_steps):
             actions = {
                 agent: {
-                    "investments": np.zeros(
-                        env_dict.max_num_assets, dtype=np.int8
-                    ),
-                    "bd_bids": np.zeros(
-                        env_dict.bd_max_slots, dtype=np.int64
-                    ),
+                    "investments": np.zeros(env_dict.max_num_assets, dtype=np.int8),
+                    "bd_bids": np.zeros(env_dict.bd_max_slots, dtype=np.int64),
                 }
                 for agent in env_dict.agents
             }
-
             dict_obs, *_ = env_dict.step(actions)
-            flat_obs, *_ = env_flat.step(actions)
+            dict_obs_history.append(dict_obs)
 
+        # Collect flat observations with same seed and actions
+        env_flat = _make_env(flatten_obs=True)
+        flat_obs, _ = env_flat.reset(seed=42)
+        flat_obs_history = [flat_obs]
+        for _ in range(num_steps):
+            actions = {
+                agent: {
+                    "investments": np.zeros(env_flat.max_num_assets, dtype=np.int8),
+                    "bd_bids": np.zeros(env_flat.bd_max_slots, dtype=np.int64),
+                }
+                for agent in env_flat.agents
+            }
+            flat_obs, *_ = env_flat.step(actions)
+            flat_obs_history.append(flat_obs)
+
+        # Compare
+        for step in range(num_steps + 1):
             for agent in env_dict.possible_agents:
-                dict_as_flat = env_dict.flatten_dict_obs(
-                    dict_obs[agent]
-                )
+                dict_as_flat = env_dict.flatten_dict_obs(dict_obs_history[step][agent])
                 np.testing.assert_allclose(
-                    flat_obs[agent],
+                    flat_obs_history[step][agent],
                     dict_as_flat,
                     atol=1e-6,
-                    err_msg=(
-                        f"Mismatch for {agent} at step {step}"
-                    ),
+                    err_msg=(f"Mismatch for {agent} at step {step}"),
                 )
 
     def test_unflatten_roundtrip(self):
@@ -611,13 +661,11 @@ class TestDictObservation:
                 orig = dict_obs["assets"][i]
                 recon = reconstructed["assets"][i]
                 for key in ["state", "ta_index", "indication"]:
-                    assert orig[key] == recon[key], (
+                    assert orig[key] == recon[key], f"Asset {i} key {key} mismatch"
+                for key in ["max_revenue", "enpv", "eroi"]:
+                    assert orig[key] == pytest.approx(recon[key], rel=1e-5), (
                         f"Asset {i} key {key} mismatch"
                     )
-                for key in ["max_revenue", "enpv", "eroi"]:
-                    assert orig[key] == pytest.approx(
-                        recon[key], rel=1e-5
-                    ), f"Asset {i} key {key} mismatch"
 
             # Check BD market
             for i in range(len(dict_obs["bd_market"])):
@@ -625,9 +673,9 @@ class TestDictObservation:
                 recon = reconstructed["bd_market"][i]
                 assert orig["available"] == recon["available"]
                 for key in ["enpv", "ptrs"]:
-                    assert orig[key] == pytest.approx(
-                        recon[key], rel=1e-5
-                    ), f"BD slot {i} key {key}"
+                    assert orig[key] == pytest.approx(recon[key], rel=1e-5), (
+                        f"BD slot {i} key {key}"
+                    )
 
     def test_flatten_then_unflatten_matches_flat(self):
         """Test flatten(unflatten(flat)) == flat."""
@@ -639,7 +687,9 @@ class TestDictObservation:
             dict_obs = env.unflatten_to_dict_obs(flat_obs)
             re_flat = env.flatten_dict_obs(dict_obs)
             np.testing.assert_allclose(
-                flat_obs, re_flat, atol=1e-6,
+                flat_obs,
+                re_flat,
+                atol=1e-6,
                 err_msg=f"Re-flattened mismatch for {agent}",
             )
 
@@ -661,7 +711,8 @@ class TestDisableMarketShareCompetition:
         shares = calculate_agent_market_shares(
             "pharma_0",
             env.multi_agent_game.shared_market,
-            env.agent_portfolios, 0,
+            env.agent_portfolios,
+            0,
         )
         # With competition disabled, all on-market drugs get share 1.0
         for share in shares.values():

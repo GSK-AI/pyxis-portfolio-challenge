@@ -1,15 +1,18 @@
 """Run a full episode with a random agent vs a custom callable opponent."""
 
 import numpy as np
-from pyxis_portfolio_challenge.environment import make_multi_agent_train_env
+
 from pyxis_portfolio_challenge.agents import MultiAgentKnapsackAgent
+from pyxis_portfolio_challenge.environment import make_multi_agent_train_env
 
 
 def random_policy(obs, masks):
     inv_mask = masks["investments"]
     bd_mask = masks["bd_bids"]
 
-    investments = (np.random.randint(0, 2, size=len(inv_mask)) * inv_mask).astype(np.int8)
+    investments = (np.random.randint(0, 2, size=len(inv_mask)) * inv_mask).astype(
+        np.int8
+    )
 
     bd_bids = np.zeros(len(bd_mask), dtype=np.int64)
     for i, slot in enumerate(bd_mask):

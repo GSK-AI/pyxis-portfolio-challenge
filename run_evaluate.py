@@ -1,7 +1,9 @@
 """Run evaluation over multiple episodes and print metrics."""
 
 import json
+
 import numpy as np
+
 from pyxis_portfolio_challenge.environment.competition import evaluate
 
 
@@ -18,7 +20,9 @@ class RandomAgent:
         inv_mask = masks["investments"]
         bd_mask = masks["bd_bids"]
 
-        investments = (np.random.randint(0, 2, size=len(inv_mask)) * inv_mask).astype(np.int8)
+        investments = (np.random.randint(0, 2, size=len(inv_mask)) * inv_mask).astype(
+            np.int8
+        )
 
         bd_bids = np.zeros(len(bd_mask), dtype=np.int64)
         for i, slot in enumerate(bd_mask):
@@ -47,4 +51,3 @@ for agent_id, reports in per_agent_reports.items():
             print(f"\n  {group_name}:")
             for metric in metrics:
                 print(f"    {json.dumps(metric, indent=6, default=str)}")
-
