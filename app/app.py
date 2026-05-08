@@ -68,6 +68,7 @@ async def lifespan(app: FastAPI):
         host=settings.redis_host,
         port=settings.redis_port,
         db=settings.redis_db,
+        password=settings.redis_password,
     )
     await app.state.redis_cache.test_connection()
     logger.info("Redis connection initialized")

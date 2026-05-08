@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     redis_host: str = "localhost"
     redis_port: int = 6379
     redis_db: int = 0
+    redis_password: str | None = None
     use_local_redis: bool = True  # A flag to switch between local and Azure
 
     # Middleware Settings
