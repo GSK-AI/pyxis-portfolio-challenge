@@ -51,6 +51,8 @@ stages:
         inlineScript: |
           set -euo pipefail
 
+          cd "$(frontendBuildContext)"
+
           az acr build \
             --registry "$(acrName)" \
             --resource-group "$(resourceGroupName)" \
@@ -61,7 +63,7 @@ stages:
             --build-arg NEXT_PUBLIC_BACKEND_URL_GAME="$(backendPublicUrl)" \
             --build-arg NEXT_PUBLIC_AZURE_CLIENT_ID="$(azureClientId)" \
             --build-arg NEXT_PUBLIC_AZURE_AUTHORITY="$(azureAuthority)" \
-            "$(frontendBuildContext)"
+            .
 
   - job: BuildBackend
     displayName: Build backend image
