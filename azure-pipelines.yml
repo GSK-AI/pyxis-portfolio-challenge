@@ -17,7 +17,7 @@ variables:
   frontendImageRepo: 'pyxis/frontend'
   backendImageRepo: 'pyxis/backend'
 
-  frontendDockerfile: 'linux_dockerfile_fe'
+  frontendDockerfile: './linux_dockerfile_fe'
   frontendBuildContext: '$(Build.SourcesDirectory)/frontend'
 
   backendDockerfile: 'Dockerfile.backend'
@@ -51,7 +51,16 @@ stages:
         inlineScript: |
           set -euo pipefail
 
+          backendHostName=$(az webapp show \
+            --resource-group "$(resourceGroupName)" \
+            --name "$(backendAppName)" \
+            --query defaultHostName \
+            --output tsv)
+          backendPublicUrl="https://${backendHostName}"
+          echo "Using backend URL for frontend build: ${backendPublicUrl}"
+
           cd "$(frontendBuildContext)"
+          test -f "$(frontendDockerfile)"
 
           az acr build \
             --registry "$(acrName)" \
@@ -59,8 +68,8 @@ stages:
             --image "$(frontendImageRepo):$(imageTag)" \
             --image "$(frontendImageRepo):latest" \
             --file "$(frontendDockerfile)" \
-            --build-arg NEXT_PUBLIC_BACKEND_URL="$(backendPublicUrl)" \
-            --build-arg NEXT_PUBLIC_BACKEND_URL_GAME="$(backendPublicUrl)" \
+            --build-arg NEXT_PUBLIC_BACKEND_URL="${backendPublicUrl}" \
+            --build-arg NEXT_PUBLIC_BACKEND_URL_GAME="${backendPublicUrl}" \
             --build-arg NEXT_PUBLIC_AZURE_CLIENT_ID="$(azureClientId)" \
             --build-arg NEXT_PUBLIC_AZURE_AUTHORITY="$(azureAuthority)" \
             .
@@ -107,14 +116,22 @@ stages:
               inlineScript: |
                 set -euo pipefail
 
+                backendHostName=$(az webapp show \
+                  --resource-group "$(resourceGroupName)" \
+                  --name "$(backendAppName)" \
+                  --query defaultHostName \
+                  --output tsv)
+                backendPublicUrl="https://${backendHostName}"
+                echo "Using backend URL for frontend runtime config: ${backendPublicUrl}"
+
                 az webapp config appsettings set \
                   --resource-group "$(resourceGroupName)" \
                   --name "$(frontendAppName)" \
                   --settings \
                     WEBSITES_PORT=3000 \
                     NODE_ENV=production \
-                    NEXT_PUBLIC_BACKEND_URL="$(backendPublicUrl)" \
-                    NEXT_PUBLIC_BACKEND_URL_GAME="$(backendPublicUrl)"
+                    NEXT_PUBLIC_BACKEND_URL="${backendPublicUrl}" \
+                    NEXT_PUBLIC_BACKEND_URL_GAME="${backendPublicUrl}"
 
           - task: AzureWebAppContainer@1
             displayName: Point frontend App Service to new image
@@ -151,16 +168,38 @@ stages:
               appName: '$(backendAppName)'
               containers: '$(acrLoginServer)/$(backendImageRepo):$(imageTag)'
 
-- stage: Smoke_Test
-  displayName: Smoke test production
+- stage: Deployment_Test
+  displayName: Deployment test
   dependsOn: Deploy_Prod
   jobs:
-  - job: SmokeTest
+  - job: DeploymentTest
     displayName: Check frontend and backend
     steps:
-    - script: |
-        set -euo pipefail
+    - task: AzureCLI@2
+      displayName: Test deployed endpoints
+      inputs:
+        azureSubscription: '$(azureServiceConnection)'
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          set -euo pipefail
 
-        curl --fail --silent --show-error --retry 6 --retry-delay 10 "$(backendPublicUrl)/health"
-        curl --fail --silent --show-error --retry 6 --retry-delay 10 --output /dev/null "$(frontendPublicUrl)"
-      displayName: Smoke test deployed endpoints
+          frontendHostName=$(az webapp show \
+            --resource-group "$(resourceGroupName)" \
+            --name "$(frontendAppName)" \
+            --query defaultHostName \
+            --output tsv)
+          backendHostName=$(az webapp show \
+            --resource-group "$(resourceGroupName)" \
+            --name "$(backendAppName)" \
+            --query defaultHostName \
+            --output tsv)
+
+          frontendUrl="https://${frontendHostName}"
+          backendUrl="https://${backendHostName}"
+
+          echo "Frontend URL: ${frontendUrl}"
+          echo "Backend URL: ${backendUrl}"
+
+          curl --fail --silent --show-error --retry 6 --retry-delay 10 "${backendUrl}/health"
+          curl --fail --silent --show-error --retry 6 --retry-delay 10 --output /dev/null "${frontendUrl}"
