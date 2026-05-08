@@ -163,12 +163,12 @@ masks = env.action_masks("pharma_0")
 
 Investment mask rules:
 - Only Idle assets are investable (state=0)
-- Assets are masked if `cash < cost_to_invest` (when `mask_first_order_assets=True`)
+- Idle assets are masked if `cash < cost_to_invest` — this is a first-order affordability check that considers each asset independently, without accounting for the combined cost of investing in multiple assets in the same step. This reduces the RL action search space by pruning clearly unaffordable options
 - InDevelopment, OnMarket, Failed, Expired, and empty slots are always masked
 
 BD bid mask rules:
 - Level 0 (pass) is always valid
-- Level k is valid if the agent can afford the bid price
+- Level k is valid if the agent can afford the bid price — as with investment masks, this is a first-order check per slot and does not account for the combined cost of bidding on multiple BD assets or investing in the same step
 - All levels masked if no BD asset in that slot, agent is bankrupt, or at max assets
 
 Using masks with MaskablePPO or a manual agent:
