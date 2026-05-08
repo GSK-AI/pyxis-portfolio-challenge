@@ -108,6 +108,26 @@ stages:
         deploy:
           steps:
           - task: AzureCLI@2
+            displayName: Configure App Service ACR pull identity
+            inputs:
+              azureSubscription: '$(azureServiceConnection)'
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                set -euo pipefail
+
+                for appName in "$(frontendAppName)" "$(backendAppName)"; do
+                  az webapp identity assign \
+                    --resource-group "$(resourceGroupName)" \
+                    --name "${appName}"
+
+                  az webapp config set \
+                    --resource-group "$(resourceGroupName)" \
+                    --name "${appName}" \
+                    --generic-configurations '{"acrUseManagedIdentityCreds": true}'
+                done
+
+          - task: AzureCLI@2
             displayName: Configure frontend App Service settings
             inputs:
               azureSubscription: '$(azureServiceConnection)'
