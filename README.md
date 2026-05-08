@@ -38,7 +38,7 @@ from pyxis_portfolio_challenge.environment import make_multi_agent_train_env
 from pyxis_portfolio_challenge.environment.competition import evaluate
 
 env = make_multi_agent_train_env()
-reports, _, _ = evaluate(agents=["knapsack(c12)", "random"], num_episodes=100)
+reports, _ = evaluate(agents=["knapsack(c12)", "random"], num_episodes=100)
 ```
 
 ### Provided Agents
@@ -158,7 +158,7 @@ action = {
 ```python
 masks = env.action_masks("pharma_0")
 # masks["investments"]: shape (max_num_assets,), dtype int8 — 1 = can invest, 0 = cannot
-# masks["bd_bids"]: shape (3, 11), dtype bool — [slot][level] = True if affordable
+# masks["bd_bids"]: list of 3 lists, each length 11 — [slot][level] = True if affordable
 ```
 
 Investment mask rules:
