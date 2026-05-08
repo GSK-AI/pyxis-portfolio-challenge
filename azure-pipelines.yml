@@ -1,0 +1,164 @@
+trigger: none
+pr: none
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  azureServiceConnection: 'sc-azurerm-gskai-pyxis-prod'
+
+  resourceGroupName: 'rg-gskai-pyxis-prod'
+  acrName: 'registrygskaipyxisprod'
+  acrLoginServer: 'registrygskaipyxisprod.azurecr.io'
+
+  frontendAppName: 'app-gskai-pyxis-fe-prod'
+  backendAppName: 'app-gskai-pyxis-be-prod'
+
+  frontendImageRepo: 'pyxis/frontend'
+  backendImageRepo: 'pyxis/backend'
+
+  frontendDockerfile: 'linux_dockerfile_fe'
+  frontendBuildContext: '$(Build.SourcesDirectory)/frontend'
+
+  backendDockerfile: 'Dockerfile.backend'
+  backendBuildContext: '$(Build.SourcesDirectory)'
+
+  frontendPublicUrl: 'https://app-gskai-pyxis-fe-prod.azurewebsites.net'
+  backendPublicUrl: 'https://app-gskai-pyxis-be-prod.azurewebsites.net'
+  redisHost: 'redis-gskai-pyxis-prod.redis.cache.windows.net'
+  gameAssetsDir: '/app/rl-environment-assets/gpt5_09feb2026_highPtrs/training'
+
+  azureClientId: ''
+  azureAuthority: ''
+
+  imageTag: '$(Build.BuildId)'
+
+stages:
+- stage: Build
+  displayName: Build images into ACR
+  jobs:
+  - job: BuildFrontend
+    displayName: Build frontend image
+    steps:
+    - checkout: self
+
+    - task: AzureCLI@2
+      displayName: Build frontend with az acr build
+      inputs:
+        azureSubscription: '$(azureServiceConnection)'
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          set -euo pipefail
+
+          az acr build \
+            --registry "$(acrName)" \
+            --resource-group "$(resourceGroupName)" \
+            --image "$(frontendImageRepo):$(imageTag)" \
+            --image "$(frontendImageRepo):latest" \
+            --file "$(frontendDockerfile)" \
+            --build-arg NEXT_PUBLIC_BACKEND_URL="$(backendPublicUrl)" \
+            --build-arg NEXT_PUBLIC_BACKEND_URL_GAME="$(backendPublicUrl)" \
+            --build-arg NEXT_PUBLIC_AZURE_CLIENT_ID="$(azureClientId)" \
+            --build-arg NEXT_PUBLIC_AZURE_AUTHORITY="$(azureAuthority)" \
+            "$(frontendBuildContext)"
+
+  - job: BuildBackend
+    displayName: Build backend image
+    steps:
+    - checkout: self
+
+    - task: AzureCLI@2
+      displayName: Build backend with az acr build
+      inputs:
+        azureSubscription: '$(azureServiceConnection)'
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          set -euo pipefail
+
+          az acr build \
+            --registry "$(acrName)" \
+            --resource-group "$(resourceGroupName)" \
+            --image "$(backendImageRepo):$(imageTag)" \
+            --image "$(backendImageRepo):latest" \
+            --file "$(backendDockerfile)" \
+            "$(backendBuildContext)"
+
+- stage: Deploy_Prod
+  displayName: Deploy to production
+  dependsOn: Build
+  jobs:
+  - deployment: DeployContainers
+    displayName: Deploy frontend and backend containers
+    environment: 'gskai-pyxis-prod'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: AzureCLI@2
+            displayName: Configure frontend App Service settings
+            inputs:
+              azureSubscription: '$(azureServiceConnection)'
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                set -euo pipefail
+
+                az webapp config appsettings set \
+                  --resource-group "$(resourceGroupName)" \
+                  --name "$(frontendAppName)" \
+                  --settings \
+                    WEBSITES_PORT=3000 \
+                    NODE_ENV=production \
+                    NEXT_PUBLIC_BACKEND_URL="$(backendPublicUrl)" \
+                    NEXT_PUBLIC_BACKEND_URL_GAME="$(backendPublicUrl)"
+
+          - task: AzureWebAppContainer@1
+            displayName: Point frontend App Service to new image
+            inputs:
+              azureSubscription: '$(azureServiceConnection)'
+              appName: '$(frontendAppName)'
+              containers: '$(acrLoginServer)/$(frontendImageRepo):$(imageTag)'
+
+          - task: AzureCLI@2
+            displayName: Configure backend App Service settings
+            inputs:
+              azureSubscription: '$(azureServiceConnection)'
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                set -euo pipefail
+
+                az webapp config appsettings set \
+                  --resource-group "$(resourceGroupName)" \
+                  --name "$(backendAppName)" \
+                  --settings \
+                    WEBSITES_PORT=8000 \
+                    APP_REDIS_HOST="$(redisHost)" \
+                    APP_REDIS_PORT=6380 \
+                    APP_REDIS_DB=0 \
+                    APP_USE_LOCAL_REDIS=false \
+                    APP_REDIS_PASSWORD="$(APP_REDIS_PASSWORD)" \
+                    APP_GAME_ASSETS_DIR="$(gameAssetsDir)"
+
+          - task: AzureWebAppContainer@1
+            displayName: Point backend App Service to new image
+            inputs:
+              azureSubscription: '$(azureServiceConnection)'
+              appName: '$(backendAppName)'
+              containers: '$(acrLoginServer)/$(backendImageRepo):$(imageTag)'
+
+- stage: Smoke_Test
+  displayName: Smoke test production
+  dependsOn: Deploy_Prod
+  jobs:
+  - job: SmokeTest
+    displayName: Check frontend and backend
+    steps:
+    - script: |
+        set -euo pipefail
+
+        curl --fail --silent --show-error --retry 6 --retry-delay 10 "$(backendPublicUrl)/health"
+        curl --fail --silent --show-error --retry 6 --retry-delay 10 --output /dev/null "$(frontendPublicUrl)"
+      displayName: Smoke test deployed endpoints
