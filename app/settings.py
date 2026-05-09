@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     main_url: str = "https://pyxis.gsk.com"
     docs_cdn: str = "https://cdn.jsdelivr.net"
     docs_api: str = "https://fastapi.tiangolo.com"
+    additional_cors_origins: str = ""
 
     # Multi-agent game settings
     max_opponents: int = 1  # Max opponents allowed in multi-agent games
