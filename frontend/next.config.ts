@@ -12,10 +12,6 @@ const nextConfig: NextConfig = {
         source: "/(.*)", // Apply to all routes
         headers: [
           {
-            key: "X-Frame-Options",
-            value: "SAMEORIGIN",
-          },
-          {
             key: "X-Content-Type-Options",
             value: "nosniff",
           },
@@ -33,6 +29,7 @@ const nextConfig: NextConfig = {
               "img-src 'self';",
               "form-action 'self' https://login.microsoftonline.com *.microsoftonline.com;",
               "frame-src https://login.microsoftonline.com *.microsoftonline.com;",
+              "frame-ancestors 'self' https://gsk.ai https://www.gsk.ai;",
               "object-src 'none';",
               "report-to csp-endpoint;",
             ].join(" "),
