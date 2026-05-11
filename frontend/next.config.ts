@@ -1,5 +1,24 @@
 import type { NextConfig } from "next";
 
+const uniqueSources = (sources: Array<string | undefined>) =>
+  [...new Set(sources.filter((source): source is string => !!source))].join(
+    " ",
+  );
+
+const connectSources = uniqueSources([
+  "'self'",
+  "http://localhost:3000",
+  "http://localhost:8000",
+  process.env.NEXT_PUBLIC_BACKEND_URL,
+  process.env.NEXT_PUBLIC_BACKEND_URL_GAME,
+  "https://*.rd-iase-devtest-us6.appserviceenvironment.net",
+  "https://*.rd-iase-uat-us6.appserviceenvironment.net",
+  "https://*.rd-iase-prod-us6.appserviceenvironment.net",
+  "https://login.microsoftonline.com",
+  "*.microsoftonline.com",
+  "https://pyxis.gsk.com",
+]);
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   turbopack: {
@@ -25,7 +44,7 @@ const nextConfig: NextConfig = {
               "default-src 'self' https://login.microsoftonline.com *.microsoftonline.com;",
               "script-src 'self' 'unsafe-inline' 'unsafe-eval';",
               "style-src 'self' 'unsafe-inline';",
-              "connect-src 'self' http://localhost:3000 http://localhost:8000 https://*.rd-iase-devtest-us6.appserviceenvironment.net https://*.rd-iase-uat-us6.appserviceenvironment.net https://*.rd-iase-prod-us6.appserviceenvironment.net https://login.microsoftonline.com *.microsoftonline.com https://pyxis.gsk.com;",
+              `connect-src ${connectSources};`,
               "img-src 'self';",
               "form-action 'self' https://login.microsoftonline.com *.microsoftonline.com;",
               "frame-src https://login.microsoftonline.com *.microsoftonline.com;",

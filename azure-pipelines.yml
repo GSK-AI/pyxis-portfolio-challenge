@@ -23,8 +23,6 @@ variables:
   backendDockerfile: 'Dockerfile.backend'
   backendBuildContext: '$(Build.SourcesDirectory)'
 
-  frontendPublicUrl: 'https://app-gskai-pyxis-fe-prod.azurewebsites.net'
-  backendPublicUrl: 'https://app-gskai-pyxis-be-prod.azurewebsites.net'
   redisHost: 'redis-gskai-pyxis-prod.redis.cache.windows.net'
   gameAssetsDir: '/app/rl-environment-assets/gpt5_09feb2026_highPtrs/training'
 
@@ -151,7 +149,9 @@ stages:
                     WEBSITES_PORT=3000 \
                     NODE_ENV=production \
                     NEXT_PUBLIC_BACKEND_URL="${backendPublicUrl}" \
-                    NEXT_PUBLIC_BACKEND_URL_GAME="${backendPublicUrl}"
+                    NEXT_PUBLIC_BACKEND_URL_GAME="${backendPublicUrl}" \
+                    NEXT_PUBLIC_AZURE_CLIENT_ID="$(azureClientId)" \
+                    NEXT_PUBLIC_AZURE_AUTHORITY="$(azureAuthority)"
 
           - task: AzureWebAppContainer@1
             displayName: Point frontend App Service to new image
@@ -169,6 +169,14 @@ stages:
               inlineScript: |
                 set -euo pipefail
 
+                frontendHostName=$(az webapp show \
+                  --resource-group "$(resourceGroupName)" \
+                  --name "$(frontendAppName)" \
+                  --query defaultHostName \
+                  --output tsv)
+                frontendPublicUrl="https://${frontendHostName}"
+                echo "Allowing frontend origin for backend CORS: ${frontendPublicUrl}"
+
                 az webapp config appsettings set \
                   --resource-group "$(resourceGroupName)" \
                   --name "$(backendAppName)" \
@@ -179,7 +187,8 @@ stages:
                     APP_REDIS_DB=0 \
                     APP_USE_LOCAL_REDIS=false \
                     APP_REDIS_PASSWORD="$(APP_REDIS_PASSWORD)" \
-                    APP_GAME_ASSETS_DIR="$(gameAssetsDir)"
+                    APP_GAME_ASSETS_DIR="$(gameAssetsDir)" \
+                    APP_ADDITIONAL_CORS_ORIGINS="${frontendPublicUrl}"
 
           - task: AzureWebAppContainer@1
             displayName: Point backend App Service to new image
@@ -222,4 +231,11 @@ stages:
           echo "Backend URL: ${backendUrl}"
 
           curl --fail --silent --show-error --retry 6 --retry-delay 10 "${backendUrl}/health"
+          curl --fail --silent --show-error --retry 6 --retry-delay 10 \
+            --request OPTIONS \
+            --header "Origin: ${frontendUrl}" \
+            --header "Access-Control-Request-Method: GET" \
+            --header "Access-Control-Request-Headers: authorization" \
+            --output /dev/null \
+            "${backendUrl}/health"
           curl --fail --silent --show-error --retry 6 --retry-delay 10 --output /dev/null "${frontendUrl}"

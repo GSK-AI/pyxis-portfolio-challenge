@@ -59,6 +59,14 @@ game_config = config.from_yaml()
 reward_fn = config.instantiate_from_config(game_config.reward_fn)
 
 
+def _split_origins(value: str) -> list[str]:
+    return [
+        origin.strip().rstrip("/")
+        for origin in value.split(",")
+        if origin.strip()
+    ]
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Creates the database and loads all data."""
@@ -68,6 +76,7 @@ async def lifespan(app: FastAPI):
         host=settings.redis_host,
         port=settings.redis_port,
         db=settings.redis_db,
+        password=settings.redis_password,
     )
     await app.state.redis_cache.test_connection()
     logger.info("Redis connection initialized")
@@ -92,6 +101,9 @@ origins = [
     "https://cdn.jsdelivr.net",
     "https://fastapi.tiangolo.com",
 ]
+origins = list(
+    dict.fromkeys([*origins, *_split_origins(settings.additional_cors_origins)])
+)
 
 app = FastAPI(
     title="Pyxis Portfolio Challenge",

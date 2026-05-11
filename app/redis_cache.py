@@ -192,7 +192,9 @@ class RedisCache:
         return await self.get(f"user:{user_id}:agent:{agent_name}:hints_used")
 
 
-def get_redis_cache(use_local: bool, host: str, port: int, db: int) -> RedisCache:
+def get_redis_cache(
+    use_local: bool, host: str, port: int, db: int, password: str | None = None
+) -> RedisCache:
     """
     Factory function to get an instance of RedisCache.
 
@@ -202,6 +204,7 @@ def get_redis_cache(use_local: bool, host: str, port: int, db: int) -> RedisCach
         host (str): The Redis host.
         port (int): The Redis port.
         db (int): The Redis database index.
+        password (str | None): The Azure Redis access key when using Azure Redis.
 
     Returns:
         RedisCache: An initialized RedisCache instance.
@@ -210,5 +213,7 @@ def get_redis_cache(use_local: bool, host: str, port: int, db: int) -> RedisCach
     if use_local:
         client = create_local_redis_client(host=host, port=port, db=db)
     else:
-        client = create_azure_redis_client(host=host, port=port, db=db)
+        client = create_azure_redis_client(
+            host=host, port=port, db=db, password=password
+        )
     return RedisCache(client)

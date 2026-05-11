@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     redis_host: str = "localhost"
     redis_port: int = 6379
     redis_db: int = 0
+    redis_password: str | None = None
     use_local_redis: bool = True  # A flag to switch between local and Azure
 
     # Middleware Settings
@@ -26,6 +27,7 @@ class Settings(BaseSettings):
     main_url: str = "https://pyxis.gsk.com"
     docs_cdn: str = "https://cdn.jsdelivr.net"
     docs_api: str = "https://fastapi.tiangolo.com"
+    additional_cors_origins: str = ""
 
     # Multi-agent game settings
     max_opponents: int = 1  # Max opponents allowed in multi-agent games
