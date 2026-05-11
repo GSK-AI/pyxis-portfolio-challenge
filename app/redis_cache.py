@@ -151,6 +151,14 @@ class RedisCache:
         """Delete multi-agent game state for a given game_id."""
         await self.delete(f"multi_game_state:{game_id}")
 
+    async def set_multi_game_rng_state(self, game_id, rng_state):
+        """Store game RNG state for a given game_id."""
+        await self.set(f"multi_game_rng_state:{game_id}", rng_state)
+
+    async def get_multi_game_rng_state(self, game_id):
+        """Retrieve game RNG state for a given game_id."""
+        return await self.get(f"multi_game_rng_state:{game_id}")
+
     async def set_multi_game_opponents(self, game_id, opponent_types):
         """Store opponent agent types for a given game_id."""
         await self.set(f"multi_game_opponents:{game_id}", opponent_types)
