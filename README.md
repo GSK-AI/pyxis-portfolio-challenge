@@ -38,7 +38,7 @@ from pyxis_portfolio_challenge.environment import make_multi_agent_train_env
 from pyxis_portfolio_challenge.environment.competition import evaluate
 
 env = make_multi_agent_train_env()
-reports, _, _ = evaluate(agents=["knapsack(c12)", "random"], num_episodes=100)
+reports, _ = evaluate(agents=["knapsack(c12)", "random"], num_episodes=100)
 ```
 
 ### Provided Agents
@@ -158,17 +158,17 @@ action = {
 ```python
 masks = env.action_masks("pharma_0")
 # masks["investments"]: shape (max_num_assets,), dtype int8 — 1 = can invest, 0 = cannot
-# masks["bd_bids"]: shape (3, 11), dtype bool — [slot][level] = True if affordable
+# masks["bd_bids"]: list of 3 lists, each length 11 — [slot][level] = True if affordable
 ```
 
 Investment mask rules:
 - Only Idle assets are investable (state=0)
-- Assets are masked if `cash < cost_to_invest` (when `mask_first_order_assets=True`)
+- Idle assets are masked if `cash < cost_to_invest` — this is a first-order affordability check that considers each asset independently, without accounting for the combined cost of investing in multiple assets in the same step. This reduces the RL action search space by pruning clearly unaffordable options
 - InDevelopment, OnMarket, Failed, Expired, and empty slots are always masked
 
 BD bid mask rules:
 - Level 0 (pass) is always valid
-- Level k is valid if the agent can afford the bid price
+- Level k is valid if the agent can afford the bid price — as with investment masks, this is a first-order check per slot and does not account for the combined cost of bidding on multiple BD assets or investing in the same step
 - All levels masked if no BD asset in that slot, agent is bankrupt, or at max assets
 
 Using masks with MaskablePPO or a manual agent:
