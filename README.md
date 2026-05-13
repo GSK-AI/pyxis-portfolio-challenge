@@ -10,7 +10,9 @@ The repository provides a standardised environment with multiple baseline agents
 
 ## Play the Game
 
-Before building an agent, you can play the game yourself against a provided AI opponent at [gsk.ai/pyxis-portfolio-challenge](https://gsk.ai/pyxis-portfolio-challenge). This is the best way to develop an intuition for the environment dynamics — asset pipelines, trial outcomes, cash management, and competitive market timing.
+Before building an agent, you can play the game yourself against a provided AI opponent at [gsk.ai/pyxis-portfolio-challenge/play](https://gsk.ai/pyxis-portfolio-challenge/play). This is the best way to develop an intuition for the environment dynamics — asset pipelines, trial outcomes, cash management, and competitive market timing.
+
+For background on the challenge, the environment design, and how to get involved, see the [blog post](https://gsk.ai/pyxis-portfolio-challenge).
 
 ## Getting Started
 
@@ -29,7 +31,7 @@ Run a match from the CLI and generate a replay file:
 uv run pyxis 'knapsack(c12)' random --seed 42 -o replay.json
 ```
 
-Upload `replay.json` to [gsk.ai/pyxis-portfolio-challenge](https://gsk.ai/pyxis-portfolio-challenge) to watch the replay in the browser.
+Upload `replay.json` to [gsk.ai/pyxis-portfolio-challenge/play](https://gsk.ai/pyxis-portfolio-challenge/play) to watch the replay in the browser.
 
 Or use the Python API to evaluate agents over multiple episodes:
 
