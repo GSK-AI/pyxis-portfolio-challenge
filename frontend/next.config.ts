@@ -48,7 +48,7 @@ const nextConfig: NextConfig = {
               "img-src 'self';",
               "form-action 'self' https://login.microsoftonline.com *.microsoftonline.com;",
               "frame-src https://login.microsoftonline.com *.microsoftonline.com;",
-              "frame-ancestors 'self' https://gsk.ai https://www.gsk.ai;",
+              "frame-ancestors 'self' https://gsk.ai https://www.gsk.ai https://gsk-ai-v3.staging-iis.gskinternet.com;",
               "object-src 'none';",
               "report-to csp-endpoint;",
             ].join(" "),
