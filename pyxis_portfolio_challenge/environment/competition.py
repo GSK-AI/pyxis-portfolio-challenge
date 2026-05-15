@@ -180,6 +180,8 @@ class _FlatObsAgentWrapper:
 
     def __getattr__(self, name):
         """Proxy attribute access to inner agent."""
+        if name in ("_agent", "_env"):
+            raise AttributeError(name)
         return getattr(self._agent, name)
 
 
@@ -205,6 +207,8 @@ class _DeferredFlatObsWrapper:
 
     def __getattr__(self, name):
         """Proxy attribute access to inner agent."""
+        if name in ("_agent", "_env"):
+            raise AttributeError(name)
         return getattr(self._agent, name)
 
 

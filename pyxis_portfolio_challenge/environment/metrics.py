@@ -115,6 +115,10 @@ class PerEvaluationCumulativeReward(PerEvaluationMetric):
     def report(self) -> dict[str, Any]:
         """Returns the collected metrics in a dictionary format."""
         combined = [cum_reward for cum_reward in self.history.values()]
+        sorted_combined = sorted(combined)
+        n = len(sorted_combined)
+        q25 = statistics.median(sorted_combined[: n // 2]) if n >= 2 else sorted_combined[0]
+        q75 = statistics.median(sorted_combined[(n + 1) // 2 :]) if n >= 2 else sorted_combined[0]
 
         return {
             self.__class__.__name__: {
@@ -123,6 +127,9 @@ class PerEvaluationCumulativeReward(PerEvaluationMetric):
                 "min": min(combined),
                 "max": max(combined),
                 "median": statistics.median(combined),
+                "q25": q25,
+                "q75": q75,
+                "iqr": q75 - q25,
             }
         }
 
