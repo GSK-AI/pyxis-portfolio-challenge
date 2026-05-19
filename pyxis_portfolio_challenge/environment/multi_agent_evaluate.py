@@ -129,6 +129,7 @@ def evaluate_multi_agent(
         # Begin episode for per-agent metrics
         shared_market = env.multi_agent_game.shared_market
         all_states = env.agent_portfolios
+        episode_fingerprint = env.multi_agent_game.content_fingerprint(episode_seed)
         for agent_id in env.possible_agents:
             game_state = all_states[agent_id]
             ctx = MetricsContext(
@@ -137,6 +138,7 @@ def evaluate_multi_agent(
                 shared_market_state=shared_market,
                 agent_id=agent_id,
                 all_agent_states=all_states,
+                episode_id=episode_fingerprint,
             )
             collect_metrics(
                 "on_episode_begin",

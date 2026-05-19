@@ -91,7 +91,7 @@ def _ctx(gs, sm=None, reward=0.0, agent_id=None, all_agent_states=None,
 
 
 def _key(gs):
-    return f"episode_id_{gs.id}"
+    return f"game_state_id_{gs.id}"
 
 
 # ── PerStepIndicationDiversity ──────────────────────────────────────────
