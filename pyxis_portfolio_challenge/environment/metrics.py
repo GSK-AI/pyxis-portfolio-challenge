@@ -25,6 +25,14 @@ class MetricsContext:
     all_agent_states: dict[str, GameState] | None = None
     all_agent_rewards: dict[str, float] | None = None
     bd_bid_levels: list[int] | None = None
+    episode_id: str | None = None
+
+    @property
+    def episode_key(self) -> str:
+        """Returns a prefixed key indicating the type and value of the episode identifier."""
+        if self.episode_id is not None:
+            return f"episode_id_{self.episode_id}"
+        return f"game_state_id_{self.game_state.id}"
 
 
 class EvaluationMetric(Protocol):
@@ -103,13 +111,13 @@ class PerEvaluationCumulativeReward(PerEvaluationMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Called once before an episode run starts."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         self.history[key] = 0.0
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Called after every step."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = self.history[key] + context.reward
 
     def report(self) -> dict[str, Any]:
@@ -155,13 +163,13 @@ class PerEvaluationCumulativeNCF(PerEvaluationMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Called once before an episode run starts."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         self.history[key] = context.game_state.cash
 
     def on_episode_end(self, context: MetricsContext) -> None:
         """Store total NCF = final_cash - starting_cash."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         starting_cash = self.history[key]
         self.history[key] = context.game_state.cash - starting_cash
 
@@ -192,13 +200,13 @@ class PerEvaluationBankruptcyRate(PerEvaluationMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Called once before an episode run starts."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         self.history[key] = False
 
     def on_episode_end(self, context: MetricsContext) -> None:
         """Called once after a multi-episode evaluation run ends."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         if context.game_state.game_ended and context.game_state.bankrupt:
             self.history[key] = True
 
@@ -226,13 +234,13 @@ class PerEpisodeFinalEnpv(PerEpisodeMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Called once before an episode run starts."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         self.history[key] = 0.0
 
     def on_episode_end(self, context: MetricsContext) -> None:
         """Called once after a multi-episode evaluation run ends."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = context.game_state.enpv_over_time[-1]
 
     def report(self) -> dict[str, Any]:
@@ -253,13 +261,13 @@ class PerEpisodeFinalEroi(PerEpisodeMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Called once before an episode run starts."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         self.history[key] = 0.0
 
     def on_episode_end(self, context: MetricsContext) -> None:
         """Called once after a multi-episode evaluation run ends."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = context.game_state.eroi_over_time[-1]
 
     def report(self) -> dict[str, Any]:
@@ -280,13 +288,13 @@ class PerEpisodeNumSteps(PerEpisodeMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Called once before an episode run starts."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         self.history[key] = 0
 
     def on_episode_end(self, context: MetricsContext) -> None:
         """Called once after a multi-episode evaluation run ends."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = context.game_state.time
 
     def report(self) -> dict[str, Any]:
@@ -307,7 +315,7 @@ class PerEpisodeCumulativeReward(PerEpisodeMetric):
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Called after every step."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         if key not in self.history:
             self.history[key] = []
 
@@ -339,13 +347,13 @@ class PerEpisodeRealisedRoi(PerEpisodeMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Called once before an episode run starts."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         self.history[key] = 0.0
 
     def on_episode_end(self, context: MetricsContext) -> None:
         """Called after every episode."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = context.game_state.realised_roi()
 
     def report(self) -> dict[str, Any]:
@@ -366,13 +374,13 @@ class PerStepReward(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Called once before an episode run starts."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         self.history[key] = [0.0]
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Called after every step."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key].append(context.reward)
 
     def report(self) -> dict:
@@ -393,13 +401,13 @@ class PerStepCumulativeReward(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Called once before an episode run starts."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         self.history[key] = [0.0]
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Called after every step."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key].append(self.history[key][-1] + context.reward)
 
     def report(self) -> dict:
@@ -420,13 +428,13 @@ class PerStepEnpv(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Called once before an episode run starts."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         self.history[key] = []
 
     def on_episode_end(self, context: MetricsContext) -> None:
         """Called once before when episode run ends."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = context.game_state.running_enpv
 
     def report(self) -> dict:
@@ -447,13 +455,13 @@ class PerStepEroi(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Called once before an episode run starts."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         self.history[key] = []
 
     def on_episode_end(self, context: MetricsContext) -> None:
         """Called once before when episode run ends."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = context.game_state.running_eroi
 
     def report(self) -> dict:
@@ -474,13 +482,13 @@ class PerStepCash(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Called once before an episode run starts."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         self.history[key] = [context.game_state.cash]
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Called after every step."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = self.history[key] + [context.game_state.cash]
 
     def report(self) -> dict:
@@ -501,13 +509,13 @@ class PerStepRevenue(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Called once before an episode run starts."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         self.history[key] = []
 
     def on_episode_end(self, context: MetricsContext) -> None:
         """Called after every step."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = self.history[key] + context.game_state.realised_revenues
 
     def report(self) -> dict:
@@ -528,13 +536,13 @@ class PerStepCost(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Called once before an episode run starts."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         self.history[key] = []
 
     def on_episode_end(self, context: MetricsContext) -> None:
         """Called after every step."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = self.history[key] + context.game_state.realised_costs
 
     def report(self) -> dict:
@@ -555,13 +563,13 @@ class PerStepNetCashFlow(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Called once before an episode run starts."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         self.history[key] = []
 
     def on_episode_end(self, context: MetricsContext) -> None:
         """Called after every step."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         revenues = context.game_state.realised_revenues
         costs = context.game_state.realised_costs
         reinvestment_percentage = context.game_state.reinvestment_percentage
@@ -590,13 +598,13 @@ class PerStepCumulativeNetCashFlow(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Called once before an episode run starts."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         self.history[key] = []
 
     def on_episode_end(self, context: MetricsContext) -> None:
         """Called after every step."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         revenues = context.game_state.realised_revenues
         costs = context.game_state.realised_costs
         reinvestment_percentage = context.game_state.reinvestment_percentage
@@ -625,7 +633,7 @@ class PerStepNumAssetsIdleState(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Called once before an episode run starts."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         num_idle_assets = len([
             asset
@@ -636,7 +644,7 @@ class PerStepNumAssetsIdleState(PerStepMetric):
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Called after every step."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         num_idle_assets = len([
             asset
             for asset in context.game_state.assets.values()
@@ -662,7 +670,7 @@ class PerStepNumAssetsInDevelopmentState(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Called once before an episode run starts."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         num_in_dev_assets = len([
             asset
@@ -673,7 +681,7 @@ class PerStepNumAssetsInDevelopmentState(PerStepMetric):
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Called after every step."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         num_in_dev_assets = len([
             asset
             for asset in context.game_state.assets.values()
@@ -699,7 +707,7 @@ class PerStepNumAssetsOnMarketState(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Called once before an episode run starts."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         num_on_mkt_assets = len([
             asset
@@ -710,7 +718,7 @@ class PerStepNumAssetsOnMarketState(PerStepMetric):
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Called after every step."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         num_on_mkt_assets = len([
             asset
             for asset in context.game_state.assets.values()
@@ -736,13 +744,13 @@ class PerStepNumAssetsFailedState(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Called once before an episode run starts."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         self.history[key] = [len(context.game_state.failed_assets)]
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Called after every step."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = self.history[key] + [len(context.game_state.failed_assets)]
 
     def report(self) -> dict:
@@ -763,13 +771,13 @@ class PerStepNumAssetsExpiredState(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Called once before an episode run starts."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         self.history[key] = [len(context.game_state.expired_assets)]
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Called after every step."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = self.history[key] + [len(context.game_state.expired_assets)]
 
     def report(self) -> dict:
@@ -791,7 +799,7 @@ class PerStepFractionOfPossibleInvestments(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Called once before an episode run starts."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         self.history[key] = []
 
@@ -814,7 +822,7 @@ class PerStepFractionOfPossibleInvestments(PerStepMetric):
         fraction = 0.0
         if len(assets_available_for_inv) > 0:
             fraction = num_investments_made / len(assets_available_for_inv)
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = self.history[key] + [fraction]
 
     def report(self) -> dict:
@@ -836,7 +844,7 @@ class PerStepFractionOfPossibleInvestmentsPosEnpv(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Called once before an episode run starts."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         self.history[key] = []
 
@@ -860,7 +868,7 @@ class PerStepFractionOfPossibleInvestmentsPosEnpv(PerStepMetric):
         fraction = 0.0
         if len(assets_available_for_inv) > 0:
             fraction = num_investments_made / len(assets_available_for_inv)
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = self.history[key] + [fraction]
 
     def report(self) -> dict:
@@ -886,14 +894,14 @@ class PerStepTAExperienceOncology(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Called once before an episode run starts."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         experience = context.game_state.ta_experience.get("oncology", 0.0)
         self.history[key] = [experience]
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Called after every step."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         experience = context.game_state.ta_experience.get("oncology", 0.0)
         self.history[key].append(experience)
 
@@ -915,7 +923,7 @@ class PerStepTAExperienceRespiratoryImmunology(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Called once before an episode run starts."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         experience = context.game_state.ta_experience.get(
             "respiratory and immunology", 0.0
@@ -924,7 +932,7 @@ class PerStepTAExperienceRespiratoryImmunology(PerStepMetric):
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Called after every step."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         experience = context.game_state.ta_experience.get(
             "respiratory and immunology", 0.0
         )
@@ -948,7 +956,7 @@ class PerStepTAExperienceVaccines(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Called once before an episode run starts."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         experience = context.game_state.ta_experience.get(
             "vaccines and infectious disease", 0.0
@@ -957,7 +965,7 @@ class PerStepTAExperienceVaccines(PerStepMetric):
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Called after every step."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         experience = context.game_state.ta_experience.get(
             "vaccines and infectious disease", 0.0
         )
@@ -986,13 +994,13 @@ class PerStepMeanPTRSError(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Called once before an episode run starts."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         self.history[key] = [self._compute_mean_error(context.game_state)]
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Called after every step."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key].append(self._compute_mean_error(context.game_state))
 
     def _compute_mean_error(self, game_state: GameState) -> float:
@@ -1029,13 +1037,13 @@ class PerStepMeanExpertiseBoost(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Called once before an episode run starts."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         self.history[key] = [self._compute_mean_boost(context.game_state)]
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Called after every step."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key].append(self._compute_mean_boost(context.game_state))
 
     def _compute_mean_boost(self, game_state: GameState) -> float:
@@ -1071,7 +1079,7 @@ class PerStepNumAssetsOncology(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Called once before an episode run starts."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         count = sum(
             1
@@ -1082,7 +1090,7 @@ class PerStepNumAssetsOncology(PerStepMetric):
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Called after every step."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         count = sum(
             1
             for asset in context.game_state.assets.values()
@@ -1108,7 +1116,7 @@ class PerStepNumAssetsRespiratoryImmunology(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Called once before an episode run starts."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         count = sum(
             1
@@ -1119,7 +1127,7 @@ class PerStepNumAssetsRespiratoryImmunology(PerStepMetric):
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Called after every step."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         count = sum(
             1
             for asset in context.game_state.assets.values()
@@ -1145,7 +1153,7 @@ class PerStepNumAssetsVaccines(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Called once before an episode run starts."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         count = sum(
             1
@@ -1156,7 +1164,7 @@ class PerStepNumAssetsVaccines(PerStepMetric):
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Called after every step."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         count = sum(
             1
             for asset in context.game_state.assets.values()
@@ -1187,13 +1195,13 @@ class PerStepCapacityUsed(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Called once before an episode run starts."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         self.history[key] = [context.game_state.capacity_used]
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Called after every step."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key].append(context.game_state.capacity_used)
 
     def report(self) -> dict:
@@ -1214,13 +1222,13 @@ class PerStepCapacityRatio(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Called once before an episode run starts."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         self.history[key] = [context.game_state.capacity_ratio]
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Called after every step."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key].append(context.game_state.capacity_ratio)
 
     def report(self) -> dict:
@@ -1241,13 +1249,13 @@ class PerStepGlobalSuccessModifier(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Called once before an episode run starts."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         self.history[key] = [context.game_state.success_modifier]
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Called after every step."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key].append(context.game_state.success_modifier)
 
     def report(self) -> dict:
@@ -1268,13 +1276,13 @@ class PerStepGlobalCostModifier(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Called once before an episode run starts."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         self.history[key] = [context.game_state.cost_modifier]
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Called after every step."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key].append(context.game_state.cost_modifier)
 
     def report(self) -> dict:
@@ -1297,7 +1305,7 @@ class PerStepNumAssetsMinimalLevel(PerStepMetric):
         """Called once before an episode run starts."""
         from pyxis_portfolio_challenge.game.constants import InvestmentLevel
 
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         count = sum(
             1
@@ -1310,7 +1318,7 @@ class PerStepNumAssetsMinimalLevel(PerStepMetric):
         """Called after every step."""
         from pyxis_portfolio_challenge.game.constants import InvestmentLevel
 
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         count = sum(
             1
             for asset in context.game_state.assets.values()
@@ -1338,7 +1346,7 @@ class PerStepNumAssetsStandardLevel(PerStepMetric):
         """Called once before an episode run starts."""
         from pyxis_portfolio_challenge.game.constants import InvestmentLevel
 
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         count = sum(
             1
@@ -1351,7 +1359,7 @@ class PerStepNumAssetsStandardLevel(PerStepMetric):
         """Called after every step."""
         from pyxis_portfolio_challenge.game.constants import InvestmentLevel
 
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         count = sum(
             1
             for asset in context.game_state.assets.values()
@@ -1379,7 +1387,7 @@ class PerStepNumAssetsAcceleratedLevel(PerStepMetric):
         """Called once before an episode run starts."""
         from pyxis_portfolio_challenge.game.constants import InvestmentLevel
 
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         count = sum(
             1
@@ -1392,7 +1400,7 @@ class PerStepNumAssetsAcceleratedLevel(PerStepMetric):
         """Called after every step."""
         from pyxis_portfolio_challenge.game.constants import InvestmentLevel
 
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         count = sum(
             1
             for asset in context.game_state.assets.values()
@@ -1428,13 +1436,13 @@ class PerStepMeanInterimSignal(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Called once before an episode run starts."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         self.history[key] = [self._compute_mean_signal(context.game_state)]
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Called after every step."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key].append(self._compute_mean_signal(context.game_state))
 
     def _compute_mean_signal(self, game_state: GameState) -> float:
@@ -1473,13 +1481,13 @@ class PerStepMeanTrialProgress(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Called once before an episode run starts."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         self.history[key] = [self._compute_mean_progress(context.game_state)]
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Called after every step."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key].append(self._compute_mean_progress(context.game_state))
 
     def _compute_mean_progress(self, game_state: GameState) -> float:
@@ -1515,13 +1523,13 @@ class PerStepMinInterimSignal(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Called once before an episode run starts."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         self.history[key] = [self._compute_min_signal(context.game_state)]
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Called after every step."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key].append(self._compute_min_signal(context.game_state))
 
     def _compute_min_signal(self, game_state: GameState) -> float:
@@ -1561,7 +1569,7 @@ class PerEpisodeNumStopActions(PerEpisodeMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Called once before an episode run starts."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         self._current_count = 0
 
@@ -1576,7 +1584,7 @@ class PerEpisodeNumStopActions(PerEpisodeMetric):
 
     def on_episode_end(self, context: MetricsContext) -> None:
         """Called at the end of each episode."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = self._current_count
 
     def report(self) -> dict:
@@ -1602,7 +1610,7 @@ class PerStepNumStopActions(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Called once before an episode run starts."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         assert key not in self.history, "Got a duplicate episode_id, shouldn't happen."
         self.history[key] = []
 
@@ -1610,7 +1618,7 @@ class PerStepNumStopActions(PerStepMetric):
         """Called after every step - checks for STOP actions in investment decisions."""
         from pyxis_portfolio_challenge.game.constants import InvestmentLevel
 
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         stop_count = 0
         if context.investment_decisions:
             for decision in context.investment_decisions.values():
