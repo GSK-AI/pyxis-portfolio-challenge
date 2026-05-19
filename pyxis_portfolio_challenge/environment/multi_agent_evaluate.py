@@ -266,6 +266,72 @@ def evaluate_multi_agent(
     return agent_metrics, playthrough
 
 
+def _parallel_evaluate_raw(
+    agents: dict[str, Callable],
+    num_workers: int,
+    env_kwargs: dict[str, Any],
+    warmup_steps: int = 0,
+    num_episodes: int | None = None,
+) -> dict[str, list[EvaluationMetric]]:
+    """
+    Evaluate agents in parallel and return raw (unformatted) metric objects.
+
+    This is the internal workhorse used by both
+    ``parallel_evaluate_multi_agent`` and the symmetric evaluation path in
+    ``competition.evaluate()``.
+
+    Returns:
+        Per-agent raw metrics: {agent_id: [EvaluationMetric, ...]}
+
+    """
+    cfg = config
+    total_episodes = num_episodes if num_episodes is not None else cfg.num_eval_episodes
+    # Don't spawn more workers than episodes
+    num_workers = min(num_workers, total_episodes)
+    episodes_per_worker = total_episodes // num_workers
+
+    if num_workers == 1:
+        agent_metrics, _ = evaluate_multi_agent(
+            agents,
+            worker_id=0,
+            episodes_per_worker=total_episodes,
+            env_kwargs=env_kwargs,
+            warmup_steps=warmup_steps,
+        )
+        return agent_metrics
+
+    with ProcessPoolExecutor(max_workers=num_workers) as pool:
+        futures = [
+            pool.submit(
+                evaluate_multi_agent,
+                agents,
+                worker_id=i,
+                episodes_per_worker=episodes_per_worker,
+                env_kwargs=env_kwargs,
+                warmup_steps=warmup_steps,
+            )
+            for i in range(num_workers)
+        ]
+
+        all_agent_metrics: dict[str, list[list[EvaluationMetric]]] = {}
+
+        with tqdm(total=num_workers, desc="Workers", unit="worker") as pbar:
+            for future in as_completed(futures):
+                agent_metrics, _ = future.result()
+                for agent_id, metrics in agent_metrics.items():
+                    if agent_id not in all_agent_metrics:
+                        all_agent_metrics[agent_id] = []
+                    all_agent_metrics[agent_id].append(metrics)
+                pbar.update(1)
+
+    # Merge per-agent metrics across workers
+    merged_metrics = {}
+    for agent_id, metrics_lists in all_agent_metrics.items():
+        merged_metrics[agent_id] = merge_all_metrics(metrics_lists)
+
+    return merged_metrics
+
+
 def parallel_evaluate_multi_agent(
     agents: dict[str, Callable],
     num_workers: int,
@@ -297,7 +363,6 @@ def parallel_evaluate_multi_agent(
     """
     cfg = config
     total_episodes = num_episodes if num_episodes is not None else cfg.num_eval_episodes
-    episodes_per_worker = total_episodes // num_workers
 
     if capture_playthrough:
         if total_episodes > 1:
@@ -309,15 +374,14 @@ def parallel_evaluate_multi_agent(
             raise ValueError(
                 f"Playthrough capture requires num_workers=1, got {num_workers}"
             )
-
-    if num_workers == 1:
+        # Playthrough path: must use single worker with full API
         agent_metrics, playthrough = evaluate_multi_agent(
             agents,
             worker_id=0,
             episodes_per_worker=total_episodes,
             env_kwargs=env_kwargs,
             warmup_steps=warmup_steps,
-            capture_playthrough=capture_playthrough,
+            capture_playthrough=True,
             agent_names=agent_names,
         )
         per_agent_reports = {}
@@ -326,34 +390,16 @@ def parallel_evaluate_multi_agent(
         playthrough_dict = playthrough.model_dump(mode="json") if playthrough else None
         return per_agent_reports, playthrough_dict
 
-    with ProcessPoolExecutor(max_workers=num_workers) as pool:
-        futures = [
-            pool.submit(
-                evaluate_multi_agent,
-                agents,
-                worker_id=i,
-                episodes_per_worker=episodes_per_worker,
-                env_kwargs=env_kwargs,
-                warmup_steps=warmup_steps,
-            )
-            for i in range(num_workers)
-        ]
-
-        all_agent_metrics: dict[str, list[list[EvaluationMetric]]] = {}
-
-        with tqdm(total=num_workers, desc="Workers", unit="worker") as pbar:
-            for future in as_completed(futures):
-                agent_metrics, _ = future.result()
-                for agent_id, metrics in agent_metrics.items():
-                    if agent_id not in all_agent_metrics:
-                        all_agent_metrics[agent_id] = []
-                    all_agent_metrics[agent_id].append(metrics)
-                pbar.update(1)
-
-    # Merge per-agent metrics across workers
+    # Standard path: delegate to _parallel_evaluate_raw and report
+    raw_metrics = _parallel_evaluate_raw(
+        agents=agents,
+        num_workers=num_workers,
+        env_kwargs=env_kwargs,
+        warmup_steps=warmup_steps,
+        num_episodes=num_episodes,
+    )
     per_agent_reports = {}
-    for agent_id, metrics_lists in all_agent_metrics.items():
-        merged = merge_all_metrics(metrics_lists)
-        per_agent_reports[agent_id] = report_all_metrics(merged)
+    for agent_id, metrics in raw_metrics.items():
+        per_agent_reports[agent_id] = report_all_metrics(metrics)
 
     return per_agent_reports, None

@@ -1817,10 +1817,15 @@ class PerEpisodeInvestmentPnL(PerEpisodeMetric):
 
 class PerEpisodeWinLoss(PerEpisodeMetric):
     """
-    Win/loss outcome per episode based on cumulative reward.
+    Win/loss outcome per episode with bankruptcy-aware conditions.
 
     Records 1.0 for a win, 0.0 for a loss, 0.5 for a draw.
-    Uses whatever reward function is configured — reward-agnostic.
+
+    Win conditions:
+    - Bankrupt agents automatically lose.
+    - If both agents go bankrupt, the one that survived longer wins
+      (higher game_state.time). Same step → draw.
+    - If neither is bankrupt, the agent with higher NCF wins.
     """
 
     def __init__(self) -> None:
@@ -1836,23 +1841,45 @@ class PerEpisodeWinLoss(PerEpisodeMetric):
         key = f"episode_id_{str(context.game_state.id)}"
         if (
             context.all_agent_rewards is None
+            or context.all_agent_states is None
             or context.agent_id is None
             or len(context.all_agent_rewards) < 2
         ):
             return
+
+        my_state = context.all_agent_states[context.agent_id]
+        my_bankrupt = my_state.bankrupt
         my_reward = context.all_agent_rewards[context.agent_id]
-        opponent_rewards = [
-            r
-            for aid, r in context.all_agent_rewards.items()
-            if aid != context.agent_id
+
+        opponent_ids = [
+            aid for aid in context.all_agent_rewards if aid != context.agent_id
         ]
-        max_opponent = max(opponent_rewards)
-        if my_reward > max_opponent:
-            self.history[key] = 1.0
-        elif my_reward < max_opponent:
+        # For 2-player: single opponent
+        opp_id = opponent_ids[0]
+        opp_state = context.all_agent_states[opp_id]
+        opp_bankrupt = opp_state.bankrupt
+        opp_reward = context.all_agent_rewards[opp_id]
+
+        if my_bankrupt and not opp_bankrupt:
             self.history[key] = 0.0
+        elif not my_bankrupt and opp_bankrupt:
+            self.history[key] = 1.0
+        elif my_bankrupt and opp_bankrupt:
+            # Both bankrupt: whoever survived longer wins
+            if my_state.time > opp_state.time:
+                self.history[key] = 1.0
+            elif my_state.time < opp_state.time:
+                self.history[key] = 0.0
+            else:
+                self.history[key] = 0.5
         else:
-            self.history[key] = 0.5
+            # Neither bankrupt: compare NCF
+            if my_reward > opp_reward:
+                self.history[key] = 1.0
+            elif my_reward < opp_reward:
+                self.history[key] = 0.0
+            else:
+                self.history[key] = 0.5
 
     def report(self) -> dict:
         """Return collected metric data."""

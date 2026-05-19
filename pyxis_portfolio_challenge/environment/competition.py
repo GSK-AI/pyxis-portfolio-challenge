@@ -451,11 +451,17 @@ def evaluate(
     num_agents: int | None = None,
     capture_playthrough: bool = False,
     flat_obs: dict[int, bool] | None = None,
+    symmetric: bool = True,
 ) -> tuple[dict[str, dict[str, Any]], dict | None]:
     """
     Evaluate agents in the multi-agent environment.
 
     Creates the environment from config and runs evaluation episodes.
+
+    When ``symmetric=True`` (default), each seed is played twice with
+    agent positions swapped to control for positional asymmetry.
+    Results are keyed by original agent identity (``agent_0``,
+    ``agent_1``) rather than seat position.
 
     Parameters
     ----------
@@ -463,30 +469,41 @@ def evaluate(
         List of agent specifications (strings or callables), one per
         player slot. No ``None`` slots — all agents must be specified.
     num_episodes : int | None
-        Number of evaluation episodes. If ``None``, uses
-        ``config.num_eval_episodes``.
+        Number of unique seeds to evaluate. If ``None``, uses
+        ``config.num_eval_episodes``. When ``symmetric=True``, the
+        actual number of episodes played is ``2 * num_episodes``.
     num_workers : int
         Number of parallel workers. Default 1.
     num_agents : int | None
         Override the number of agents. If ``None``, uses config value.
     capture_playthrough : bool
         If True, capture a full playthrough for replay (requires
-        ``num_episodes=1`` and ``num_workers=1``).
+        ``num_episodes=1`` and ``num_workers=1``). Not supported with
+        ``symmetric=True``.
     flat_obs : dict[int, bool] | None
         Mapping of agent index to whether it needs flat observations.
         Named agents already have a fixed format and cannot be
         overridden.  User agents without an entry here (and without a
         ``flat_obs`` attribute) receive dict observations.
+    symmetric : bool
+        If True (default), run seed-symmetric evaluation: each seed is
+        played with both agent orderings. Results are reported under
+        ``agent_0`` / ``agent_1`` keys (original identity, not seat).
 
     Returns
     -------
     tuple
         ``(per_agent_reports, playthrough_dict)``
-        where per_agent_reports maps agent_id to metric dicts.
+        where per_agent_reports maps agent key to metric dicts.
 
     """
     from pyxis_portfolio_challenge.environment.multi_agent_evaluate import (
+        _parallel_evaluate_raw,
         parallel_evaluate_multi_agent,
+    )
+    from pyxis_portfolio_challenge.environment.metrics import (
+        merge_all_metrics,
+        report_all_metrics,
     )
 
     # Build env kwargs to determine possible_agents
@@ -510,32 +527,100 @@ def evaluate(
 
     _validate_flat_obs_overrides(agents, flat_obs)
 
-    # Resolve named agents
-    resolved = {}
-    for i, spec in enumerate(agents):
-        agent_name = possible[i]
-        resolved[agent_name] = _resolve_agent(spec, agent_name)
+    if symmetric and capture_playthrough:
+        raise ValueError(
+            "Playthrough capture is not supported with symmetric=True."
+        )
 
-    # Wrap agents that need flat obs with deferred wrappers
-    # (the eval function creates its own env internally)
-    agents_with_format = {}
-    for i, agent_name in enumerate(possible):
-        agent = resolved[agent_name]
-        if _needs_flat_obs(agents[i], i, flat_obs):
-            agents_with_format[agent_name] = _DeferredFlatObsWrapper(agent)
-        else:
-            agents_with_format[agent_name] = agent
+    # Non-symmetric path: original behaviour
+    if not symmetric:
+        resolved = {}
+        for i, spec in enumerate(agents):
+            agent_name = possible[i]
+            resolved[agent_name] = _resolve_agent(spec, agent_name)
 
+        agents_with_format = {}
+        for i, agent_name in enumerate(possible):
+            agent = resolved[agent_name]
+            if _needs_flat_obs(agents[i], i, flat_obs):
+                agents_with_format[agent_name] = _DeferredFlatObsWrapper(agent)
+            else:
+                agents_with_format[agent_name] = agent
+
+        cfg = config
+        warmup_steps = cfg.warmup_on_reset_steps
+        return parallel_evaluate_multi_agent(
+            agents=agents_with_format,
+            num_workers=num_workers,
+            env_kwargs=env_kwargs,
+            warmup_steps=warmup_steps,
+            capture_playthrough=capture_playthrough,
+            num_episodes=num_episodes,
+        )
+
+    # --- Symmetric evaluation ---
     cfg = config
     warmup_steps = cfg.warmup_on_reset_steps
-    return parallel_evaluate_multi_agent(
-        agents=agents_with_format,
+
+    # Resolve agents for both orderings.
+    # Each ordering needs fresh agent instances (they carry env state).
+    def _build_agents_dict(agent_specs, position_order):
+        """Build {pharma_id: wrapped_agent} for a given position order."""
+        resolved = {}
+        for pos_idx, agent_idx in enumerate(position_order):
+            agent_name = possible[pos_idx]
+            resolved[agent_name] = _resolve_agent(
+                agent_specs[agent_idx], agent_name,
+            )
+        agents_fmt = {}
+        for pos_idx, agent_idx in enumerate(position_order):
+            agent_name = possible[pos_idx]
+            agent = resolved[agent_name]
+            if _needs_flat_obs(agent_specs[agent_idx], agent_idx, flat_obs):
+                agents_fmt[agent_name] = _DeferredFlatObsWrapper(agent)
+            else:
+                agents_fmt[agent_name] = agent
+        return agents_fmt
+
+    # Run 1: original order [0, 1]
+    agents_original = _build_agents_dict(agents, [0, 1])
+    raw_original = _parallel_evaluate_raw(
+        agents=agents_original,
         num_workers=num_workers,
         env_kwargs=env_kwargs,
         warmup_steps=warmup_steps,
-        capture_playthrough=capture_playthrough,
         num_episodes=num_episodes,
     )
+
+    # Run 2: swapped order [1, 0]
+    agents_swapped = _build_agents_dict(agents, [1, 0])
+    raw_swapped = _parallel_evaluate_raw(
+        agents=agents_swapped,
+        num_workers=num_workers,
+        env_kwargs=env_kwargs,
+        warmup_steps=warmup_steps,
+        num_episodes=num_episodes,
+    )
+
+    # Remap swapped results: pharma_0 in run2 was agent_1, pharma_1 was agent_0
+    # Merge under canonical keys: agent_0, agent_1
+    agent_keys = [f"agent_{i}" for i in range(n)]
+
+    # original: pharma_0 -> agent_0, pharma_1 -> agent_1
+    # swapped:  pharma_0 -> agent_1, pharma_1 -> agent_0
+    per_agent_reports = {}
+    for agent_idx in range(n):
+        agent_key = agent_keys[agent_idx]
+        # From original run: agent_idx sat in pharma_{agent_idx}
+        original_metrics = raw_original[possible[agent_idx]]
+        # From swapped run: agent_idx sat in pharma_{1-agent_idx} (for 2 agents)
+        swapped_pos = possible[1 - agent_idx]
+        swapped_metrics = raw_swapped[swapped_pos]
+        # Merge the two sets of metrics
+        merged = merge_all_metrics([original_metrics, swapped_metrics])
+        per_agent_reports[agent_key] = report_all_metrics(merged)
+
+    return per_agent_reports, None
 
 
 def run(

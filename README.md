@@ -39,6 +39,7 @@ from pyxis_portfolio_challenge.environment.competition import evaluate
 
 env = make_multi_agent_train_env()
 reports, _ = evaluate(agents=["knapsack(c12)", "random"], num_episodes=100)
+# 100 seeds × 2 positions = 200 episodes; results keyed by agent_0/agent_1
 ```
 
 ### Provided Agents
@@ -279,10 +280,14 @@ per_agent_reports, playthrough = evaluate(
     flat_obs={0: True},  # my_agent expects flat obs
 )
 
-# per_agent_reports: {"pharma_0": [...], "pharma_1": [...]}
+# per_agent_reports: {"agent_0": [...], "agent_1": [...]}
 ```
 
-The return value `per_agent_reports` is a dict mapping agent ID to a list of three report groups:
+By default, `evaluate()` uses **seed-symmetric evaluation**: each seed is played twice with agent positions swapped to control for positional asymmetry. With `num_episodes=100`, this produces 200 total episodes (100 per seat assignment). Results are keyed by original agent identity (`agent_0`, `agent_1`), not seat position. Pass `symmetric=False` to disable this and get position-keyed results (`pharma_0`, `pharma_1`).
+
+**Win conditions** are bankruptcy-aware: bankrupt agents automatically lose; if both go bankrupt, the agent that survived longer wins; same-step bankruptcy is a draw. Non-bankrupt agents are ranked by NCF.
+
+The return value `per_agent_reports` is a dict mapping agent key to a list of three report groups:
 
 ```python
 [
