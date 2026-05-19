@@ -5,8 +5,6 @@ import logging
 
 import click
 import yaml
-
-from pyxis_portfolio_challenge.config import config, from_yaml
 from pyxis_portfolio_challenge.logging_utils import setup_logging
 
 NUM_AGENTS = 2
@@ -110,7 +108,7 @@ def _run_with_replay(agents_dict, env_kwargs, seed, agent_names, agent_labels=No
     default=None,
     help="Path to write replay JSON file.",
 )
-@click.option("--cfg-file", type=str, default=None, help="Path to config YAML.")
+@click.option("--horizon", "-H", type=int, default=None, help="Override episode length (number of steps).")
 @click.option("--seed", "-s", type=int, default=None, help="Random seed.")
 @click.option(
     "--agent-kwargs",
@@ -127,7 +125,7 @@ def _run_with_replay(agents_dict, env_kwargs, seed, agent_names, agent_labels=No
     help="Display names for agents in replay (repeatable).",
 )
 @click.option("--log-level", type=str, default="INFO", help="Logging level.")
-def main(agents, output, cfg_file, seed, agent_kwargs_list, names, log_level):
+def main(agents, output, horizon, seed, agent_kwargs_list, names, log_level):
     """
     Run a multi-agent investment game match.
 
@@ -139,7 +137,7 @@ def main(agents, output, cfg_file, seed, agent_kwargs_list, names, log_level):
     Examples:
         pyxis knapsack(c12) random --seed 42
         pyxis ./my_bot.py knapsack(c12) -o replay.json
-        pyxis knapsack(c12) knapsack(c12) --agent-kwargs '{capacity: 6}'
+        pyxis knapsack(c12) knapsack(c12) --horizon 50
     """  # noqa: D301
     setup_logging(level=log_level)
     logger = logging.getLogger(__name__)
@@ -148,14 +146,6 @@ def main(agents, output, cfg_file, seed, agent_kwargs_list, names, log_level):
         raise click.UsageError(
             f"Exactly {NUM_AGENTS} agents required, got {len(agents)}."
         )
-
-    # Load config
-    if cfg_file is not None:
-        cfg = from_yaml(cfg_file)
-        logger.info(f"Loaded config from {cfg_file}")
-    else:
-        cfg = config
-        logger.info("Using default config")
 
     # Parse per-agent kwargs
     per_agent_kwargs = []
@@ -192,22 +182,16 @@ def main(agents, output, cfg_file, seed, agent_kwargs_list, names, log_level):
 
     # Build env kwargs from config
     # Import here to avoid pulling in stable_baselines3 at module level
-    # Temporarily patch the config singleton if a custom config was loaded
-    import pyxis_portfolio_challenge.config as config_module
     from pyxis_portfolio_challenge.environment.env_factory import (
         _build_multi_agent_env_kwargs,
     )
 
-    original_config = config_module.config
-    if cfg_file is not None:
-        config_module.config = cfg
-
-    try:
-        env_kwargs = _build_multi_agent_env_kwargs(
-            flatten_obs=True, num_agents=NUM_AGENTS
-        )
-    finally:
-        config_module.config = original_config
+    env_kwargs = _build_multi_agent_env_kwargs(
+        flatten_obs=True, num_agents=NUM_AGENTS
+    )
+    if horizon is not None:
+        env_kwargs["horizon"] = horizon
+        logger.info(f"Overriding horizon to {horizon}")
 
     p0, p1 = agent_labels[agent_ids[0]], agent_labels[agent_ids[1]]
     logger.info(f"Starting match: {p0} vs {p1}")
