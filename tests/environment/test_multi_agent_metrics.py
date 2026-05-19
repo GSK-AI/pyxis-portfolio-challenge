@@ -50,6 +50,7 @@ def _make_game_state(assets=None):
     gs = MagicMock()
     gs.id = uuid.uuid4()
     gs.assets = {a.id: a for a in (assets or [])}
+    gs.bankrupt = False
     return gs
 
 
@@ -1042,10 +1043,12 @@ class TestPerEpisodeWinLoss:
     def test_win(self):
         metric = PerEpisodeWinLoss()
         gs = _make_game_state([])
+        gs_opp = _make_game_state([])
         rewards = {"pharma_0": 150.0, "pharma_1": 100.0}
         ctx = _ctx(
             gs, agent_id="pharma_0",
             all_agent_rewards=rewards,
+            all_agent_states={"pharma_0": gs, "pharma_1": gs_opp},
         )
         metric.on_evaluation_begin(ctx)
         metric.on_episode_end(ctx)
@@ -1054,10 +1057,12 @@ class TestPerEpisodeWinLoss:
     def test_loss(self):
         metric = PerEpisodeWinLoss()
         gs = _make_game_state([])
+        gs_opp = _make_game_state([])
         rewards = {"pharma_0": 50.0, "pharma_1": 100.0}
         ctx = _ctx(
             gs, agent_id="pharma_0",
             all_agent_rewards=rewards,
+            all_agent_states={"pharma_0": gs, "pharma_1": gs_opp},
         )
         metric.on_evaluation_begin(ctx)
         metric.on_episode_end(ctx)
@@ -1066,10 +1071,12 @@ class TestPerEpisodeWinLoss:
     def test_draw(self):
         metric = PerEpisodeWinLoss()
         gs = _make_game_state([])
+        gs_opp = _make_game_state([])
         rewards = {"pharma_0": 100.0, "pharma_1": 100.0}
         ctx = _ctx(
             gs, agent_id="pharma_0",
             all_agent_rewards=rewards,
+            all_agent_states={"pharma_0": gs, "pharma_1": gs_opp},
         )
         metric.on_evaluation_begin(ctx)
         metric.on_episode_end(ctx)
@@ -1088,6 +1095,7 @@ class TestPerEpisodeWinLoss:
         gs1 = _make_game_state([])
         gs2 = _make_game_state([])
         gs3 = _make_game_state([])
+        gs_opp = _make_game_state([])
 
         ctx_init = _ctx(gs1, agent_id="pharma_0")
         metric.on_evaluation_begin(ctx_init)
@@ -1096,6 +1104,7 @@ class TestPerEpisodeWinLoss:
         ctx1 = _ctx(
             gs1, agent_id="pharma_0",
             all_agent_rewards={"pharma_0": 200.0, "pharma_1": 100.0},
+            all_agent_states={"pharma_0": gs1, "pharma_1": gs_opp},
         )
         metric.on_episode_end(ctx1)
 
@@ -1103,6 +1112,7 @@ class TestPerEpisodeWinLoss:
         ctx2 = _ctx(
             gs2, agent_id="pharma_0",
             all_agent_rewards={"pharma_0": 50.0, "pharma_1": 100.0},
+            all_agent_states={"pharma_0": gs2, "pharma_1": gs_opp},
         )
         metric.on_episode_end(ctx2)
 
@@ -1110,6 +1120,7 @@ class TestPerEpisodeWinLoss:
         ctx3 = _ctx(
             gs3, agent_id="pharma_0",
             all_agent_rewards={"pharma_0": 100.0, "pharma_1": 100.0},
+            all_agent_states={"pharma_0": gs3, "pharma_1": gs_opp},
         )
         metric.on_episode_end(ctx3)
 
@@ -1120,10 +1131,12 @@ class TestPerEpisodeWinLoss:
     def test_negative_rewards(self):
         metric = PerEpisodeWinLoss()
         gs = _make_game_state([])
+        gs_opp = _make_game_state([])
         rewards = {"pharma_0": -50.0, "pharma_1": -100.0}
         ctx = _ctx(
             gs, agent_id="pharma_0",
             all_agent_rewards=rewards,
+            all_agent_states={"pharma_0": gs, "pharma_1": gs_opp},
         )
         metric.on_evaluation_begin(ctx)
         metric.on_episode_end(ctx)
