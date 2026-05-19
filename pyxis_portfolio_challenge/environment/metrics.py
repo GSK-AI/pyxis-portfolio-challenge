@@ -115,6 +115,7 @@ class PerEvaluationCumulativeReward(PerEvaluationMetric):
     def report(self) -> dict[str, Any]:
         """Returns the collected metrics in a dictionary format."""
         combined = [cum_reward for cum_reward in self.history.values()]
+        # Guard against empty history (e.g. workers that received 0 episodes)
         if not combined:
             return {
                 self.__class__.__name__: {
