@@ -10,6 +10,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { CarouselTourWrapper } from "@/components/CarouselTour/CarouselTourWrapper";
 import { NextStepClient } from "@/components/NextStepClient";
+import { HomeScreenProvider } from "@/context/HomeScreenContext";
 
 export const metadata: Metadata = {
   title: "Pyxis | GSK",
@@ -42,12 +43,14 @@ export default function RootLayout({
               <TheBackendHealth>
                 <CarouselTourWrapper>
                   <NextStepClient>
+                    <HomeScreenProvider>
                     <div className="flex min-h-screen flex-col">
                       {showNavbar && <TheHeader />}
-                      {!showNavbar && <HomeButton />}
+                      <HomeButton showNavbar={showNavbar} />
                       <main className="flex-1 pb-4 pt-6">{children}</main>
                       {showFooter && <TheFooter />}
                     </div>
+                    </HomeScreenProvider>
                   </NextStepClient>
                 </CarouselTourWrapper>
               </TheBackendHealth>
