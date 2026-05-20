@@ -248,6 +248,8 @@ def make_train_env(flatten_obs: bool = True) -> InvestmentGameEnv:
 def _build_multi_agent_env_kwargs(
     flatten_obs: bool,
     num_agents: int | None = None,
+    assets_dir: upath.UPath | None = None,
+    bd_assets_dir: upath.UPath | None = None,
 ) -> dict[str, Any]:
     """
     Build keyword arguments for MultiAgentInvestmentGameEnv from config.
@@ -258,6 +260,10 @@ def _build_multi_agent_env_kwargs(
         Whether to flatten observations into a single array.
     num_agents : int | None
         Override number of agents. If None, uses config value.
+    assets_dir : upath.UPath | None
+        Override portfolio assets directory. Defaults to training_data_dir.
+    bd_assets_dir : upath.UPath | None
+        Override BD assets directory. Defaults to multi_agent.bd_assets_dir.
 
     Returns
     -------
@@ -268,7 +274,7 @@ def _build_multi_agent_env_kwargs(
     cfg = config
     ma = cfg.multi_agent
     return dict(
-        assets_dir=cfg.training_data_dir,
+        assets_dir=assets_dir if assets_dir is not None else cfg.training_data_dir,
         num_agents=num_agents if num_agents is not None else ma.num_agents,
         starting_cash=cfg.starting_cash,
         max_num_assets=cfg.max_num_assets,
@@ -278,7 +284,7 @@ def _build_multi_agent_env_kwargs(
         asset_arrival_sensitivity_above=cfg.asset_arrival_sensitivity_above,
         reinvestment_percentage=cfg.reinvestment_percentage,
         bd_enabled=ma.bd_enabled,
-        bd_assets_dir=ma.bd_assets_dir,
+        bd_assets_dir=bd_assets_dir if bd_assets_dir is not None else ma.bd_assets_dir,
         bd_base_lambda=ma.bd_base_lambda,
         bd_leak_lambda_boost=ma.bd_leak_lambda_boost,
         bd_min_step=ma.bd_min_step,

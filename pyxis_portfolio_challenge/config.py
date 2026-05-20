@@ -250,6 +250,7 @@ class MultiAgentConfig(BaseModel):
     # BD market parameters
     bd_enabled: bool
     bd_assets_dir: upath.UPath
+    bd_eval_assets_dir: upath.UPath
     bd_base_lambda: float  # Base Poisson λ for BD appearance
     bd_leak_lambda_boost: float  # Added λ per recent leak
     bd_min_step: int  # No BD before this step
@@ -438,6 +439,10 @@ class Config(BaseModel):
         if not ma.bd_assets_dir.is_absolute():
             object.__setattr__(
                 ma, "bd_assets_dir", PROJECT_ROOT / ma.bd_assets_dir
+            )
+        if not ma.bd_eval_assets_dir.is_absolute():
+            object.__setattr__(
+                ma, "bd_eval_assets_dir", PROJECT_ROOT / ma.bd_eval_assets_dir
             )
         return self
 
