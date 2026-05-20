@@ -18,6 +18,7 @@ import {
   startMultiAgentGame,
 } from "@/lib/backendCallsGame";
 import { useState, useCallback, useEffect } from "react";
+import { useHomeScreen } from "@/context/HomeScreenContext";
 import { ArrowRight, Gamepad2, Users, User, Eye } from "lucide-react";
 import PlaythroughViewer from "@/components/InvestmentGame/Replay/PlaythroughViewer";
 import FileUploadArea from "@/components/InvestmentGame/Replay/FileUploadArea";
@@ -73,6 +74,11 @@ export default function InvestmentGame() {
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string>("");
+
+  const { setIsHomeScreen } = useHomeScreen();
+  useEffect(() => {
+    setIsHomeScreen(screen === "start");
+  }, [screen, setIsHomeScreen]);
 
   // Fetch configs on mount
   useEffect(() => {
