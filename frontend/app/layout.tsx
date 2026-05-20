@@ -36,7 +36,6 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="flex min-h-screen flex-col">
-        <HomeButton />
         <TheQueryClientProvider>
           <TooltipProvider>
             <AuthProvider>
@@ -45,6 +44,7 @@ export default function RootLayout({
                   <NextStepClient>
                     <div className="flex min-h-screen flex-col">
                       {showNavbar && <TheHeader />}
+                      {!showNavbar && <HomeButton />}
                       <main className="flex-1 pb-4 pt-6">{children}</main>
                       {showFooter && <TheFooter />}
                     </div>

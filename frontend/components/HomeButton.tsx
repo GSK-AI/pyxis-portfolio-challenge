@@ -10,12 +10,14 @@ export function HomeButton() {
   if (pathname === "/") return null;
 
   return (
-    <Link
-      href="/"
-      className="fixed left-4 top-4 z-50 flex items-center gap-2 rounded-md bg-white px-3 py-2 text-sm font-medium shadow-md hover:bg-gray-50"
-    >
-      <House className="h-4 w-4" />
-      Home
-    </Link>
+    <div className="px-4 pt-4">
+      <Link
+        href="/"
+        className="inline-flex items-center gap-2 rounded-md bg-white px-3 py-2 text-sm font-medium shadow-md hover:bg-gray-50"
+      >
+        <House className="h-4 w-4" />
+        Home
+      </Link>
+    </div>
   );
 }
