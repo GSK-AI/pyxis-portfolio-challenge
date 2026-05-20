@@ -2,6 +2,7 @@ import "@/app/ui/global.css";
 import { type Metadata } from "next";
 import { TheHeader } from "@/components/TheHeader";
 import { TheFooter } from "@/components/TheFooter";
+import { HomeButton } from "@/components/HomeButton";
 import TheBackendHealth from "@/components/TheBackendHealth";
 import { AuthProvider } from "@/components/AuthContext";
 import { TheQueryClientProvider } from "@/components/TheQueryClientProvider";
@@ -35,6 +36,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="flex min-h-screen flex-col">
+        <HomeButton />
         <TheQueryClientProvider>
           <TooltipProvider>
             <AuthProvider>
