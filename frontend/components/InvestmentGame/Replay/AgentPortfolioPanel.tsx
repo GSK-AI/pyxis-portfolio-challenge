@@ -165,7 +165,7 @@ export default function AgentPortfolioPanel({
       </div>
 
       {/* Assets Table */}
-      <div className="max-h-[400px] overflow-y-auto">
+      <div className="max-h-[400px] overflow-y-auto" style={{ zoom: 0.8 }}>
         <AssetsTable
           assets={allAssets}
           selection={selection}
