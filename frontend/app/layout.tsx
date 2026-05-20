@@ -24,6 +24,9 @@ export const metadata: Metadata = {
   },
 };
 
+const showNavbar = process.env.NEXT_PUBLIC_SHOW_NAVBAR === "true";
+const showFooter = process.env.NEXT_PUBLIC_SHOW_FOOTER === "true";
+
 export default function RootLayout({
   children,
 }: {
@@ -39,9 +42,9 @@ export default function RootLayout({
                 <CarouselTourWrapper>
                   <NextStepClient>
                     <div className="flex min-h-screen flex-col">
-                      <TheHeader />
+                      {showNavbar && <TheHeader />}
                       <main className="flex-1 pb-4 pt-6">{children}</main>
-                      <TheFooter />
+                      {showFooter && <TheFooter />}
                     </div>
                   </NextStepClient>
                 </CarouselTourWrapper>
