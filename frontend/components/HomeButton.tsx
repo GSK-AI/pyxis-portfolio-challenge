@@ -1,11 +1,10 @@
-"use client";
-
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { headers } from "next/headers";
 import { House } from "lucide-react";
 
-export function HomeButton() {
-  const pathname = usePathname();
+export async function HomeButton() {
+  const headersList = await headers();
+  const pathname = headersList.get("x-pathname") ?? "/";
 
   if (pathname === "/") return null;
 
