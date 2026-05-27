@@ -10,6 +10,7 @@
     #host-page { background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
     #pyxis-container { width: 100%; overflow: hidden; aspect-ratio: 1600 / 1620; }
     #pyxis-frame { border: 0; display: block; transform-origin: top left; }
+    #pyxis-mobile { display: none; padding: 48px 24px; text-align: center; color: #374151; }
   </style>
 </head>
 <body>
@@ -31,16 +32,33 @@
         allowfullscreen="allowfullscreen">
       </iframe>
     </div>
+    <div id="pyxis-mobile">
+      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto 16px; display: block;"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+      <p style="font-size: 18px; font-weight: 600; margin: 0 0 8px;">Please use a desktop browser</p>
+      <p style="font-size: 14px; color: #6b7280; margin: 0;">Pyxis is designed for larger screens.</p>
+    </div>
   </div>
 
   <script>
     var IFRAME_NATURAL_WIDTH = 1600;
     var IFRAME_NATURAL_HEIGHT = 1620;
+    var MOBILE_THRESHOLD = 768;
 
     function applyLayout() {
       var container = document.getElementById('pyxis-container');
+      var mobile = document.getElementById('pyxis-mobile');
       var iframe = document.getElementById('pyxis-frame');
-      var scale = Math.min(1, container.offsetWidth / IFRAME_NATURAL_WIDTH);
+      var width = container.offsetWidth;
+
+      if (width < MOBILE_THRESHOLD) {
+        container.style.display = 'none';
+        mobile.style.display = 'block';
+        return;
+      }
+
+      container.style.display = 'block';
+      mobile.style.display = 'none';
+      var scale = Math.min(1, width / IFRAME_NATURAL_WIDTH);
       iframe.style.transform = 'scale(' + scale + ')';
       iframe.width = IFRAME_NATURAL_WIDTH;
       iframe.height = IFRAME_NATURAL_HEIGHT;
