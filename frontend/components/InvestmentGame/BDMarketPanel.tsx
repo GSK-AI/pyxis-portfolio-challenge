@@ -4,7 +4,7 @@ import type { BDAssetType } from "@/lib/definitionsGameZ";
 import { formatDisplayNumber } from "@/lib/numbers";
 import { InformationButton } from "@/components/InformationButton";
 
-const BD_MARKET_INFO = `Each year, Business Development assets may become available for acquisition via sealed-bid auction. Assets appear stochastically — more frequently when there is active pipeline development in the market.
+const BD_MARKET_INFO = `Each year, Business Development assets may become available for acquisition via sealed-bid auction. Assets appear stochastically. BD assets are more likely to arrive in active indications.
 
 How bidding works:
 - You choose a bid level per asset — higher levels cost more but beat lower bids
