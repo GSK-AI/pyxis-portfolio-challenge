@@ -43,6 +43,11 @@ body {
   font-weight: 400;
 }
 
+html,
+body {
+  overflow-x: hidden;
+}
+
 .dev {
   border: 1px dotted red !important;
 }

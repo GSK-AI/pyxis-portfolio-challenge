@@ -315,8 +315,8 @@ export default function InvestmentGame() {
 
   return (
     <div className="mt-6 px-6">
-      <LayoutContainer className="c-splash-screen flex min-h-[75vh] rounded-2xl bg-gray-800 !p-8 text-white">
-        <div className="relative z-20 flex flex-1 items-center rounded-2xl bg-white p-20 text-black">
+      <LayoutContainer maxWidth="800px" className="c-splash-screen rounded-2xl bg-gray-800 !p-8 text-white">
+        <div className="relative z-20 rounded-2xl bg-white p-10 text-black">
           <div className="space-y-10">
             <div>
               <Gamepad2 />

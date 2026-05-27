@@ -20,7 +20,7 @@ export default function ReplaySalesMarketPanel({
 
   if (active.length === 0) {
     return (
-      <div className="rounded-lg border border-gray-200 bg-white p-4">
+      <div className="flex h-[460px] flex-col rounded-lg border border-gray-200 bg-white p-4">
         <h3 className="mb-2 text-sm font-semibold text-gray-700">
           Sales Market
         </h3>
@@ -36,12 +36,9 @@ export default function ReplaySalesMarketPanel({
   });
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4">
+    <div className="flex h-[460px] flex-col rounded-lg border border-gray-200 bg-white p-4">
       <h3 className="mb-3 text-sm font-semibold text-gray-700">Sales Market</h3>
-      <div
-        className="flex flex-col gap-3 overflow-y-auto"
-        style={{ maxHeight: "400px" }}
-      >
+      <div className="flex flex-1 flex-col gap-3 overflow-y-auto">
         {sorted.map((market) => {
           const hasExclusivity = market.exclusivity_remaining > 0;
           const entries = Object.entries(market.active_drugs).filter(

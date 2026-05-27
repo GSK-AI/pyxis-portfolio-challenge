@@ -30,13 +30,13 @@ export default function ReplayBDMarketPanel({
   );
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4">
+    <div className="flex h-[460px] flex-col rounded-lg border border-gray-200 bg-white p-4">
       <h3 className="mb-3 text-sm font-semibold text-gray-700">BD Market</h3>
 
       {bdAssets.length === 0 && !hasAcquisitions ? (
         <p className="text-xs text-gray-400">No asset available this year</p>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-1 flex-col gap-3 overflow-y-auto">
           {/* Available BD assets */}
           {bdAssets.map((asset) => (
             <div

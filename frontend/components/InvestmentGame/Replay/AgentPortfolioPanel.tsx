@@ -165,7 +165,7 @@ export default function AgentPortfolioPanel({
       </div>
 
       {/* Assets Table */}
-      <div className="max-h-[400px] overflow-y-auto" style={{ zoom: 0.8 }}>
+      <div className="max-h-[400px] overflow-x-auto overflow-y-auto" style={{ zoom: 0.8 }}>
         <AssetsTable
           assets={allAssets}
           selection={selection}
@@ -188,17 +188,23 @@ export default function AgentPortfolioPanel({
         />
       </div>
 
-      {/* BD Bid Summary (action view only) */}
-      {bdBidSummaries.length > 0 && (
-        <div className="border-t bg-blue-50 px-4 py-2 text-xs text-blue-800">
-          {bdBidSummaries.map((entry, i) => (
-            <div key={i}>
-              BD Bid: Level {entry.bid}
-              <span className="text-blue-600"> for {entry.assetName}</span>
-            </div>
-          ))}
-        </div>
-      )}
+      {/* BD Bid Summary — always reserved, shows bids in action view */}
+      <div className="flex h-[36px] shrink-0 items-center gap-4 border-t bg-blue-50 px-4 text-xs text-blue-800">
+        {viewMode === "action" ? (
+          bdBidSummaries.length > 0 ? (
+            bdBidSummaries.map((entry, i) => (
+              <span key={i}>
+                BD Bid: Level {entry.bid}
+                <span className="text-blue-600"> for {entry.assetName}</span>
+              </span>
+            ))
+          ) : (
+            <span className="text-blue-300">No BD bids this step</span>
+          )
+        ) : (
+          <span className="text-blue-300">Switch to action view to see bids</span>
+        )}
+      </div>
     </div>
   );
 }

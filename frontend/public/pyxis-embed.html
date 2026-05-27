@@ -1,0 +1,32 @@
+<div id="pyxis-container" style="width: 100%; overflow: hidden; aspect-ratio: 1600 / 1620;">
+  <iframe
+    id="pyxis-frame"
+    src="https://app-gskai-pyxis-fe-prod-cbe5hgbvhwhje4g4.uksouth-01.azurewebsites.net/"
+    title="Pyxis Portfolio Challenge"
+    width="1600"
+    height="1620"
+    frameborder="0"
+    style="border: 0; display: block; transform-origin: top left;"
+    allowfullscreen="allowfullscreen">
+  </iframe>
+</div>
+
+<script>
+  (function() {
+    var NATURAL_WIDTH = 1600;
+    var NATURAL_HEIGHT = 1620;
+
+    function applyLayout() {
+      var container = document.getElementById('pyxis-container');
+      var iframe = document.getElementById('pyxis-frame');
+      var scale = Math.min(1, container.offsetWidth / NATURAL_WIDTH);
+      iframe.style.transform = 'scale(' + scale + ')';
+      iframe.width = NATURAL_WIDTH;
+      iframe.height = NATURAL_HEIGHT;
+      container.style.height = Math.ceil(NATURAL_HEIGHT * scale) + 'px';
+    }
+
+    window.addEventListener('resize', applyLayout);
+    applyLayout();
+  })();
+</script>

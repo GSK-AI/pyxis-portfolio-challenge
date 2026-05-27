@@ -426,8 +426,8 @@ export default function MultiAgentAction({
   };
 
   return (
-    <div className="mt-4">
-      <LayoutContainer className="flex flex-col gap-1" maxWidth="1700px">
+    <div className="mt-4 overflow-x-hidden">
+      <LayoutContainer className="flex flex-col gap-1" maxWidth="1560px">
         {loadingResetGame ? (
           <LoaderList />
         ) : (
@@ -446,8 +446,8 @@ export default function MultiAgentAction({
                 {/* Main game UI */}
                 <div className="flex gap-4">
                   {/* Stats and Charts */}
-                  <div className="flex flex-1 gap-4" id="actionStat">
-                    <div className="flex flex-col justify-between gap-4">
+                  <div className="flex min-w-0 flex-1 gap-4" id="actionStat">
+                    <div className="flex min-w-0 flex-col justify-between gap-4">
                       <ActionStats
                         time={time!}
                         startingCash={startingCash || 0}
@@ -468,7 +468,7 @@ export default function MultiAgentAction({
                         />
                       </div>
                     </div>
-                    <div className="flex min-h-[300px] flex-1 flex-col gap-4">
+                    <div className="flex min-h-[300px] min-w-0 flex-1 flex-col gap-4">
                       <div className="w-full overflow-hidden">
                         <div ref={parentRef}>
                           <ActionChart
@@ -614,7 +614,7 @@ export default function MultiAgentAction({
                 <HighlightKey
                   showBdAcquisition={activeState?.bd_enabled ?? false}
                 />
-                <div className="mt-2 rounded-lg bg-white shadow-sm">
+                <div className="mt-2 overflow-x-auto rounded-lg bg-white shadow-sm">
                   <AssetsTable
                     assets={playerState ? extractAllAssets(playerState) : []}
                     selection={selection}

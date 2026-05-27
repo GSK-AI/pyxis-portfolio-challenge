@@ -90,8 +90,8 @@ export default function PlaythroughViewer({
     : "grid-cols-2";
 
   return (
-    <div className="mt-4">
-      <LayoutContainer className="flex flex-col gap-4" maxWidth="1900px">
+    <div className="mt-4 overflow-x-hidden">
+      <LayoutContainer className="flex flex-col gap-4" maxWidth="1560px">
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
