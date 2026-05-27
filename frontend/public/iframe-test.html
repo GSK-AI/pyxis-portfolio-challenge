@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pyxis Iframe Test (local)</title>
+  <style>
+    body { margin: 0; padding: 20px; background: #f0f0f0; font-family: sans-serif; }
+    #width-control { margin-bottom: 16px; display: flex; align-items: center; gap: 12px; font-size: 13px; }
+    #host-page { background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    #pyxis-container { width: 100%; overflow: hidden; aspect-ratio: 1600 / 1620; }
+    #pyxis-frame { border: 0; display: block; transform-origin: top left; }
+  </style>
+</head>
+<body>
+
+  <div id="width-control">
+    <label>Simulate container width:</label>
+    <input id="width-slider" type="range" min="300" max="1600" value="1200" style="width: 300px;" />
+    <span id="width-label">1200px</span>
+  </div>
+
+  <div id="host-page" style="max-width: 1200px;">
+    <div id="pyxis-container">
+      <iframe
+        id="pyxis-frame"
+        src="http://localhost:3000"
+        title="Pyxis Portfolio Challenge"
+        width="1600"
+        height="1620"
+        allowfullscreen="allowfullscreen">
+      </iframe>
+    </div>
+  </div>
+
+  <script>
+    var IFRAME_NATURAL_WIDTH = 1600;
+    var IFRAME_NATURAL_HEIGHT = 1620;
+
+    function applyLayout() {
+      var container = document.getElementById('pyxis-container');
+      var iframe = document.getElementById('pyxis-frame');
+      var scale = Math.min(1, container.offsetWidth / IFRAME_NATURAL_WIDTH);
+      iframe.style.transform = 'scale(' + scale + ')';
+      iframe.width = IFRAME_NATURAL_WIDTH;
+      iframe.height = IFRAME_NATURAL_HEIGHT;
+      container.style.height = Math.ceil(IFRAME_NATURAL_HEIGHT * scale) + 'px';
+    }
+
+    window.addEventListener('resize', applyLayout);
+    applyLayout();
+
+    var slider = document.getElementById('width-slider');
+    var label = document.getElementById('width-label');
+    var hostPage = document.getElementById('host-page');
+    slider.addEventListener('input', function() {
+      hostPage.style.maxWidth = slider.value + 'px';
+      label.textContent = slider.value + 'px';
+      applyLayout();
+    });
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pyxis | GSK</title>
+  <style>
+    /* Remove default body margin so the embed is flush */
+    body {
+      margin: 0;
+      padding: 0;
+    }
+
+    #pyxis-container {
+      width: 100%;
+      overflow: hidden;
+      aspect-ratio: 1600 / 1620;
+    }
+
+    #pyxis-frame {
+      border: 0;
+      display: block;
+      transform-origin: top left;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="pyxis-container">
+    <iframe
+      id="pyxis-frame"
+      src="https://app-gskai-pyxis-fe-prod-cbe5hgbvhwhje4g4.uksouth-01.azurewebsites.net/"
+      title="Pyxis Portfolio Challenge"
+      width="1600"
+      height="1620"
+      allowfullscreen="allowfullscreen">
+    </iframe>
+  </div>
+
+  <script>
+    var IFRAME_NATURAL_WIDTH = 1600;
+    var IFRAME_NATURAL_HEIGHT = 1620;
+
+    function applyLayout() {
+      var container = document.getElementById('pyxis-container');
+      var iframe = document.getElementById('pyxis-frame');
+      var scale = Math.min(1, container.offsetWidth / IFRAME_NATURAL_WIDTH);
+      iframe.style.transform = 'scale(' + scale + ')';
+      iframe.width = IFRAME_NATURAL_WIDTH;
+      iframe.height = IFRAME_NATURAL_HEIGHT;
+      container.style.height = Math.ceil(IFRAME_NATURAL_HEIGHT * scale) + 'px';
+    }
+
+    window.addEventListener('resize', applyLayout);
+    applyLayout();
+  </script>
+
+</body>
+</html>

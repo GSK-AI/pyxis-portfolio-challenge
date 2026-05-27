@@ -36,7 +36,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="flex min-h-screen flex-col">
+      <body className="flex flex-col">
         <TheQueryClientProvider>
           <TooltipProvider>
             <AuthProvider>
@@ -44,10 +44,10 @@ export default function RootLayout({
                 <CarouselTourWrapper>
                   <NextStepClient>
                     <HomeScreenProvider>
-                    <div className="flex min-h-screen flex-col">
+                    <div className="flex flex-col overflow-x-hidden">
                       {showNavbar && <TheHeader />}
                       <HomeButton showNavbar={showNavbar} />
-                      <main className="flex-1 pb-4 pt-6">{children}</main>
+                      <main className="min-w-0 flex-1 pb-4 pt-6">{children}</main>
                       {showFooter && <TheFooter />}
                     </div>
                     </HomeScreenProvider>
