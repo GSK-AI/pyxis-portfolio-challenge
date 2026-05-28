@@ -351,7 +351,7 @@ export default function InvestmentGame() {
                 size="sm"
               >
                 <Users className="mr-2 h-4 w-4" />
-                Multiplayer
+                Play
               </Button>
               <Button
                 variant="outline"
@@ -436,7 +436,7 @@ export default function InvestmentGame() {
             {/* Multiplayer Config */}
             {gameMode === "multi" && multiAgentConfig && (
               <div className="rounded-lg bg-gray-100 p-4">
-                <h3 className="mb-4 font-semibold">Multiplayer Settings</h3>
+                <h3 className="mb-4 font-semibold">Settings</h3>
                 <div className="space-y-4">
                   <div className="flex items-center gap-4">
                     <label className="w-32 text-sm text-gray-600">

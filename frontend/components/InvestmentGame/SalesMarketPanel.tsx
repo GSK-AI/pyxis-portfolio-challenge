@@ -15,8 +15,7 @@ The first company to launch a drug in an indication gets a period of exclusive s
 Post-Exclusivity Market Shares:
 Once exclusivity expires, revenue is split based on drug quality:
 • Drug quality = peak revenue × tenure bonus (longer on market = higher quality)
-• The first mover retains a 30% bonus to their quality score
-• Your share = your total quality / all agents' total quality
+• The first mover's drug is guaranteed a 30% share; the remaining 70% is split proportionally by quality
 
 Strategy Tips:
 • Racing to be first in a high-value indication gives you monopoly revenue
