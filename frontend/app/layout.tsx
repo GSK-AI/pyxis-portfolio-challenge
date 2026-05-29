@@ -11,6 +11,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { CarouselTourWrapper } from "@/components/CarouselTour/CarouselTourWrapper";
 import { NextStepClient } from "@/components/NextStepClient";
 import { HomeScreenProvider } from "@/context/HomeScreenContext";
+import { DesktopGate } from "@/components/DesktopGate";
 
 export const metadata: Metadata = {
   title: "Pyxis | GSK",
@@ -37,6 +38,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="flex flex-col">
+        <DesktopGate>
         <TheQueryClientProvider>
           <TooltipProvider>
             <AuthProvider>
@@ -58,6 +60,7 @@ export default function RootLayout({
           </TooltipProvider>
         </TheQueryClientProvider>
         <Toaster />
+        </DesktopGate>
       </body>
     </html>
   );

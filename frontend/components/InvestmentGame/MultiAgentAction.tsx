@@ -474,6 +474,7 @@ export default function MultiAgentAction({
                         assets={assets}
                         selection={selection}
                         nextStepCost={nextStepCost}
+                        eNPVDescription="eNPV stands for Expected Net Present Value and is a measure of the value of your portfolio today, taking into account all its expected future costs and revenue. In multiplayer mode the winner is determined by NCF (cumulative cash flow), not eNPV."
                       />
                       <div className="w-full overflow-hidden">
                         <CapitalProjectionGraph
