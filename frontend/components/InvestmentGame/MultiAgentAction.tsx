@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
+import { useNextStep } from "nextstepjs";
+import { useCustomNextStep } from "@/hooks/use-custom-next-step";
 import LayoutContainer from "@/components/LayoutContainer";
 import { Button } from "../ui/button";
 import { ArrowBigRight, Ban, RotateCcw } from "lucide-react";
@@ -104,6 +106,15 @@ export default function MultiAgentAction({
   const distributionalPtrsEnabled =
     playerState?.distributional_ptrs_enabled ?? false;
 
+  // Tour
+  const { startNextStep } = useNextStep();
+  const { startTourIfNotSkipped, clearAllTourData } = useCustomNextStep();
+  const handleStartTour = useCallback(() => {
+    clearAllTourData();
+    window.scrollTo(0, 0);
+    startNextStep("multiplayerTour");
+  }, [clearAllTourData, startNextStep]);
+
   function handleAssetSelection(asset: AssetSchemaType) {
     const { id } = asset;
     if (!id) return;
@@ -162,6 +173,12 @@ export default function MultiAgentAction({
     setPreviousSelection({});
     setBdBids([]);
   }, [state]);
+
+  // Auto-start tour for first-time visitors
+  useEffect(() => {
+    startTourIfNotSkipped("multiplayerTour", startNextStep);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Auto-select assets (same logic as Action.tsx)
   useEffect(() => {
@@ -447,7 +464,7 @@ export default function MultiAgentAction({
                 <div className="flex gap-4">
                   {/* Stats and Charts */}
                   <div className="flex min-w-0 flex-1 gap-4" id="actionStat">
-                    <div className="flex min-w-0 flex-col justify-between gap-4">
+                    <div id="multi-action-finances" className="flex min-w-0 flex-col justify-between gap-4">
                       <ActionStats
                         time={time!}
                         startingCash={startingCash || 0}
@@ -468,7 +485,7 @@ export default function MultiAgentAction({
                         />
                       </div>
                     </div>
-                    <div className="flex min-h-[300px] min-w-0 flex-1 flex-col gap-4">
+                    <div id="multi-action-charts" className="flex min-h-[300px] min-w-0 flex-1 flex-col gap-4">
                       <div className="w-full overflow-hidden">
                         <div ref={parentRef}>
                           <ActionChart
@@ -519,6 +536,7 @@ export default function MultiAgentAction({
 
                   {/* Controls */}
                   <div className="flex flex-col items-end gap-4 rounded-lg bg-white">
+                    <div id="multi-action-controls" className="flex flex-col items-end gap-2">
                     <div className="flex items-center gap-3">
                       <Button
                         variant="outline"
@@ -527,6 +545,13 @@ export default function MultiAgentAction({
                         disabled={loadingResetGame}
                       >
                         <RotateCcw className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleStartTour}
+                      >
+                        Tour
                       </Button>
                       {!playerBankrupt && (
                         <Button
@@ -557,16 +582,19 @@ export default function MultiAgentAction({
                         </div>
                       </div>
                     </div>
+                    </div>
 
                     {/* Opponent Bar */}
                     {activeState?.opponents && (
-                      <OpponentBar
-                        opponents={activeState.opponents}
-                        thinkingState={agentThinkingState}
-                        playerCumulativeReward={
-                          activeState?.player_cumulative_reward ?? 0
-                        }
-                      />
+                      <div id="multi-action-opponents" className="w-full">
+                        <OpponentBar
+                          opponents={activeState.opponents}
+                          thinkingState={agentThinkingState}
+                          playerCumulativeReward={
+                            activeState?.player_cumulative_reward ?? 0
+                          }
+                        />
+                      </div>
                     )}
 
                     {/* TA Experience */}
@@ -611,6 +639,7 @@ export default function MultiAgentAction({
                 )}
 
                 {/* Asset Table */}
+                <div id="multi-action-assets">
                 <HighlightKey
                   showBdAcquisition={activeState?.bd_enabled ?? false}
                 />
@@ -637,32 +666,39 @@ export default function MultiAgentAction({
                     time={time}
                   />
                 </div>
+                </div>
 
                 {/* Multi-Agent Panels (side-by-side) */}
                 <div
                   className={`mt-4 grid gap-4 ${activeState?.bd_enabled ? "grid-cols-3" : "grid-cols-2"}`}
                 >
                   {activeState?.bd_enabled && (
-                    <BDMarketPanel
-                      bdAssets={activeState?.bd_assets ?? []}
-                      playerCash={startingCash || 0}
-                      bdBids={bdBids}
-                      bdBidPrices={activeState?.bd_bid_prices ?? []}
-                      onBidChange={handleBdBidChange}
-                    />
+                    <div id="multi-action-bd">
+                      <BDMarketPanel
+                        bdAssets={activeState?.bd_assets ?? []}
+                        playerCash={startingCash || 0}
+                        bdBids={bdBids}
+                        bdBidPrices={activeState?.bd_bid_prices ?? []}
+                        onBidChange={handleBdBidChange}
+                      />
+                    </div>
                   )}
-                  <SalesMarketPanel
-                    indicationMarkets={activeState?.indication_markets || []}
-                    playerAgentName={
-                      activeState?.player_agent_name || "pharma_0"
-                    }
-                  />
-                  <AlertsPanel
-                    alerts={activeState?.alerts || []}
-                    playerAgentName={
-                      activeState?.player_agent_name || "pharma_0"
-                    }
-                  />
+                  <div id="multi-action-sales">
+                    <SalesMarketPanel
+                      indicationMarkets={activeState?.indication_markets || []}
+                      playerAgentName={
+                        activeState?.player_agent_name || "pharma_0"
+                      }
+                    />
+                  </div>
+                  <div id="multi-action-alerts">
+                    <AlertsPanel
+                      alerts={activeState?.alerts || []}
+                      playerAgentName={
+                        activeState?.player_agent_name || "pharma_0"
+                      }
+                    />
+                  </div>
                 </div>
               </>
             )}

@@ -44,7 +44,7 @@ export default function RootLayout({
                 <CarouselTourWrapper>
                   <NextStepClient>
                     <HomeScreenProvider>
-                    <div className="flex flex-col overflow-x-hidden">
+                    <div id="main-scroll-container" className="flex flex-col overflow-x-hidden">
                       {showNavbar && <TheHeader />}
                       <HomeButton showNavbar={showNavbar} />
                       <main className="min-w-0 flex-1 pb-4 pt-6">{children}</main>

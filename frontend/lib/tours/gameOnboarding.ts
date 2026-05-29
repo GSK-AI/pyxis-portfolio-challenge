@@ -194,6 +194,242 @@ const steps: Tour[] = [
       },
     ],
   },
+  {
+    tour: "replayTour",
+    steps: [
+      {
+        icon: null,
+        title: "Welcome to Replay",
+        content:
+          "You're watching a recorded game between AI agents. Step through to see how the game unfolded year by year — investments made, drugs launched, and markets competed over.",
+        side: "right",
+        showControls: true,
+        showSkip: true,
+      },
+      {
+        icon: null,
+        title: "Navigating the Replay",
+        content:
+          "Use the back and forward buttons — or your keyboard arrow keys — to step through the game. You can also jump directly to any step using the input field.",
+        side: "bottom",
+        selector: "#replay-step-navigator",
+        showControls: true,
+        showSkip: true,
+      },
+      {
+        icon: null,
+        title: "State vs Action View",
+        content:
+          "This is the key toggle. State view shows the state of the portfolio, market, CI and BD at the current game step. Action view shows which actions each agent took based on that observed state: which assets they chose to invest in and any BD bids placed. Switch between them to understand both the situation and the decisions made.",
+        side: "bottom",
+        selector: "#replay-view-toggle",
+        showControls: true,
+        showSkip: true,
+      },
+      {
+        icon: null,
+        title: "Agent Status & Ranking",
+        content:
+          "Each card shows an agent's current Cumulative Net Cash Flow (NCF). The leading agent is highlighted. Cards stay in their fixed positions — step through the game to see how NCF evolves and which agent pulls ahead.",
+        side: "bottom",
+        selector: "#replay-leaderboard",
+        showControls: true,
+        showSkip: true,
+      },
+      {
+        icon: null,
+        title: "Cash Flow Over Time",
+        content:
+          "Tracks each agent's NCF across all steps. The dashed vertical line marks the current step. Use this to spot when agents pulled ahead or fell behind.",
+        side: "bottom",
+        selector: "#replay-reward-chart",
+        showControls: true,
+        showSkip: true,
+      },
+      {
+        icon: null,
+        title: "Agent Portfolios",
+        content:
+          "One panel per agent showing their R&D pipeline. Colour highlights indicate new assets, BD acquisitions, and phase transitions. In Action view, each asset shows the investment decision taken that year.",
+        side: "top",
+        selector: "#replay-portfolio-grid",
+        showControls: true,
+        showSkip: true,
+      },
+      {
+        icon: null,
+        title: "Sales Market",
+        content:
+          "Indication-level competition at the current step. Shows market share, exclusivity status, and which agents have drugs on market.",
+        side: "top",
+        selector: "#replay-sales",
+        showControls: true,
+        showSkip: true,
+      },
+      {
+        icon: null,
+        title: "Competitive Intelligence",
+        content:
+          "The rolling alert window for this step — drug launches, BD deals, and observed pipeline transitions.",
+        side: "top",
+        selector: "#replay-alerts",
+        showControls: true,
+        showSkip: true,
+      },
+      {
+        icon: null,
+        title: "BD Market",
+        content:
+          "Shows the sealed-bid auctions that occurred at this step, including bids made by each agent and any winning bids.",
+        side: "top",
+        selector: "#replay-bd",
+        showControls: true,
+        showSkip: true,
+      },
+      {
+        icon: null,
+        title: "Start Exploring",
+        content:
+          "Step through the game and see how the AI made its decisions. Use the State/Action toggle to dig into both the choices and their outcomes.",
+        side: "right",
+        showControls: true,
+        showSkip: false,
+      },
+    ],
+  },
+  {
+    tour: "multiplayerTour",
+    steps: [
+      {
+        icon: null,
+        title: "Welcome to the Portfolio Challenge",
+        content:
+          "You are the portfolio manager of a pharmaceutical company competing against AI agents. Each year you choose which pipeline assets to fund. The player with the highest Cumulative Net Cash Flow (NCF) at the end of the game wins. Good luck!",
+        side: "right",
+        showControls: true,
+        showSkip: true,
+      },
+      {
+        icon: null,
+        title: "Your Finances",
+        content:
+          "Available Capital is your budget for the year. The eNPV and eROI metrics summarise the expected value of your current selection. The capital chart shows your historical cash balance across the game so far.",
+        side: "right",
+        selector: "#multi-action-finances",
+        showControls: true,
+        showSkip: true,
+      },
+      {
+        icon: null,
+        title: "Your Pipeline",
+        content:
+          "This table shows your full R&D portfolio. Toggle each asset to invest or stop funding it. Assets progress through Phase 1 → 2 → 3 → Approval → Market. Each phase has a probability of success. Successfully launched drugs generate the revenue your company needs to keep running.",
+        side: "top-left",
+        selector: "#multi-action-assets",
+        showControls: true,
+        showSkip: true,
+      },
+      {
+        icon: null,
+        title: "Reading an Asset Row",
+        content:
+          "Each row is one asset currently in your R&D pipeline. The toggle on the left controls whether you fund it this year. Current Phase shows where it sits (Phase 1 → 2 → 3 → Approval). Cost This Year is what you'll pay to keep it funded. PTRS is the probability of successfully completing this phase. eNPV and eROI summarise the expected value and return — use these to decide which assets are worth the investment. Assets that successfully reach market move to the On Market tab.",
+        side: "bottom",
+        selector: "#assetRow0",
+        showControls: true,
+        showSkip: true,
+      },
+      {
+        icon: null,
+        title: "Asset Detail",
+        content:
+          "Click the info icon next to any asset to see its full breakdown: the Probability of Technical and Regulatory Success (PTRS) at each remaining phase, and the projected peak revenue if it reaches market. Use this to weigh up the risk and reward of each investment.",
+        side: "right",
+        selector: "#assetInfo0",
+        showControls: true,
+        showSkip: true,
+      },
+      {
+        icon: null,
+        title: "Table Views",
+        content:
+          "These tabs switch between three views of your portfolio. In Development is where you make your funding decisions each year. On Market shows drugs that have successfully launched and are generating revenue for your company. Expired/Failed shows assets that didn't make it through trials or whose patents have expired.",
+        side: "bottom",
+        selector: "#assetTabNav",
+        showControls: true,
+        showSkip: true,
+      },
+      {
+        icon: null,
+        title: "Cost & Revenue Charts",
+        content:
+          "The Cost chart shows the total spend for your current asset selection. The Revenue chart shows the budget you will receive next year from drugs already on the market. Use these to avoid overspending your available capital.",
+        side: "bottom",
+        selector: "#multi-action-charts",
+        showControls: true,
+        showSkip: true,
+      },
+      {
+        icon: null,
+        title: "Sales Market",
+        content:
+          "Once drugs reach market, your revenue depends on your market share. The first company to launch in an indication earns an exclusivity period — competitors earn nothing in that indication during this window. After exclusivity expires, revenue is split based on drug quality and time on market.",
+        side: "top",
+        selector: "#multi-action-sales",
+        showControls: true,
+        showSkip: true,
+      },
+      {
+        icon: null,
+        title: "Competitive Intelligence",
+        content:
+          "Monitor competitor activity here. Drug launches and BD acquisitions are always reported. Pipeline progression is only partially observable — there is a 20% chance of seeing a Phase 1→2 transition, 50% for Phase 2→3, and 70% for Phase 3→Approval. The panel shows a rolling window of the last 5 years of alerts.",
+        side: "top",
+        selector: "#multi-action-alerts",
+        showControls: true,
+        showSkip: true,
+      },
+      {
+        icon: null,
+        title: "BD Market",
+        content:
+          "When available, Business Development assets appear here for sealed-bid auction. All players bid simultaneously — the highest bidder wins the asset and pays their bid. If multiple players bid the same amount, the winner is chosen at random. BD assets let you acquire drugs already in development, skipping early trial phases.",
+        side: "top",
+        selector: "#multi-action-bd",
+        showControls: true,
+        showSkip: true,
+      },
+      {
+        icon: null,
+        title: "Advancing the Game",
+        content:
+          "Press Next Year to commit your investment decisions for the year. The timeline shows how far through the game you are. If your selected investments exceed your available capital you will go bankrupt — you can still watch the remaining game play out, but you are eliminated from contention.",
+        side: "bottom",
+        selector: "#multi-action-controls",
+        showControls: true,
+        showSkip: true,
+      },
+      {
+        icon: null,
+        title: "Live Leaderboard",
+        content:
+          "This is the active leaderboard. Rankings update each year based on Cumulative Net Cash Flow (NCF) — the total cash your company has accumulated over the game. The winner is whoever has the highest NCF at the end — not the highest eNPV. Watch the rankings to see how you're competing against the AI.",
+        side: "left",
+        selector: "#multi-action-opponents",
+        showControls: true,
+        showSkip: true,
+      },
+      {
+        icon: null,
+        title: "You're ready!",
+        content:
+          "That's everything you need to get started. Make smart investment decisions, keep an eye on the leaderboard, and try to beat the AI! You can replay this tour at any time using the Tour button.",
+        side: "right",
+        showControls: true,
+        showSkip: false,
+      },
+    ],
+  },
 ];
 
 export default steps;

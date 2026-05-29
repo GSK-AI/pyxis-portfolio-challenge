@@ -110,6 +110,11 @@ pre {
   z-index: 50;
 }
 
+/* nextstepjs: ensure overlay covers the full viewport even when content is shorter */
+[data-name="nextstep-overlay"] {
+  min-height: 100vh !important;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
