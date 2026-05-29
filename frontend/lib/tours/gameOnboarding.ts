@@ -404,7 +404,7 @@ const steps: Tour[] = [
         title: "Advancing the Game",
         content:
           "Press Next Year to commit your investment decisions for the year. The timeline shows how far through the game you are. If your selected investments exceed your available capital you will go bankrupt — you can still watch the remaining game play out, but you are eliminated from contention.",
-        side: "bottom",
+        side: "bottom-right",
         selector: "#multi-action-controls",
         showControls: true,
         showSkip: true,

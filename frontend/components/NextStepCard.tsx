@@ -40,9 +40,14 @@ export default function NextStepCard({
     const selector = targetStep?.selector;
 
     if (selector) {
-      document.querySelector(selector)?.scrollIntoView({ block: "center" });
+      const el = document.querySelector(selector);
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        const center = window.scrollY + rect.top + rect.height / 2 - window.innerHeight / 2;
+        window.scrollTo({ top: Math.max(0, center), behavior: "instant" });
+      }
     } else {
-      window.scrollTo(0, 0);
+      window.scrollTo({ top: 0, behavior: "instant" });
     }
   };
 
