@@ -110,9 +110,9 @@ pre {
   z-index: 50;
 }
 
-/* nextstepjs: ensure overlay covers the full viewport even when content is shorter */
+/* nextstepjs: ensure overlay covers the full page height, not just the viewport */
 [data-name="nextstep-overlay"] {
-  min-height: 100vh !important;
+  min-height: 100% !important;
 }
 
 @layer base {
