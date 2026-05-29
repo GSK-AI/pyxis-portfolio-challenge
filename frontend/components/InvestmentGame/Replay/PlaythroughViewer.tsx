@@ -1,8 +1,10 @@
 "use client";
 
-import { useMemo, useState, useEffect, useRef } from "react";
+import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { X } from "lucide-react";
+import { useNextStep } from "nextstepjs";
 import { Button } from "@/components/ui/button";
+import { useCustomNextStep } from "@/hooks/use-custom-next-step";
 import LayoutContainer from "@/components/LayoutContainer";
 
 import type { PlaythroughData } from "@/lib/definitionsGameZ";
@@ -31,6 +33,20 @@ export default function PlaythroughViewer({
   const numAgents = data.metadata.num_agents;
   const [showSummary, setShowSummary] = useState(false);
   const prevStepIndex = useRef(replay.currentStepIndex);
+
+  const { startNextStep } = useNextStep();
+  const { startTourIfNotSkipped, clearAllTourData } = useCustomNextStep();
+
+  const handleStartTour = useCallback(() => {
+    clearAllTourData();
+    window.scrollTo(0, 0);
+    startNextStep("replayTour");
+  }, [clearAllTourData, startNextStep]);
+
+  useEffect(() => {
+    startTourIfNotSkipped("replayTour", startNextStep);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Detect when we reach the final step or all agents are bankrupt
   const isGameOver = useMemo(() => {
@@ -101,18 +117,25 @@ export default function PlaythroughViewer({
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <ViewModeToggle
-              viewMode={replay.viewMode}
-              onViewModeChange={replay.setViewMode}
-              disabled={replay.currentActions === null}
-            />
-            <StepNavigator
-              currentStepIndex={replay.currentStepIndex}
-              totalSteps={replay.totalSteps}
-              onGoTo={replay.goToStep}
-              onNext={replay.goNext}
-              onPrev={replay.goPrev}
-            />
+            <div id="replay-view-toggle">
+              <ViewModeToggle
+                viewMode={replay.viewMode}
+                onViewModeChange={replay.setViewMode}
+                disabled={replay.currentActions === null}
+              />
+            </div>
+            <div id="replay-step-navigator">
+              <StepNavigator
+                currentStepIndex={replay.currentStepIndex}
+                totalSteps={replay.totalSteps}
+                onGoTo={replay.goToStep}
+                onNext={replay.goNext}
+                onPrev={replay.goPrev}
+              />
+            </div>
+            <Button variant="outline" size="sm" onClick={handleStartTour}>
+              Tour
+            </Button>
             <Button variant="outline" size="sm" onClick={onExit}>
               <X className="mr-1 h-4 w-4" />
               Exit
@@ -121,25 +144,29 @@ export default function PlaythroughViewer({
         </div>
 
         {/* Leaderboard */}
-        <AgentLeaderboard
-          agentIds={data.metadata.agent_ids}
-          agentDisplayNames={replay.agentDisplayNames}
-          agentStates={replay.currentAgentStates}
-          cumulativeRewards={replay.cumulativeRewards}
-          agentColors={replay.agentColors}
-        />
+        <div id="replay-leaderboard">
+          <AgentLeaderboard
+            agentIds={data.metadata.agent_ids}
+            agentDisplayNames={replay.agentDisplayNames}
+            agentStates={replay.currentAgentStates}
+            cumulativeRewards={replay.cumulativeRewards}
+            agentColors={replay.agentColors}
+          />
+        </div>
 
         {/* Reward Chart */}
-        <RewardChart
-          data={data}
-          currentStepIndex={replay.currentStepIndex}
-          agentColors={replay.agentColors}
-          agentDisplayNames={replay.agentDisplayNames}
-        />
+        <div id="replay-reward-chart">
+          <RewardChart
+            data={data}
+            currentStepIndex={replay.currentStepIndex}
+            agentColors={replay.agentColors}
+            agentDisplayNames={replay.agentDisplayNames}
+          />
+        </div>
 
         {/* Agent Portfolio Panels */}
         <HighlightKey showBdAcquisition={data.config.bd_enabled} />
-        <div className={`grid gap-4 ${agentGridCols}`}>
+        <div id="replay-portfolio-grid" className={`grid gap-4 ${agentGridCols}`}>
           {data.metadata.agent_ids.map((agentId) => (
             <AgentPortfolioPanel
               key={agentId}
@@ -163,25 +190,31 @@ export default function PlaythroughViewer({
         {/* Shared Market Panels */}
         <div className={`grid gap-4 ${sharedPanelCols}`}>
           {data.config.bd_enabled && (
-            <ReplayBDMarketPanel
-              bdAssets={replay.currentSharedMarket.bd_assets}
-              lastAcquisitions={replay.currentSharedMarket.last_bd_acquisitions}
-              agentActions={replay.currentActions ?? undefined}
+            <div id="replay-bd">
+              <ReplayBDMarketPanel
+                bdAssets={replay.currentSharedMarket.bd_assets}
+                lastAcquisitions={replay.currentSharedMarket.last_bd_acquisitions}
+                agentActions={replay.currentActions ?? undefined}
+                agentColors={replay.agentColors}
+                agentDisplayNames={replay.agentDisplayNames}
+                viewMode={replay.viewMode}
+              />
+            </div>
+          )}
+          <div id="replay-sales">
+            <ReplaySalesMarketPanel
+              indicationMarkets={replay.currentSharedMarket.indication_markets}
               agentColors={replay.agentColors}
               agentDisplayNames={replay.agentDisplayNames}
-              viewMode={replay.viewMode}
             />
-          )}
-          <ReplaySalesMarketPanel
-            indicationMarkets={replay.currentSharedMarket.indication_markets}
-            agentColors={replay.agentColors}
-            agentDisplayNames={replay.agentDisplayNames}
-          />
-          <ReplayAlertsPanel
-            alerts={allAlerts}
-            currentStep={currentStep}
-            agentDisplayNames={replay.agentDisplayNames}
-          />
+          </div>
+          <div id="replay-alerts">
+            <ReplayAlertsPanel
+              alerts={allAlerts}
+              currentStep={currentStep}
+              agentDisplayNames={replay.agentDisplayNames}
+            />
+          </div>
         </div>
 
         {/* Game Over Summary */}
