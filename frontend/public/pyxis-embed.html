@@ -22,8 +22,12 @@
     var NATURAL_HEIGHT = 1620;
     var MOBILE_THRESHOLD = 768;
 
-    function applyLayout() {
+    function applyPyxisGameLayout() {
       var container = document.getElementById('pyxis-container');
+      if(container == null) {
+          return;
+      }
+      
       var mobile = document.getElementById('pyxis-mobile');
       var iframe = document.getElementById('pyxis-frame');
       var width = container.offsetWidth;
@@ -43,7 +47,7 @@
       container.style.height = Math.ceil(NATURAL_HEIGHT * scale) + 'px';
     }
 
-    window.addEventListener('resize', applyLayout);
-    applyLayout();
+    window.addEventListener('resize', applyPyxisGameLayout);
+    applyPyxisGameLayout();
   })();
 </script>
