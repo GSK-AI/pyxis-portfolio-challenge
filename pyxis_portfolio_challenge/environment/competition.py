@@ -508,7 +508,10 @@ def evaluate(
 
     # Build env kwargs to determine possible_agents
     env_kwargs = _build_multi_agent_env_kwargs(
-        flatten_obs=False, num_agents=num_agents,
+        flatten_obs=False,
+        num_agents=num_agents,
+        assets_dir=config.evaluation_data_dir,
+        bd_assets_dir=config.multi_agent.bd_eval_assets_dir,
     )
     n = env_kwargs["num_agents"]
     possible = [f"pharma_{i}" for i in range(n)]
@@ -665,7 +668,11 @@ def run(
         evaluate_multi_agent,
     )
 
-    env_kwargs = _build_multi_agent_env_kwargs(flatten_obs=False)
+    env_kwargs = _build_multi_agent_env_kwargs(
+        flatten_obs=False,
+        assets_dir=config.evaluation_data_dir,
+        bd_assets_dir=config.multi_agent.bd_eval_assets_dir,
+    )
     n = env_kwargs["num_agents"]
     possible = [f"pharma_{i}" for i in range(n)]
 

@@ -43,6 +43,11 @@ body {
   font-weight: 400;
 }
 
+html,
+body {
+  overflow-x: hidden;
+}
+
 .dev {
   border: 1px dotted red !important;
 }
@@ -103,6 +108,11 @@ pre {
 }
 .visx-tooltip {
   z-index: 50;
+}
+
+/* nextstepjs: ensure overlay covers the full page height, not just the viewport */
+[data-name="nextstep-overlay"] {
+  min-height: 100% !important;
 }
 
 @layer base {

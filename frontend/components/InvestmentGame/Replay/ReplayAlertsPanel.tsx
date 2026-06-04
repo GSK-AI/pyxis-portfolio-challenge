@@ -62,17 +62,14 @@ export default function ReplayAlertsPanel({
     .sort((a, b) => b.step - a.step);
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4">
+    <div className="flex h-[460px] flex-col rounded-lg border border-gray-200 bg-white p-4">
       <h3 className="mb-3 text-sm font-semibold text-gray-700">
         Competitive Intelligence
       </h3>
       {relevantAlerts.length === 0 ? (
         <p className="text-xs text-gray-400">No intelligence reports yet</p>
       ) : (
-        <div
-          className="flex flex-col gap-2 overflow-y-auto"
-          style={{ maxHeight: "400px" }}
-        >
+        <div className="flex flex-1 flex-col gap-2 overflow-y-auto">
           {relevantAlerts.map((alert, i) => {
             const style = ALERT_STYLES[alert.event_type] || {
               label: alert.event_type.toUpperCase(),

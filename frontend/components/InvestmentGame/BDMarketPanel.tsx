@@ -4,7 +4,7 @@ import type { BDAssetType } from "@/lib/definitionsGameZ";
 import { formatDisplayNumber } from "@/lib/numbers";
 import { InformationButton } from "@/components/InformationButton";
 
-const BD_MARKET_INFO = `Each year, Business Development assets may become available for acquisition via sealed-bid auction. Assets appear stochastically — more frequently when there is active pipeline development in the market.
+const BD_MARKET_INFO = `Each year, Business Development assets may become available for acquisition via sealed-bid auction. Assets appear stochastically. BD assets are more likely to arrive in active indications.
 
 How bidding works:
 - You choose a bid level per asset — higher levels cost more but beat lower bids
@@ -106,7 +106,7 @@ export default function BDMarketPanel({
 }) {
   if (bdAssets.length === 0) {
     return (
-      <div className="rounded-lg border border-gray-200 bg-white p-4">
+      <div className="flex h-[460px] flex-col rounded-lg border border-gray-200 bg-white p-4">
         <div className="mb-2 flex items-center gap-1">
           <h3 className="text-sm font-semibold text-gray-700">BD Market</h3>
           <InformationButton
@@ -120,7 +120,7 @@ export default function BDMarketPanel({
   }
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4">
+    <div className="flex h-[460px] flex-col rounded-lg border border-gray-200 bg-white p-4">
       <div className="mb-3 flex items-center gap-1">
         <h3 className="text-sm font-semibold text-gray-700">BD Market</h3>
         <InformationButton
@@ -128,7 +128,7 @@ export default function BDMarketPanel({
           description={BD_MARKET_INFO}
         />
       </div>
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-1 flex-col gap-2 overflow-y-auto">
         {bdAssets.map((asset, index) => (
           <BDAssetCard
             key={asset.name}
