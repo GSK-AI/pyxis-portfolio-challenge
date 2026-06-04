@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
 import uuid
 from typing import Literal
@@ -12,7 +14,7 @@ from pydantic import BaseModel, ConfigDict, PrivateAttr
 from pyxis_portfolio_challenge.game.asset import AssetState
 from pyxis_portfolio_challenge.game.asset_generators import JSONAssetGenerator
 from pyxis_portfolio_challenge.game.constants import InvestmentLevel
-from pyxis_portfolio_challenge.game.game_state import GameState
+from pyxis_portfolio_challenge.game.game_state import GameState, _PACKAGE_CODE_HASH
 from pyxis_portfolio_challenge.game.shared_market_state import (
     THERAPEUTIC_AREAS,
     SharedMarketState,
@@ -215,6 +217,25 @@ class MultiAgentGame(BaseModel):
             pricing_elasticity=pricing_elasticity,
         )
         return game
+
+    def content_fingerprint(self, seed: int | None = None) -> str:
+        """
+        Compute a deterministic fingerprint for this initial multi-agent game state.
+
+        Serializes all agent portfolios and the shared market, strips the random
+        GameState.id from each agent (asset UUIDs are deterministic/seeded so they
+        stay in), then hashes with seed and package code hash.
+        """
+        data = self.model_dump(mode="json")
+        for agent_data in data.get("agent_states", {}).values():
+            agent_data.pop("id", None)
+        fingerprint_input = {
+            "state": data,
+            "seed": seed,
+            "code_hash": _PACKAGE_CODE_HASH,
+        }
+        serialized = json.dumps(fingerprint_input, sort_keys=True)
+        return hashlib.sha256(serialized.encode()).hexdigest()
 
     @property
     def possible_agents(self) -> list[str]:

@@ -34,8 +34,7 @@ Upload `replay.json` to [gsk.ai/pyxis-portfolio-challenge](https://gsk.ai/pyxis-
 Or use the Python API to evaluate agents over multiple episodes:
 
 ```python
-from pyxis_portfolio_challenge.environment import make_multi_agent_train_env
-from pyxis_portfolio_challenge.environment.competition import evaluate
+from pyxis_portfolio_challenge import evaluate, make_multi_agent_train_env
 
 env = make_multi_agent_train_env()
 reports, _ = evaluate(agents=["knapsack(c12)", "random"], num_episodes=100)
@@ -186,7 +185,7 @@ action["investments"] = my_decisions * masks["investments"]
 ### Creating the Environment
 
 ```python
-from pyxis_portfolio_challenge.environment import make_multi_agent_train_env
+from pyxis_portfolio_challenge import make_multi_agent_train_env
 
 env = make_multi_agent_train_env()
 ```
@@ -271,7 +270,7 @@ For multi-episode statistical evaluation, use `evaluate()` below instead.
 Use the standalone `evaluate()` function. Agents can be strings or callables:
 
 ```python
-from pyxis_portfolio_challenge.environment.competition import evaluate
+from pyxis_portfolio_challenge import evaluate
 
 per_agent_reports, playthrough = evaluate(
     agents=[my_agent, "knapsack(c12)"],

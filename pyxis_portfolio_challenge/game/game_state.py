@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
+import pathlib
 import random
 import uuid
 from enum import Enum
@@ -27,6 +30,22 @@ from pyxis_portfolio_challenge.game.trial import TrialPhase
 from pyxis_portfolio_challenge.rng import get_game_rng
 
 logger = logging.getLogger(__name__)
+
+
+def _compute_package_code_hash() -> str:
+    """Hash all files in the package directory for version fingerprinting."""
+    # Equivalent to PROJECT_ROOT / "pyxis_portfolio_challenge", derived via __file__ to
+    # avoid a circular import (pyxis_portfolio_challenge/__init__.py imports game_state
+    # transitively, so we can't import PROJECT_ROOT from there).
+    package_dir = pathlib.Path(__file__).parent.parent  # pyxis_portfolio_challenge/
+    hasher = hashlib.sha256()
+    for f in sorted(package_dir.rglob("*")):
+        if f.is_file():
+            hasher.update(f.read_bytes())
+    return hasher.hexdigest()
+
+
+_PACKAGE_CODE_HASH: str = _compute_package_code_hash()
 
 
 class GameEndReason(str, Enum):
@@ -559,6 +578,24 @@ class GameState(BaseModel):
         game_state._ta_quality_modifiers = ta_quality_modifiers
         logger.debug("Initialised new game state...")
         return game_state._post_init_update_enpv_eroi()
+
+    def content_fingerprint(self, seed: int | None = None) -> str:
+        """
+        Compute a deterministic fingerprint for this initial game state.
+
+        Incorporates the serialized state (excluding the random id), the seed,
+        and a hash of the package source code. Two evaluations with the same seed,
+        same config, and same codebase will produce identical fingerprints.
+        """
+        state_data = self.model_dump(mode="json")
+        state_data.pop("id")  # exclude the random UUID4
+        fingerprint_input = {
+            "state": state_data,
+            "seed": seed,
+            "code_hash": _PACKAGE_CODE_HASH,
+        }
+        serialized = json.dumps(fingerprint_input, sort_keys=True)
+        return hashlib.sha256(serialized.encode()).hexdigest()
 
     def _add_new_assets_mean_reverting(
         self, assets_not_expired: dict[uuid.UUID, DrugAsset]
