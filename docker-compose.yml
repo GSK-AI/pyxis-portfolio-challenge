@@ -28,7 +28,7 @@ services:
       APP_REDIS_DB: 0
       APP_USE_LOCAL_REDIS: "true"
       # Local game assets
-      APP_GAME_ASSETS_DIR: /app/rl-environment-assets/gpt5_09feb2026_highPtrs/training
+      APP_GAME_ASSETS_DIR: /app/rl-environment-assets/09feb2026_highPtrs/training
     volumes:
       # Mount source code for development (hot reload)
       - ./pyxis_portfolio_challenge:/app/pyxis_portfolio_challenge:ro

@@ -24,7 +24,7 @@ variables:
   backendBuildContext: '$(Build.SourcesDirectory)'
 
   redisHost: 'redis-gskai-pyxis-prod.redis.cache.windows.net'
-  gameAssetsDir: '/app/rl-environment-assets/gpt5_09feb2026_highPtrs/training'
+  gameAssetsDir: '/app/rl-environment-assets/09feb2026_highPtrs/training'
 
   azureClientId: ''
   azureAuthority: ''
