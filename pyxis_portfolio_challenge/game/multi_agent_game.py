@@ -158,6 +158,7 @@ class MultiAgentGame(BaseModel):
                 indication_drift_speed=indication_drift_speed,
                 trial_cost_multiplier=trial_cost_multiplier,
                 approval_phase_config=approval_phase_config,
+                generator_index=i,
             )
             if indication_permutation:
                 game_state._asset_generator.set_indication_permutation(
@@ -201,6 +202,7 @@ class MultiAgentGame(BaseModel):
                 indication_drift_speed=indication_drift_speed,
                 trial_cost_multiplier=trial_cost_multiplier,
                 approval_phase_config=approval_phase_config,
+                generator_index=len(agent_names),
             )
             if indication_permutation:
                 bd_generator.set_indication_permutation(indication_permutation)
