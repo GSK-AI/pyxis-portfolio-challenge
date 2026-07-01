@@ -785,7 +785,6 @@ class JSONAssetGenerator(AssetGeneratorBase):
                 f"{type(assets_dir).__name__}"
             )
 
-        self.random = random.Random(self.global_seed)
         self.assets_dir = assets_dir
         self.uncertain_ptrs_config = uncertain_ptrs_config
         self.distributional_ptrs_config = distributional_ptrs_config
@@ -814,7 +813,7 @@ class JSONAssetGenerator(AssetGeneratorBase):
     def _reset_available_assets(self, stage: Literal["initial", "new"]):
         """Reset the available assets for a given stage."""
         reset_assets = [asset.copy() for asset in self._all_assets[stage]]
-        self.random.shuffle(reset_assets)
+        get_game_rng().shuffle(reset_assets)
         self.available_assets[stage] = reset_assets
 
     def _generate_single_asset(
@@ -888,7 +887,7 @@ class JSONAssetGenerator(AssetGeneratorBase):
         """
         progress = getattr(self, "_current_episode_progress", None)
         if progress is None or num_indications < 2:
-            raw = self.random.randint(0, num_indications - 1)
+            raw = get_game_rng().randint(0, num_indications - 1)
         else:
             # Centre drifts through indications over the episode.
             # drift_speed controls how many full sweeps per episode.
@@ -905,7 +904,7 @@ class JSONAssetGenerator(AssetGeneratorBase):
 
             # Sample from weighted distribution
             total = sum(weights)
-            r = self.random.random() * total
+            r = get_game_rng().random() * total
             cumulative = 0.0
             raw = num_indications - 1
             for i, w in enumerate(weights):
@@ -1064,7 +1063,7 @@ class JSONAssetGenerator(AssetGeneratorBase):
                 target_ta = sample_ta_by_experience(
                     ta_experience=ta_experience,
                     temperature=self.ta_experience_config.asset_arrival_temperature,
-                    rng=self.random,
+                    rng=get_game_rng(),
                 )
                 if target_ta:
                     logger.debug(f"TA bias: sampled target TA '{target_ta}'")
@@ -1109,7 +1108,7 @@ class JSONAssetGenerator(AssetGeneratorBase):
         if not candidates:
             candidates = self._all_assets["new"]
 
-        asset_data = copy.deepcopy(self.random.choice(candidates))
+        asset_data = copy.deepcopy(get_game_rng().choice(candidates))
         asset_data["pending_trial_phase"] = pending_phase
         asset_data["state"] = "Idle"
 
@@ -1195,7 +1194,6 @@ class FixedListAssetGenerator(AssetGeneratorBase):
         if not all(isinstance(item, dict) for item in assets_data_list):
             raise TypeError("All items in assets_data_list must be dictionaries")
 
-        self.asset_chooser = random.Random(self.global_seed)
         self.assets_data_list = assets_data_list
         self.uncertain_ptrs_config = uncertain_ptrs_config
         self.distributional_ptrs_config = distributional_ptrs_config
@@ -1255,7 +1253,7 @@ class FixedListAssetGenerator(AssetGeneratorBase):
                 target_ta = sample_ta_by_experience(
                     ta_experience=ta_experience,
                     temperature=self.ta_experience_config.asset_arrival_temperature,
-                    rng=self.asset_chooser,
+                    rng=get_game_rng(),
                 )
 
             # Pick a random asset from assets_data_list and copy it
@@ -1268,15 +1266,15 @@ class FixedListAssetGenerator(AssetGeneratorBase):
                 ]
                 if matching_assets:
                     asset_data = copy.deepcopy(
-                        self.asset_chooser.choice(matching_assets)
+                        get_game_rng().choice(matching_assets)
                     )
                 else:
                     asset_data = copy.deepcopy(
-                        self.asset_chooser.choice(self.assets_data_list)
+                        get_game_rng().choice(self.assets_data_list)
                     )
             else:
                 asset_data = copy.deepcopy(
-                    self.asset_chooser.choice(self.assets_data_list)
+                    get_game_rng().choice(self.assets_data_list)
                 )
             # Add id and rng fields to asset_data
             self.asset_count += 1
@@ -1338,7 +1336,7 @@ class FixedListAssetGenerator(AssetGeneratorBase):
             if self.indications_per_ta and ta in self.indications_per_ta:
                 num_ind = self.indications_per_ta[ta]
                 if num_ind > 1:
-                    raw = self.asset_chooser.randint(0, num_ind - 1)
+                    raw = get_game_rng().randint(0, num_ind - 1)
                     # Apply per-episode permutation
                     if self._indication_permutation:
                         perm = self._indication_permutation.get(ta)
