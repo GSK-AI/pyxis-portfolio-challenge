@@ -621,9 +621,9 @@ DUMMY_LIST_DATA = [
 ]
 
 
-def generate_asset_id(global_seed: int, counter: int) -> uuid.UUID:
-    """Generate a UUID for a drug asset using the global seed and asset count."""
-    return uuid.uuid5(ASSET_NAMESPACE, f"{global_seed}_{counter}")
+def generate_asset_id(global_seed: int, counter: int, generator_id: int = 0) -> uuid.UUID:
+    """Generate a UUID for a drug asset using the global seed, asset count, and generator identity."""
+    return uuid.uuid5(ASSET_NAMESPACE, f"{global_seed}_{generator_id}_{counter}")
 
 
 class AssetGeneratorBase(ABC):
@@ -924,7 +924,7 @@ class JSONAssetGenerator(AssetGeneratorBase):
         """Convert asset data dictionary to DrugAsset object with unique ID and RNG."""
         # Convert trials data from JSON schema to dict of Trial objects
         logger.debug(f"asset_data: {asset_data}")
-        asset_id = generate_asset_id(self.global_seed, self.asset_count)
+        asset_id = generate_asset_id(self.global_seed, self.asset_count, id(self))
         therapeutic_area = asset_data["therapeutic_area"]
 
         if AssetState(asset_data["state"]) == AssetState.OnMarket:
@@ -1113,7 +1113,7 @@ class JSONAssetGenerator(AssetGeneratorBase):
         asset_data["state"] = "Idle"
 
         self.asset_count += 1
-        asset_id = generate_asset_id(self.global_seed, self.asset_count)
+        asset_id = generate_asset_id(self.global_seed, self.asset_count, id(self))
 
         trial = trials_json_to_trials_sequence(
             asset_data["trials"],
@@ -1278,7 +1278,7 @@ class FixedListAssetGenerator(AssetGeneratorBase):
                 )
             # Add id and rng fields to asset_data
             self.asset_count += 1
-            asset_id = generate_asset_id(self.global_seed, self.asset_count)
+            asset_id = generate_asset_id(self.global_seed, self.asset_count, id(self))
             if AssetState(asset_data["state"]) == AssetState.OnMarket:
                 final_phase = (
                     TrialPhase.APPROVAL
