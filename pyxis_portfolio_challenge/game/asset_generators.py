@@ -629,7 +629,7 @@ def generate_asset_id(global_seed: int, counter: int, generator_id: int = 0) -> 
 class AssetGeneratorBase(ABC):
     """Abstract base class for drug asset generators."""
 
-    def __init__(self, global_seed: int, asset_count: int = 0):
+    def __init__(self, global_seed: int, asset_count: int = 0, generator_index: int = 0):
         """
         Initialise the asset generator with a global seed and asset count.
 
@@ -639,6 +639,10 @@ class AssetGeneratorBase(ABC):
             A global seed for reproducibility of random asset generation.
         asset_count : int, optional
             Number of assets generated, used to generate unique IDs. Defaults to 0.
+        generator_index : int, optional
+            Stable integer identifier for this generator instance. Combined with
+            global_seed and asset_count to produce unique, reproducible asset UUIDs
+            across all generators that share the same seed. Defaults to 0.
 
         """
         super().__init__()
@@ -654,6 +658,7 @@ class AssetGeneratorBase(ABC):
 
         self.global_seed = global_seed
         self.asset_count = asset_count
+        self.generator_index = generator_index
 
     @abstractmethod
     def __call__(
@@ -727,6 +732,7 @@ class JSONAssetGenerator(AssetGeneratorBase):
         ta_experience_config: Optional[TAExperienceConfig] = None,
         indications_per_ta: Optional[dict[str, int]] = None,
         approval_phase_config: Optional[ApprovalPhaseConfig] = None,
+        generator_index: int = 0,
     ):
         """
         Initialise the JSON asset generator with a global seed and assets directory.
@@ -777,7 +783,7 @@ class JSONAssetGenerator(AssetGeneratorBase):
             injected after Phase 3 in the trial chain.
 
         """
-        super().__init__(global_seed)
+        super().__init__(global_seed, generator_index=generator_index)
 
         if not isinstance(assets_dir, upath.UPath):
             raise TypeError(
@@ -924,7 +930,7 @@ class JSONAssetGenerator(AssetGeneratorBase):
         """Convert asset data dictionary to DrugAsset object with unique ID and RNG."""
         # Convert trials data from JSON schema to dict of Trial objects
         logger.debug(f"asset_data: {asset_data}")
-        asset_id = generate_asset_id(self.global_seed, self.asset_count, id(self))
+        asset_id = generate_asset_id(self.global_seed, self.asset_count, self.generator_index)
         therapeutic_area = asset_data["therapeutic_area"]
 
         if AssetState(asset_data["state"]) == AssetState.OnMarket:
@@ -1113,7 +1119,7 @@ class JSONAssetGenerator(AssetGeneratorBase):
         asset_data["state"] = "Idle"
 
         self.asset_count += 1
-        asset_id = generate_asset_id(self.global_seed, self.asset_count, id(self))
+        asset_id = generate_asset_id(self.global_seed, self.asset_count, self.generator_index)
 
         trial = trials_json_to_trials_sequence(
             asset_data["trials"],
@@ -1154,6 +1160,7 @@ class FixedListAssetGenerator(AssetGeneratorBase):
         indications_per_ta: Optional[dict[str, int]] = None,
         approval_phase_config: Optional[ApprovalPhaseConfig] = None,
         trial_cost_multiplier: float = 1.0,
+        generator_index: int = 0,
     ):
         """
         Initialise the fixed list asset generator.
@@ -1184,7 +1191,7 @@ class FixedListAssetGenerator(AssetGeneratorBase):
             Multiplier for trial phase costs.
 
         """
-        super().__init__(global_seed)
+        super().__init__(global_seed, generator_index=generator_index)
 
         if not isinstance(assets_data_list, list):
             raise TypeError(
@@ -1278,7 +1285,7 @@ class FixedListAssetGenerator(AssetGeneratorBase):
                 )
             # Add id and rng fields to asset_data
             self.asset_count += 1
-            asset_id = generate_asset_id(self.global_seed, self.asset_count, id(self))
+            asset_id = generate_asset_id(self.global_seed, self.asset_count, self.generator_index)
             if AssetState(asset_data["state"]) == AssetState.OnMarket:
                 final_phase = (
                     TrialPhase.APPROVAL
