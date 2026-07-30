@@ -34,9 +34,9 @@ Upload `replay.json` to [gsk.ai/pyxis-portfolio-challenge](https://gsk.ai/pyxis-
 Or use the Python API to evaluate agents over multiple episodes:
 
 ```python
-from pyxis_portfolio_challenge import evaluate, make_multi_agent_train_env
+from pyxis_portfolio_challenge import make_train_env, evaluate
 
-env = make_multi_agent_train_env()
+env = make_train_env()
 reports, _ = evaluate(agents=["knapsack(c12)", "random"], num_episodes=100)
 # 100 seeds × 2 positions = 200 episodes; results keyed by agent_0/agent_1
 ```
@@ -185,15 +185,15 @@ action["investments"] = my_decisions * masks["investments"]
 ### Creating the Environment
 
 ```python
-from pyxis_portfolio_challenge import make_multi_agent_train_env
+from pyxis_portfolio_challenge import make_train_env
 
-env = make_multi_agent_train_env()
+env = make_train_env()
 ```
 
 This creates a PettingZoo `ParallelEnv` from the YAML configuration. Observations are flat numpy arrays by default for faster processing. Pass `flatten_obs=False` if you prefer structured dict observations:
 
 ```python
-env = make_multi_agent_train_env(flatten_obs=False)
+env = make_train_env(flatten_obs=False)
 ```
 
 ### PettingZoo Environment
@@ -316,12 +316,13 @@ Additional metrics cover BD deal activity (`PerEpisodeBDDealsWon`), first-mover 
 We provide optional self-play wrappers built on Stable-Baselines3 and MaskablePPO — this is how we trained the Pyxie agent. `SelfPlayWrapper` converts the PettingZoo env into a single-agent `gym.Env` where opponents use frozen policy copies, and `OpponentSyncCallback` keeps those copies in sync during training.
 
 ```python
-from pyxis_portfolio_challenge.environment import make_multi_agent_train_env, SelfPlayWrapper
+from pyxis_portfolio_challenge import make_train_env
+from pyxis_portfolio_challenge.environment.self_play import SelfPlayWrapper
 from pyxis_portfolio_challenge.environment.self_play import OpponentSyncCallback
 
 policy_kwargs = {"net_arch": [256, 256]}
 
-env = make_multi_agent_train_env()
+env = make_train_env()
 wrapped = SelfPlayWrapper(env, policy_kwargs=policy_kwargs)
 
 # wrapped is a gym.Env with a MultiDiscrete action space and action_masks()
