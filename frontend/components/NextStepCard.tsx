@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Step } from "nextstepjs";
+import { Step, useNextStep } from "nextstepjs";
 import {
   Card,
   CardContent,
@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import steps from "@/lib/tours/gameOnboarding";
 
 interface NextStepCardProps {
   step: Step;
@@ -31,6 +32,35 @@ export default function NextStepCard({
   skipTour,
   arrow,
 }: NextStepCardProps) {
+  const { currentTour } = useNextStep();
+
+  const scrollToStep = (stepIndex: number) => {
+    const tourConfig = steps.find((t) => t.tour === currentTour);
+    const targetStep = tourConfig?.steps[stepIndex];
+    const selector = targetStep?.selector;
+
+    if (selector) {
+      const el = document.querySelector(selector);
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        const center = window.scrollY + rect.top + rect.height / 2 - window.innerHeight / 2;
+        window.scrollTo({ top: Math.max(0, center), behavior: "instant" });
+      }
+    } else {
+      window.scrollTo({ top: 0, behavior: "instant" });
+    }
+  };
+
+  const handleNext = () => {
+    scrollToStep(currentStep + 1);
+    nextStep();
+  };
+
+  const handlePrev = () => {
+    scrollToStep(currentStep - 1);
+    prevStep();
+  };
+
   return (
     <Card className="w-[450px]">
       <CardHeader>
@@ -61,12 +91,12 @@ export default function NextStepCard({
 
         <div className="flex gap-2">
           {currentStep > 0 && (
-            <Button variant="outline" size="sm" onClick={prevStep}>
+            <Button variant="outline" size="sm" onClick={handlePrev}>
               Previous
             </Button>
           )}
 
-          <Button size="sm" onClick={nextStep}>
+          <Button size="sm" onClick={handleNext}>
             {currentStep === totalSteps - 1 ? "Finish" : "Next"}
           </Button>
         </div>

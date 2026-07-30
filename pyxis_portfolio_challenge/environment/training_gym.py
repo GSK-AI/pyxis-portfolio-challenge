@@ -864,7 +864,8 @@ class InvestmentGameEnv(gym.Env):
         observation = self._get_obs()
         info = self._get_info()
 
-        ctx = MetricsContext(self.game_state, reward=0.0)
+        self._episode_fingerprint = self.game_state.content_fingerprint(seed)
+        ctx = MetricsContext(self.game_state, reward=0.0, episode_id=self._episode_fingerprint)
         collect_metrics(
             collection_fn="on_episode_begin", context=ctx, metrics=self.metrics
         )

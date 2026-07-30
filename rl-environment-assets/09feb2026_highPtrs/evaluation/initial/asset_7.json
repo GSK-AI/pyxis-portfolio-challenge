@@ -1,0 +1,29 @@
+{
+    "name": "Gliotrene",
+    "therapeutic_area": "oncology",
+    "type": "internal",
+    "description": "A brain-penetrant PI3K pathway inhibitor for glioblastoma resistant to standard therapy. Oral formulation optimized to cross the blood\u2013brain barrier and maintain consistent exposure.",
+    "max_revenue": 3300000000,
+    "time_until_max_revenue": 5,
+    "time_until_patent_expiry": 17,
+    "trials": {
+        "phase_1": {
+            "cost_remaining": 17000000,
+            "time_remaining": 2,
+            "ptrs": 0.64
+        },
+        "phase_2": {
+            "cost_remaining": 58000000,
+            "time_remaining": 3,
+            "ptrs": 0.41
+        },
+        "phase_3": {
+            "cost_remaining": 250000000,
+            "time_remaining": 4,
+            "ptrs": 0.62
+        }
+    },
+    "state": "Idle",
+    "pending_trial_phase": "Phase 1",
+    "time_on_market": 0
+}

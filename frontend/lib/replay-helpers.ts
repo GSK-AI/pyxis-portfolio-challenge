@@ -24,13 +24,28 @@ export function getAgentColorMap(agentIds: string[]): Record<string, string> {
 /**
  * Build a mapping from agent_id to display name.
  * Falls back to the raw agent_id if no name is provided.
+ * When multiple agent IDs share the same display name, appends " (1)", " (2)", …
+ * to disambiguate.
  */
 export function getAgentDisplayNames(
   metadata: PlaythroughMetadata,
 ): Record<string, string> {
   const names = metadata.agent_names ?? {};
+  const raw = metadata.agent_ids.map((id) => names[id] ?? id);
+
+  // Count how many times each display name appears
+  const counts: Record<string, number> = {};
+  for (const name of raw) counts[name] = (counts[name] ?? 0) + 1;
+
+  // For duplicated names, append a counter per occurrence
+  const seen: Record<string, number> = {};
   return Object.fromEntries(
-    metadata.agent_ids.map((id) => [id, names[id] ?? id]),
+    metadata.agent_ids.map((id, i) => {
+      const name = raw[i];
+      if (counts[name] === 1) return [id, name];
+      seen[name] = (seen[name] ?? 0) + 1;
+      return [id, `${name} (${seen[name]})`];
+    }),
   );
 }
 

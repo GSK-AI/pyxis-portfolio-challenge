@@ -57,7 +57,7 @@ def test_per_episode_cumulative_reward(mock_game_state):
     metric.on_step_end(context=ctx)
 
     report = metric.report()
-    episode_key = f"episode_id_{mock_game_state.id}"
+    episode_key = f"game_state_id_{mock_game_state.id}"
     assert report["PerEpisodeCumulativeReward"][episode_key][
                "cumulative"] == 2.0
     assert report["PerEpisodeCumulativeReward"][episode_key]["mean"] == 1.0
@@ -65,7 +65,7 @@ def test_per_episode_cumulative_reward(mock_game_state):
 
     assert metric.report() == {
         "PerEpisodeCumulativeReward":
-            {f"episode_id_{mock_game_state.id}": {
+            {f"game_state_id_{mock_game_state.id}": {
                 "cumulative": 2.0,
             "mean": 1.0,
             "stdev": 0.0}}}
@@ -80,7 +80,7 @@ def test_per_step_reward(mock_game_state):
     metric.on_step_end(context=ctx)
 
     assert metric.report() == {
-        "PerStepReward": {f"episode_id_{mock_game_state.id}": [0.0, 1.0, 1.0]}
+        "PerStepReward": {f"game_state_id_{mock_game_state.id}": [0.0, 1.0, 1.0]}
     }
 
 
@@ -145,7 +145,7 @@ def test_per_episode_final_enpv(mock_game_state):
     metric.on_episode_end(context=ctx)
 
     report = metric.report()["PerEpisodeFinalEnpv"]
-    assert report[f"episode_id_{mock_game_state.id}"] == 120
+    assert report[f"game_state_id_{mock_game_state.id}"] == 120
 
 
 def test_per_episode_final_eroi(mock_game_state):
@@ -158,7 +158,7 @@ def test_per_episode_final_eroi(mock_game_state):
     metric.on_episode_end(context=ctx)
 
     report = metric.report()["PerEpisodeFinalEroi"]
-    assert report[f"episode_id_{mock_game_state.id}"] == 1.8
+    assert report[f"game_state_id_{mock_game_state.id}"] == 1.8
 
 
 def test_per_episode_num_steps(mock_game_state):
@@ -171,7 +171,7 @@ def test_per_episode_num_steps(mock_game_state):
     metric.on_episode_end(context=ctx)
 
     report = metric.report()["PerEpisodeNumSteps"]
-    assert report[f"episode_id_{mock_game_state.id}"] == 50
+    assert report[f"game_state_id_{mock_game_state.id}"] == 50
 
 
 def test_per_episode_realised_roi(mock_game_state):
@@ -184,7 +184,7 @@ def test_per_episode_realised_roi(mock_game_state):
     metric.on_episode_end(context=ctx)
 
     report = metric.report()["PerEpisodeRealisedRoi"]
-    assert report[f"episode_id_{mock_game_state.id}"] == 1.2
+    assert report[f"game_state_id_{mock_game_state.id}"] == 1.2
 
 
 def test_per_step_cumulative_reward(mock_game_state):
@@ -197,7 +197,7 @@ def test_per_step_cumulative_reward(mock_game_state):
     metric.on_step_end(MetricsContext(mock_game_state, -3))
 
     report = metric.report()["PerStepCumulativeReward"]
-    assert report[f"episode_id_{mock_game_state.id}"] == [0.0, 10.0, 15.0,
+    assert report[f"game_state_id_{mock_game_state.id}"] == [0.0, 10.0, 15.0,
                                                           12.0]
 
 
@@ -211,7 +211,7 @@ def test_per_step_enpv(mock_game_state):
     metric.on_episode_end(ctx)
 
     report = metric.report()["PerStepEnpv"]
-    assert report[f"episode_id_{mock_game_state.id}"] == [100, 110, 105]
+    assert report[f"game_state_id_{mock_game_state.id}"] == [100, 110, 105]
 
 
 def test_per_step_eroi(mock_game_state):
@@ -224,7 +224,7 @@ def test_per_step_eroi(mock_game_state):
     metric.on_episode_end(ctx)
 
     report = metric.report()["PerStepEroi"]
-    assert report[f"episode_id_{mock_game_state.id}"] == [1.2, 1.5, 1.4]
+    assert report[f"game_state_id_{mock_game_state.id}"] == [1.2, 1.5, 1.4]
 
 
 def test_per_step_cash(mock_game_state):
@@ -242,7 +242,7 @@ def test_per_step_cash(mock_game_state):
     metric.on_step_end(ctx)
 
     report = metric.report()["PerStepCash"]
-    assert report[f"episode_id_{mock_game_state.id}"] == [1000.0, 1200.0, 1100.0, 1300.0]
+    assert report[f"game_state_id_{mock_game_state.id}"] == [1000.0, 1200.0, 1100.0, 1300.0]
 
 
 def test_per_step_revenue(mock_game_state):
@@ -255,7 +255,7 @@ def test_per_step_revenue(mock_game_state):
     metric.on_episode_end(ctx)
 
     report = metric.report()["PerStepRevenue"]
-    assert report[f"episode_id_{mock_game_state.id}"] == [100, 150, 200]
+    assert report[f"game_state_id_{mock_game_state.id}"] == [100, 150, 200]
 
 
 def test_per_step_cost(mock_game_state):
@@ -268,7 +268,7 @@ def test_per_step_cost(mock_game_state):
     metric.on_episode_end(ctx)
 
     report = metric.report()["PerStepCost"]
-    assert report[f"episode_id_{mock_game_state.id}"] == [80, 130, 90]
+    assert report[f"game_state_id_{mock_game_state.id}"] == [80, 130, 90]
 
 
 def test_per_step_net_cash_flow(mock_game_state):
@@ -282,7 +282,7 @@ def test_per_step_net_cash_flow(mock_game_state):
     metric.on_episode_end(ctx)
 
     report = metric.report()["PerStepNetCashFlow"]
-    assert report[f"episode_id_{mock_game_state.id}"] == [20, -10, 50]
+    assert report[f"game_state_id_{mock_game_state.id}"] == [20, -10, 50]
 
 
 def test_per_step_cumulative_net_cash_flow(mock_game_state):
@@ -296,7 +296,7 @@ def test_per_step_cumulative_net_cash_flow(mock_game_state):
     metric.on_episode_end(ctx)
 
     report = metric.report()["PerStepCumulativeNetCashFlow"]
-    assert report[f"episode_id_{mock_game_state.id}"] == [20, 10, 60]
+    assert report[f"game_state_id_{mock_game_state.id}"] == [20, 10, 60]
 
 
 @pytest.fixture
@@ -336,7 +336,7 @@ def test_per_step_num_assets_idle_state(mock_game_state, mock_assets):
     metric.on_step_end(ctx)
 
     report = metric.report()["PerStepNumAssetsIdleState"]
-    assert report[f"episode_id_{mock_game_state.id}"] == [1, 3]
+    assert report[f"game_state_id_{mock_game_state.id}"] == [1, 3]
 
 
 def test_per_step_num_assets_in_development_state(
@@ -359,7 +359,7 @@ def test_per_step_num_assets_in_development_state(
     metric.on_step_end(ctx)
 
     report = metric.report()["PerStepNumAssetsInDevelopmentState"]
-    assert report[f"episode_id_{mock_game_state.id}"] == [1, 4]
+    assert report[f"game_state_id_{mock_game_state.id}"] == [1, 4]
 
 
 def test_per_step_num_assets_on_market_state(
@@ -380,7 +380,7 @@ def test_per_step_num_assets_on_market_state(
     metric.on_step_end(ctx)
 
     report = metric.report()["PerStepNumAssetsOnMarketState"]
-    assert report[f"episode_id_{mock_game_state.id}"] == [1, 2]
+    assert report[f"game_state_id_{mock_game_state.id}"] == [1, 2]
 
 
 def test_per_step_num_assets_failed_state(
@@ -403,7 +403,7 @@ def test_per_step_num_assets_failed_state(
     metric.on_step_end(ctx)
 
     report = metric.report()["PerStepNumAssetsFailedState"]
-    assert report[f"episode_id_{mock_game_state.id}"] == [1, 3]
+    assert report[f"game_state_id_{mock_game_state.id}"] == [1, 3]
 
 
 def test_per_step_num_assets_expired_state(
@@ -424,7 +424,7 @@ def test_per_step_num_assets_expired_state(
     metric.on_step_end(ctx)
 
     report = metric.report()["PerStepNumAssetsExpiredState"]
-    assert report[f"episode_id_{mock_game_state.id}"] == [2, 3]
+    assert report[f"game_state_id_{mock_game_state.id}"] == [2, 3]
 
 
 def test_per_step_fraction_of_possible_investments(mock_game_state):
@@ -447,7 +447,7 @@ def test_per_step_fraction_of_possible_investments(mock_game_state):
     metric.on_step_begin(ctx)
 
     report = metric.report()["PerStepFractionOfPossibleInvestments"]
-    assert report[f"episode_id_{mock_game_state.id}"] == [0.5]
+    assert report[f"game_state_id_{mock_game_state.id}"] == [0.5]
 
 
 def test_per_step_fraction_of_possible_investments_pos_enpv(
@@ -475,7 +475,7 @@ def test_per_step_fraction_of_possible_investments_pos_enpv(
     metric.on_step_begin(ctx)
 
     report = metric.report()["PerStepFractionOfPossibleInvestmentsPosEnpv"]
-    assert report[f"episode_id_{mock_game_state.id}"] == [0.5]
+    assert report[f"game_state_id_{mock_game_state.id}"] == [0.5]
 
 
 @pytest.fixture

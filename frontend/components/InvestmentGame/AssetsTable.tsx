@@ -463,6 +463,7 @@ export default function AssetsTable({
               return (
                 <TableRow
                   key={asset.id}
+                  id={idx === 0 ? "assetRow0" : undefined}
                   className={`transition-colors ${
                     highlightedAssetIds?.get(asset.id) === "bd-acquisition"
                       ? "bg-blue-100 shadow-[inset_4px_0_0_0_#3b82f6] hover:bg-blue-200"
@@ -904,6 +905,7 @@ export default function AssetsTable({
     <div className="w-full">
       {/* Custom Tab Navigation */}
       <div className="flex space-x-2 bg-gray-100 p-4 text-sm">
+        <div id="assetTabNav" className="flex space-x-2">
         <div
           className={cn(
             "flex cursor-pointer items-center gap-2 rounded-lg px-4 py-2",
@@ -954,6 +956,7 @@ export default function AssetsTable({
             <StatusChangeDot className="flex-shrink-0" />
           )}
           Expired/Failed ({expiredAssets.length})
+        </div>
         </div>
       </div>
 

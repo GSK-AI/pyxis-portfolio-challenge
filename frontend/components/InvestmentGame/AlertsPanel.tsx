@@ -67,7 +67,7 @@ export default function AlertsPanel({
     .sort((a, b) => b.step - a.step);
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4">
+    <div className="flex h-[460px] flex-col rounded-lg border border-gray-200 bg-white p-4">
       <div className="mb-3 flex items-center gap-1">
         <h3 className="text-sm font-semibold text-gray-700">
           Competitive Intelligence
@@ -80,10 +80,7 @@ export default function AlertsPanel({
       {relevantAlerts.length === 0 ? (
         <p className="text-xs text-gray-400">No intelligence reports yet</p>
       ) : (
-        <div
-          className="space-y-2 overflow-y-auto"
-          style={{ maxHeight: "400px" }}
-        >
+        <div className="flex-1 space-y-2 overflow-y-auto">
           {relevantAlerts.map((alert, i) => {
             const style = ALERT_STYLES[alert.event_type] || {
               label: alert.event_type.toUpperCase(),

@@ -91,12 +91,12 @@ class PerStepIndicationDiversity(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Record initial value at episode start."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = [self._compute(context)]
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Record value at step end."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = self.history[key] + [self._compute(context)]
 
     def _compute(self, context: MetricsContext) -> int:
@@ -123,12 +123,12 @@ class PerStepIndicationConcentration(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Record initial value at episode start."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = [self._compute(context)]
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Record value at step end."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = self.history[key] + [self._compute(context)]
 
     def _compute(self, context: MetricsContext) -> float:
@@ -163,12 +163,12 @@ class PerStepOnMarketPerIndication(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Record initial value at episode start."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = [self._compute(context)]
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Record value at step end."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = self.history[key] + [self._compute(context)]
 
     def _compute(self, context: MetricsContext) -> dict[str, int]:
@@ -202,12 +202,12 @@ class PerStepFirstMoverExclusivities(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Record initial value at episode start."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = [self._compute(context)]
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Record value at step end."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = self.history[key] + [self._compute(context)]
 
     def _compute(self, context: MetricsContext) -> int:
@@ -267,12 +267,12 @@ class PerStepContestedIndications(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Record initial value at episode start."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = [self._compute(context)]
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Record value at step end."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = self.history[key] + [self._compute(context)]
 
     def _compute(self, context: MetricsContext) -> int:
@@ -310,12 +310,12 @@ class PerStepTotalOnMarketPerIndication(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Record initial value at episode start."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = [self._compute(context)]
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Record value at step end."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = self.history[key] + [self._compute(context)]
 
     def _compute(self, context: MetricsContext) -> dict[str, int]:
@@ -347,12 +347,12 @@ class PerStepIndicationSpread(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Record initial value at episode start."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = [self._compute(context)]
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Record value at step end."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = self.history[key] + [self._compute(context)]
 
     def _compute(self, context: MetricsContext) -> float:
@@ -383,7 +383,7 @@ class PerEpisodeIndicationSpread(PerEpisodeMetric):
 
     def on_episode_end(self, context: MetricsContext) -> None:
         """Record final value at episode end."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         sm = context.shared_market_state
         total_indications = len(sm.indication_markets) if sm is not None else 0
         if total_indications == 0:
@@ -417,12 +417,12 @@ class PerStepNonBankruptAgents(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Record initial value at episode start."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = [self._compute(context)]
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Record value at step end."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = self.history[key] + [self._compute(context)]
 
     def _compute(self, context: MetricsContext) -> int:
@@ -448,12 +448,12 @@ class PerStepAgentRank(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Record initial value at episode start."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = [self._compute(context)]
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Record value at step end."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = self.history[key] + [self._compute(context)]
 
     def _compute(self, context: MetricsContext) -> int:
@@ -480,12 +480,12 @@ class PerStepRelativeEnpv(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Record initial value at episode start."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = [self._compute(context)]
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Record value at step end."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = self.history[key] + [self._compute(context)]
 
     def _compute(self, context: MetricsContext) -> float:
@@ -517,12 +517,12 @@ class PerStepBDAssetAvailable(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Record initial value at episode start."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = [self._compute(context)]
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Record value at step end."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = self.history[key] + [self._compute(context)]
 
     def _compute(self, context: MetricsContext) -> int:
@@ -579,7 +579,7 @@ class PerEpisodeDrugReleases(PerEpisodeMetric):
 
     def on_episode_end(self, context: MetricsContext) -> None:
         """Record final value at episode end."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = self._count
 
     def report(self) -> dict:
@@ -600,12 +600,12 @@ class PerStepDrugsOnMarket(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Record initial value at episode start."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = [self._compute(context)]
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Record value at step end."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = self.history[key] + [self._compute(context)]
 
     def _compute(self, context: MetricsContext) -> int:
@@ -662,7 +662,7 @@ class PerEpisodeBDDealsWon(PerEpisodeMetric):
 
     def on_episode_end(self, context: MetricsContext) -> None:
         """Record final value at episode end."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = self._count
 
     def report(self) -> dict:
@@ -701,7 +701,7 @@ class PerEpisodeBDBidLevelDistribution(PerEpisodeMetric):
 
     def on_episode_end(self, context: MetricsContext) -> None:
         """Record final value at episode end."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = dict(self._counts)
 
     def report(self) -> dict:
@@ -726,12 +726,12 @@ class PerStepMeanBDBidLevel(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Record initial value at episode start."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = []
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Record value at step end."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         if context.bd_bid_levels is None:
             self.history[key] = self.history[key] + [0.0]
             return
@@ -757,12 +757,12 @@ class PerStepBDBidRate(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Record initial value at episode start."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = []
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Record value at step end."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         if context.bd_bid_levels is None:
             self.history[key] = self.history[key] + [0.0]
             return
@@ -810,7 +810,7 @@ class PerEpisodePhaseTransitionLeaks(PerEpisodeMetric):
 
     def on_episode_end(self, context: MetricsContext) -> None:
         """Record final value at episode end."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = self._count
 
     def report(self) -> dict:
@@ -841,12 +841,12 @@ class PerStepMeanMarketShare(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Record initial value at episode start."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = [self._compute(context)]
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Record value at step end."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = self.history[key] + [self._compute(context)]
 
     def _compute(self, context: MetricsContext) -> float:
@@ -920,7 +920,7 @@ class PerEpisodeMarketShareDistribution(PerEpisodeMetric):
 
     def on_episode_end(self, context: MetricsContext) -> None:
         """Record final value at episode end."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         n = len(self._shares)
         if n == 0:
             self.history[key] = {
@@ -971,12 +971,12 @@ class PerStepMarketShareDistribution(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Record initial value at episode start."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = [self._compute(context)]
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Record value at step end."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = self.history[key] + [self._compute(context)]
 
     def _compute(self, context: MetricsContext) -> dict:
@@ -1025,12 +1025,12 @@ class PerStepIndicationsWithExclusivity(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Record initial value at episode start."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = [self._compute(context)]
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Record value at step end."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = self.history[key] + [self._compute(context)]
 
     def _compute(self, context: MetricsContext) -> int:
@@ -1061,12 +1061,12 @@ class PerStepEmptyIndications(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Record initial value at episode start."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = [self._compute(context)]
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Record value at step end."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = self.history[key] + [self._compute(context)]
 
     def _compute(self, context: MetricsContext) -> int:
@@ -1103,12 +1103,12 @@ class PerStepNovelIndications(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Record initial value at episode start."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = [self._compute(context)]
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Record value at step end."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = self.history[key] + [self._compute(context)]
 
     def _compute(self, context: MetricsContext) -> int:
@@ -1145,12 +1145,12 @@ class PerStepStaleIndications(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Record initial value at episode start."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = [self._compute(context)]
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Record value at step end."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = self.history[key] + [self._compute(context)]
 
     def _compute(self, context: MetricsContext) -> int:
@@ -1187,12 +1187,12 @@ class PerStepAlertCount(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Record initial value at episode start."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = [self._compute(context)]
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Record value at step end."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = self.history[key] + [self._compute(context)]
 
     def _compute(self, context: MetricsContext) -> int:
@@ -1219,12 +1219,12 @@ class PerStepDrugReleaseAlerts(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Record initial value at episode start."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = [self._compute(context)]
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Record value at step end."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = self.history[key] + [self._compute(context)]
 
     def _compute(self, context: MetricsContext) -> int:
@@ -1251,12 +1251,12 @@ class PerStepBDDealAlerts(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Record initial value at episode start."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = [self._compute(context)]
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Record value at step end."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = self.history[key] + [self._compute(context)]
 
     def _compute(self, context: MetricsContext) -> int:
@@ -1283,12 +1283,12 @@ class PerStepPipelineLeakAlerts(PerStepMetric):
 
     def on_episode_begin(self, context: MetricsContext) -> None:
         """Record initial value at episode start."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = [self._compute(context)]
 
     def on_step_end(self, context: MetricsContext) -> None:
         """Record value at step end."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = self.history[key] + [self._compute(context)]
 
     def _compute(self, context: MetricsContext) -> int:
@@ -1364,7 +1364,7 @@ class PerEpisodeExclusivityCollisionRate(PerEpisodeMetric):
 
     def on_episode_end(self, context: MetricsContext) -> None:
         """Record final value at episode end."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = (
             self._collisions / self._releases if self._releases > 0 else 0.0
         )
@@ -1426,7 +1426,7 @@ class PerEpisodeFirstMoverRate(PerEpisodeMetric):
 
     def on_episode_end(self, context: MetricsContext) -> None:
         """Record final value at episode end."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = (
             self._first_movers / self._releases if self._releases > 0 else 0.0
         )
@@ -1484,7 +1484,7 @@ class PerEpisodeRevenueLostToCompetition(PerEpisodeMetric):
 
     def on_episode_end(self, context: MetricsContext) -> None:
         """Record final value at episode end."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = self._lost
 
     def report(self) -> dict:
@@ -1556,7 +1556,7 @@ class PerEpisodeLeakInformedBDDeals(PerEpisodeMetric):
 
     def on_episode_end(self, context: MetricsContext) -> None:
         """Record final value at episode end."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         self.history[key] = (
             self._leak_correlated_deals / self._total_deals
             if self._total_deals > 0
@@ -1696,7 +1696,7 @@ class PerEpisodeInvestmentPnL(PerEpisodeMetric):
 
     def on_episode_end(self, context: MetricsContext) -> None:
         """Record final value at episode end."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
 
         n_invested = len(self._drug_ledger)
         if n_invested == 0:
@@ -1817,10 +1817,15 @@ class PerEpisodeInvestmentPnL(PerEpisodeMetric):
 
 class PerEpisodeWinLoss(PerEpisodeMetric):
     """
-    Win/loss outcome per episode based on cumulative reward.
+    Win/loss outcome per episode with bankruptcy-aware conditions.
 
     Records 1.0 for a win, 0.0 for a loss, 0.5 for a draw.
-    Uses whatever reward function is configured — reward-agnostic.
+
+    Win conditions:
+    - Bankrupt agents automatically lose.
+    - If both agents go bankrupt, the one that survived longer wins
+      (higher game_state.time). Same step → draw.
+    - If neither is bankrupt, the agent with higher NCF wins.
     """
 
     def __init__(self) -> None:
@@ -1833,26 +1838,48 @@ class PerEpisodeWinLoss(PerEpisodeMetric):
 
     def on_episode_end(self, context: MetricsContext) -> None:
         """Record win/loss/draw at episode end."""
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
         if (
             context.all_agent_rewards is None
+            or context.all_agent_states is None
             or context.agent_id is None
             or len(context.all_agent_rewards) < 2
         ):
             return
+
+        my_state = context.all_agent_states[context.agent_id]
+        my_bankrupt = my_state.bankrupt
         my_reward = context.all_agent_rewards[context.agent_id]
-        opponent_rewards = [
-            r
-            for aid, r in context.all_agent_rewards.items()
-            if aid != context.agent_id
+
+        opponent_ids = [
+            aid for aid in context.all_agent_rewards if aid != context.agent_id
         ]
-        max_opponent = max(opponent_rewards)
-        if my_reward > max_opponent:
-            self.history[key] = 1.0
-        elif my_reward < max_opponent:
+        # For 2-player: single opponent
+        opp_id = opponent_ids[0]
+        opp_state = context.all_agent_states[opp_id]
+        opp_bankrupt = opp_state.bankrupt
+        opp_reward = context.all_agent_rewards[opp_id]
+
+        if my_bankrupt and not opp_bankrupt:
             self.history[key] = 0.0
+        elif not my_bankrupt and opp_bankrupt:
+            self.history[key] = 1.0
+        elif my_bankrupt and opp_bankrupt:
+            # Both bankrupt: whoever survived longer wins
+            if my_state.time > opp_state.time:
+                self.history[key] = 1.0
+            elif my_state.time < opp_state.time:
+                self.history[key] = 0.0
+            else:
+                self.history[key] = 0.5
         else:
-            self.history[key] = 0.5
+            # Neither bankrupt: compare NCF
+            if my_reward > opp_reward:
+                self.history[key] = 1.0
+            elif my_reward < opp_reward:
+                self.history[key] = 0.0
+            else:
+                self.history[key] = 0.5
 
     def report(self) -> dict:
         """Return collected metric data."""
@@ -1934,7 +1961,7 @@ class PerEpisodeAssetLifecycle(PerEpisodeMetric):
         """Record final value at episode end."""
         import numpy as np
 
-        key = f"episode_id_{str(context.game_state.id)}"
+        key = context.episode_key
 
         idle_before_first = []
         all_pauses = []

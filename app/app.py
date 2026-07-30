@@ -25,6 +25,7 @@ from pyxis_portfolio_challenge.game.constants import (
 from pyxis_portfolio_challenge.game.game_state import GameState
 from pyxis_portfolio_challenge.game.multi_agent_game import MultiAgentGame
 from pyxis_portfolio_challenge.logging_utils import setup_logging
+from pyxis_portfolio_challenge.rng import get_game_rng, init_game_rng
 from app.endpoint_datamodels import (
     ActionType,
     AgentResponse,
@@ -59,6 +60,14 @@ game_config = config.from_yaml()
 reward_fn = config.instantiate_from_config(game_config.reward_fn)
 
 
+def _split_origins(value: str) -> list[str]:
+    return [
+        origin.strip().rstrip("/")
+        for origin in value.split(",")
+        if origin.strip()
+    ]
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Creates the database and loads all data."""
@@ -68,6 +77,7 @@ async def lifespan(app: FastAPI):
         host=settings.redis_host,
         port=settings.redis_port,
         db=settings.redis_db,
+        password=settings.redis_password,
     )
     await app.state.redis_cache.test_connection()
     logger.info("Redis connection initialized")
@@ -92,6 +102,9 @@ origins = [
     "https://cdn.jsdelivr.net",
     "https://fastapi.tiangolo.com",
 ]
+origins = list(
+    dict.fromkeys([*origins, *_split_origins(settings.additional_cors_origins)])
+)
 
 app = FastAPI(
     title="Pyxis Portfolio Challenge",
@@ -621,8 +634,9 @@ async def start_multi_agent_game(
         multi_game, payload.max_num_assets
     )
 
-    # Store in Redis
+    # Store in Redis (including RNG state for continuity across requests)
     await cache.set_multi_game_state(game_id, multi_game)
+    await cache.set_multi_game_rng_state(game_id, get_game_rng().getstate())
     await cache.set_multi_game_opponents(game_id, payload.opponent_agents)
     await cache.set_multi_game_display_names(game_id, display_names)
     await cache.set_multi_game_cumulative_rewards(game_id, cumulative_rewards)
@@ -669,6 +683,12 @@ async def step_multi_agent_game(
     if cumulative_rewards is None:
         cumulative_rewards = {name: 0.0 for name in multi_game.agent_states}
     asset_id_orders = await cache.get_multi_game_asset_orders(game_id)
+
+    # Restore game RNG state from previous step
+    rng_state = await cache.get_multi_game_rng_state(game_id)
+    if rng_state is not None:
+        rng = init_game_rng(0)  # seed doesn't matter, state is overwritten
+        rng.setstate(rng_state)
 
     # Check if the entire game is over (all agents ended or horizon reached)
     all_ended = all(s.game_ended for s in multi_game.agent_states.values())
@@ -736,8 +756,9 @@ async def step_multi_agent_game(
                 cumulative_rewards.get(agent_name, 0.0) + step_reward
             )
 
-    # Store updated state
+    # Store updated state (including RNG state for next step)
     await cache.set_multi_game_state(game_id, new_game)
+    await cache.set_multi_game_rng_state(game_id, get_game_rng().getstate())
     await cache.set_multi_game_cumulative_rewards(game_id, cumulative_rewards)
     if asset_id_orders is not None:
         await cache.set_multi_game_asset_orders(game_id, asset_id_orders)

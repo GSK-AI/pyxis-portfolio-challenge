@@ -25,6 +25,7 @@ interface ActionStatsProps {
   selection: Record<string, ActionType | boolean>;
   nextStepCost?: number; // Cost for next step from ActionChart
   taExperience?: Record<string, number>; // TA experience for uncertain PTRS
+  eNPVDescription?: string; // Override the default eNPV info popup description
 }
 
 export default function ActionStats({
@@ -36,6 +37,7 @@ export default function ActionStats({
   assets,
   selection,
   nextStepCost,
+  eNPVDescription,
 }: ActionStatsProps) {
   const expectedNPV = calculateExpectedNPV(assets, selection);
   const expectedROI = calculateExpectedROI(assets, selection);
@@ -110,7 +112,7 @@ export default function ActionStats({
               <div>
                 <InformationButton
                   title={informationDictionary.eNPV.title}
-                  description={informationDictionary.eNPV.description}
+                  description={eNPVDescription ?? informationDictionary.eNPV.description}
                   buttonClassName="w-4 h-4"
                 />
               </div>

@@ -15,8 +15,7 @@ The first company to launch a drug in an indication gets a period of exclusive s
 Post-Exclusivity Market Shares:
 Once exclusivity expires, revenue is split based on drug quality:
 • Drug quality = peak revenue × tenure bonus (longer on market = higher quality)
-• The first mover retains a 30% bonus to their quality score
-• Your share = your total quality / all agents' total quality
+• The first mover's drug is guaranteed a 30% share; the remaining 70% is split proportionally by quality
 
 Strategy Tips:
 • Racing to be first in a high-value indication gives you monopoly revenue
@@ -38,7 +37,7 @@ export default function SalesMarketPanel({
 
   if (active.length === 0) {
     return (
-      <div className="rounded-lg border border-gray-200 bg-white p-4">
+      <div className="flex h-[460px] flex-col rounded-lg border border-gray-200 bg-white p-4">
         <div className="mb-2 flex items-center gap-1">
           <h3 className="text-sm font-semibold text-gray-700">Sales Market</h3>
           <InformationButton
@@ -59,7 +58,7 @@ export default function SalesMarketPanel({
   });
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4">
+    <div className="flex h-[460px] flex-col rounded-lg border border-gray-200 bg-white p-4">
       <div className="mb-3 flex items-center gap-1">
         <h3 className="text-sm font-semibold text-gray-700">Sales Market</h3>
         <InformationButton
@@ -67,7 +66,7 @@ export default function SalesMarketPanel({
           description={SALES_MARKET_INFO}
         />
       </div>
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-1 flex-col gap-3 overflow-y-auto">
         {sorted.map((market) => {
           const playerDrugs = market.active_drugs[playerAgentName] || 0;
           const competitorDrugs = Object.entries(market.active_drugs)

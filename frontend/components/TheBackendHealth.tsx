@@ -88,9 +88,9 @@ export default function TheBackendHealth({
     return children;
   }
 
-  return (
-    <div className="flex min-h-screen flex-col">
-      {status === "healthy" ? loadAppView() : connectionLoader()}
-    </div>
+  return status === "healthy" ? (
+    <>{loadAppView()}</>
+  ) : (
+    connectionLoader()
   );
 }

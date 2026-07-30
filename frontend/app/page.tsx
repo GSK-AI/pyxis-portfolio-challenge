@@ -18,6 +18,7 @@ import {
   startMultiAgentGame,
 } from "@/lib/backendCallsGame";
 import { useState, useCallback, useEffect } from "react";
+import { useHomeScreen } from "@/context/HomeScreenContext";
 import { ArrowRight, Gamepad2, Users, User, Eye } from "lucide-react";
 import PlaythroughViewer from "@/components/InvestmentGame/Replay/PlaythroughViewer";
 import FileUploadArea from "@/components/InvestmentGame/Replay/FileUploadArea";
@@ -73,6 +74,11 @@ export default function InvestmentGame() {
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string>("");
+
+  const { setIsHomeScreen } = useHomeScreen();
+  useEffect(() => {
+    setIsHomeScreen(screen === "start");
+  }, [screen, setIsHomeScreen]);
 
   // Fetch configs on mount
   useEffect(() => {
@@ -309,8 +315,8 @@ export default function InvestmentGame() {
 
   return (
     <div className="mt-6 px-6">
-      <LayoutContainer className="c-splash-screen flex min-h-[75vh] rounded-2xl bg-gray-800 !p-8 text-white">
-        <div className="relative z-20 flex flex-1 items-center rounded-2xl bg-white p-20 text-black">
+      <LayoutContainer maxWidth="800px" className="c-splash-screen rounded-2xl bg-gray-800 !p-8 text-white">
+        <div className="relative z-20 rounded-2xl bg-white p-10 text-black">
           <div className="space-y-10">
             <div>
               <Gamepad2 />
@@ -345,7 +351,7 @@ export default function InvestmentGame() {
                 size="sm"
               >
                 <Users className="mr-2 h-4 w-4" />
-                Multiplayer
+                Play
               </Button>
               <Button
                 variant="outline"
@@ -430,7 +436,7 @@ export default function InvestmentGame() {
             {/* Multiplayer Config */}
             {gameMode === "multi" && multiAgentConfig && (
               <div className="rounded-lg bg-gray-100 p-4">
-                <h3 className="mb-4 font-semibold">Multiplayer Settings</h3>
+                <h3 className="mb-4 font-semibold">Settings</h3>
                 <div className="space-y-4">
                   <div className="flex items-center gap-4">
                     <label className="w-32 text-sm text-gray-600">

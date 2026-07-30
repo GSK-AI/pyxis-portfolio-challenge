@@ -1,0 +1,241 @@
+trigger: none
+pr: none
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  azureServiceConnection: 'sc-azurerm-gskai-pyxis-prod'
+
+  resourceGroupName: 'rg-gskai-pyxis-prod'
+  acrName: 'registrygskaipyxisprod'
+  acrLoginServer: 'registrygskaipyxisprod.azurecr.io'
+
+  frontendAppName: 'app-gskai-pyxis-fe-prod'
+  backendAppName: 'app-gskai-pyxis-be-prod'
+
+  frontendImageRepo: 'pyxis/frontend'
+  backendImageRepo: 'pyxis/backend'
+
+  frontendDockerfile: './linux_dockerfile_fe'
+  frontendBuildContext: '$(Build.SourcesDirectory)/frontend'
+
+  backendDockerfile: 'Dockerfile.backend'
+  backendBuildContext: '$(Build.SourcesDirectory)'
+
+  redisHost: 'redis-gskai-pyxis-prod.redis.cache.windows.net'
+  gameAssetsDir: '/app/rl-environment-assets/09feb2026_highPtrs/training'
+
+  azureClientId: ''
+  azureAuthority: ''
+
+  imageTag: '$(Build.BuildId)'
+
+stages:
+- stage: Build
+  displayName: Build images into ACR
+  jobs:
+  - job: BuildFrontend
+    displayName: Build frontend image
+    steps:
+    - checkout: self
+
+    - task: AzureCLI@2
+      displayName: Build frontend with az acr build
+      inputs:
+        azureSubscription: '$(azureServiceConnection)'
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          set -euo pipefail
+
+          backendHostName=$(az webapp show \
+            --resource-group "$(resourceGroupName)" \
+            --name "$(backendAppName)" \
+            --query defaultHostName \
+            --output tsv)
+          backendPublicUrl="https://${backendHostName}"
+          echo "Using backend URL for frontend build: ${backendPublicUrl}"
+
+          cd "$(frontendBuildContext)"
+          test -f "$(frontendDockerfile)"
+
+          az acr build \
+            --registry "$(acrName)" \
+            --resource-group "$(resourceGroupName)" \
+            --image "$(frontendImageRepo):$(imageTag)" \
+            --image "$(frontendImageRepo):latest" \
+            --file "$(frontendDockerfile)" \
+            --build-arg NEXT_PUBLIC_BACKEND_URL="${backendPublicUrl}" \
+            --build-arg NEXT_PUBLIC_BACKEND_URL_GAME="${backendPublicUrl}" \
+            --build-arg NEXT_PUBLIC_AZURE_CLIENT_ID="$(azureClientId)" \
+            --build-arg NEXT_PUBLIC_AZURE_AUTHORITY="$(azureAuthority)" \
+            .
+
+  - job: BuildBackend
+    displayName: Build backend image
+    steps:
+    - checkout: self
+
+    - task: AzureCLI@2
+      displayName: Build backend with az acr build
+      inputs:
+        azureSubscription: '$(azureServiceConnection)'
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          set -euo pipefail
+
+          az acr build \
+            --registry "$(acrName)" \
+            --resource-group "$(resourceGroupName)" \
+            --image "$(backendImageRepo):$(imageTag)" \
+            --image "$(backendImageRepo):latest" \
+            --file "$(backendDockerfile)" \
+            "$(backendBuildContext)"
+
+- stage: Deploy_Prod
+  displayName: Deploy to production
+  dependsOn: Build
+  jobs:
+  - deployment: DeployContainers
+    displayName: Deploy frontend and backend containers
+    environment: 'gskai-pyxis-prod'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: AzureCLI@2
+            displayName: Configure App Service ACR pull identity
+            inputs:
+              azureSubscription: '$(azureServiceConnection)'
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                set -euo pipefail
+
+                for appName in "$(frontendAppName)" "$(backendAppName)"; do
+                  az webapp identity assign \
+                    --resource-group "$(resourceGroupName)" \
+                    --name "${appName}"
+
+                  az webapp config set \
+                    --resource-group "$(resourceGroupName)" \
+                    --name "${appName}" \
+                    --generic-configurations '{"acrUseManagedIdentityCreds": true}'
+                done
+
+          - task: AzureCLI@2
+            displayName: Configure frontend App Service settings
+            inputs:
+              azureSubscription: '$(azureServiceConnection)'
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                set -euo pipefail
+
+                backendHostName=$(az webapp show \
+                  --resource-group "$(resourceGroupName)" \
+                  --name "$(backendAppName)" \
+                  --query defaultHostName \
+                  --output tsv)
+                backendPublicUrl="https://${backendHostName}"
+                echo "Using backend URL for frontend runtime config: ${backendPublicUrl}"
+
+                az webapp config appsettings set \
+                  --resource-group "$(resourceGroupName)" \
+                  --name "$(frontendAppName)" \
+                  --settings \
+                    WEBSITES_PORT=3000 \
+                    NODE_ENV=production \
+                    NEXT_PUBLIC_BACKEND_URL="${backendPublicUrl}" \
+                    NEXT_PUBLIC_BACKEND_URL_GAME="${backendPublicUrl}" \
+                    NEXT_PUBLIC_AZURE_CLIENT_ID="$(azureClientId)" \
+                    NEXT_PUBLIC_AZURE_AUTHORITY="$(azureAuthority)"
+
+          - task: AzureWebAppContainer@1
+            displayName: Point frontend App Service to new image
+            inputs:
+              azureSubscription: '$(azureServiceConnection)'
+              appName: '$(frontendAppName)'
+              containers: '$(acrLoginServer)/$(frontendImageRepo):$(imageTag)'
+
+          - task: AzureCLI@2
+            displayName: Configure backend App Service settings
+            inputs:
+              azureSubscription: '$(azureServiceConnection)'
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                set -euo pipefail
+
+                frontendHostName=$(az webapp show \
+                  --resource-group "$(resourceGroupName)" \
+                  --name "$(frontendAppName)" \
+                  --query defaultHostName \
+                  --output tsv)
+                frontendPublicUrl="https://${frontendHostName}"
+                echo "Allowing frontend origin for backend CORS: ${frontendPublicUrl}"
+
+                az webapp config appsettings set \
+                  --resource-group "$(resourceGroupName)" \
+                  --name "$(backendAppName)" \
+                  --settings \
+                    WEBSITES_PORT=8000 \
+                    APP_REDIS_HOST="$(redisHost)" \
+                    APP_REDIS_PORT=6380 \
+                    APP_REDIS_DB=0 \
+                    APP_USE_LOCAL_REDIS=false \
+                    APP_REDIS_PASSWORD="$(APP_REDIS_PASSWORD)" \
+                    APP_GAME_ASSETS_DIR="$(gameAssetsDir)" \
+                    APP_ADDITIONAL_CORS_ORIGINS="${frontendPublicUrl}"
+
+          - task: AzureWebAppContainer@1
+            displayName: Point backend App Service to new image
+            inputs:
+              azureSubscription: '$(azureServiceConnection)'
+              appName: '$(backendAppName)'
+              containers: '$(acrLoginServer)/$(backendImageRepo):$(imageTag)'
+
+- stage: Deployment_Test
+  displayName: Deployment test
+  dependsOn: Deploy_Prod
+  jobs:
+  - job: DeploymentTest
+    displayName: Check frontend and backend
+    steps:
+    - task: AzureCLI@2
+      displayName: Test deployed endpoints
+      inputs:
+        azureSubscription: '$(azureServiceConnection)'
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          set -euo pipefail
+
+          frontendHostName=$(az webapp show \
+            --resource-group "$(resourceGroupName)" \
+            --name "$(frontendAppName)" \
+            --query defaultHostName \
+            --output tsv)
+          backendHostName=$(az webapp show \
+            --resource-group "$(resourceGroupName)" \
+            --name "$(backendAppName)" \
+            --query defaultHostName \
+            --output tsv)
+
+          frontendUrl="https://${frontendHostName}"
+          backendUrl="https://${backendHostName}"
+
+          echo "Frontend URL: ${frontendUrl}"
+          echo "Backend URL: ${backendUrl}"
+
+          curl --fail --silent --show-error --retry 6 --retry-delay 10 "${backendUrl}/health"
+          curl --fail --silent --show-error --retry 6 --retry-delay 10 \
+            --request OPTIONS \
+            --header "Origin: ${frontendUrl}" \
+            --header "Access-Control-Request-Method: GET" \
+            --header "Access-Control-Request-Headers: authorization" \
+            --output /dev/null \
+            "${backendUrl}/health"
+          curl --fail --silent --show-error --retry 6 --retry-delay 10 --output /dev/null "${frontendUrl}"

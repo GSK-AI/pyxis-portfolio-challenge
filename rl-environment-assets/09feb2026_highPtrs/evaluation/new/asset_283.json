@@ -1,0 +1,29 @@
+{
+    "name": "SHPinitra",
+    "therapeutic_area": "oncology",
+    "type": "internal",
+    "description": "An oral SHP2 inhibitor designed to disrupt RAS/MAPK signaling in solid tumors. Intended for combination with EGFR or MEK inhibitors to overcome adaptive resistance while maintaining manageable safety. Once-daily dosing is targeted for outpatient use.",
+    "max_revenue": 4200000000,
+    "time_until_max_revenue": 6,
+    "time_until_patent_expiry": 19,
+    "trials": {
+        "phase_1": {
+            "cost_remaining": 20500000,
+            "time_remaining": 2,
+            "ptrs": 0.66
+        },
+        "phase_2": {
+            "cost_remaining": 56000000,
+            "time_remaining": 3,
+            "ptrs": 0.42
+        },
+        "phase_3": {
+            "cost_remaining": 255000000,
+            "time_remaining": 4,
+            "ptrs": 0.64
+        }
+    },
+    "state": "Idle",
+    "pending_trial_phase": "Phase 1",
+    "time_on_market": 0
+}

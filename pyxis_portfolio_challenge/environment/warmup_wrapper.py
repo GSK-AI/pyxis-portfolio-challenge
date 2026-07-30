@@ -226,7 +226,8 @@ class WarmupOnResetWrapper(gym.Wrapper):
                 collect_metrics,
             )
 
-            ctx = MetricsContext(unwrapped_env.game_state, reward=0.0)
+            episode_id = getattr(unwrapped_env, "_episode_fingerprint", None)
+            ctx = MetricsContext(unwrapped_env.game_state, reward=0.0, episode_id=episode_id)
             collect_metrics(
                 collection_fn="on_episode_begin", context=ctx, metrics=original_metrics
             )

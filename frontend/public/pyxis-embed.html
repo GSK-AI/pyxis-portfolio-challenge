@@ -1,0 +1,53 @@
+<div id="pyxis-container" style="position: relative; width: 100%; overflow: hidden; aspect-ratio: 1600 / 1620;">
+  <iframe
+    id="pyxis-frame"
+    src="https://app-gskai-pyxis-fe-prod-cbe5hgbvhwhje4g4.uksouth-01.azurewebsites.net/"
+    title="Pyxis Portfolio Challenge"
+    width="1600"
+    height="1620"
+    frameborder="0"
+    style="border: 0; display: block; transform-origin: top left;"
+    allowfullscreen="allowfullscreen">
+  </iframe>
+  <div id="pyxis-mobile" style="display: none; position: absolute; inset: 0; flex-direction: column; align-items: center; justify-content: center; background: white; text-align: center; padding: 24px; font-family: sans-serif; color: #374151;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 16px;"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+    <p style="font-size: 18px; font-weight: 600; margin: 0 0 8px;">Please use a desktop browser</p>
+    <p style="font-size: 14px; color: #6b7280; margin: 0;">Pyxis is designed for larger screens.</p>
+  </div>
+</div>
+
+<script>
+  (function() {
+    var NATURAL_WIDTH = 1600;
+    var NATURAL_HEIGHT = 1620;
+    var MOBILE_THRESHOLD = 768;
+
+    function applyPyxisGameLayout() {
+      var container = document.getElementById('pyxis-container');
+      if(container == null) {
+          return;
+      }
+      
+      var mobile = document.getElementById('pyxis-mobile');
+      var iframe = document.getElementById('pyxis-frame');
+      var width = container.offsetWidth;
+
+      if (width < MOBILE_THRESHOLD) {
+        iframe.style.display = 'none';
+        mobile.style.display = 'flex';
+        return;
+      }
+
+      iframe.style.display = 'block';
+      mobile.style.display = 'none';
+      var scale = Math.min(1, width / NATURAL_WIDTH);
+      iframe.style.transform = 'scale(' + scale + ')';
+      iframe.width = NATURAL_WIDTH;
+      iframe.height = NATURAL_HEIGHT;
+      container.style.height = Math.ceil(NATURAL_HEIGHT * scale) + 'px';
+    }
+
+    window.addEventListener('resize', applyPyxisGameLayout);
+    applyPyxisGameLayout();
+  })();
+</script>

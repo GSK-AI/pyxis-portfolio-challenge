@@ -19,6 +19,8 @@ export function NextStepClient({ children }: NextStepClientProps) {
         cardComponent={NextStepCard}
         onSkip={markTourSkipped}
         onComplete={markTourCompleted}
+        noInViewScroll={true}
+        scrollToTop={false}
       >
         {children}
       </NextStep>

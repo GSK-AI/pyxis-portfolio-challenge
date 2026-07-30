@@ -1,0 +1,29 @@
+{
+    "name": "Arbimune",
+    "therapeutic_area": "respiratory and immunology",
+    "type": "internal",
+    "description": "A subcutaneous anti-TSLP biologic for severe asthma uncontrolled on high-dose ICS/LABA. Intended to reduce exacerbations and improve quality of life while minimizing systemic exposure.",
+    "max_revenue": 1600000000,
+    "time_until_max_revenue": 5,
+    "time_until_patent_expiry": 16,
+    "trials": {
+        "phase_1": {
+            "cost_remaining": 0,
+            "time_remaining": 0,
+            "ptrs": 0.73
+        },
+        "phase_2": {
+            "cost_remaining": 39000000,
+            "time_remaining": 2,
+            "ptrs": 0.51
+        },
+        "phase_3": {
+            "cost_remaining": 190000000,
+            "time_remaining": 3,
+            "ptrs": 0.72
+        }
+    },
+    "state": "Idle",
+    "pending_trial_phase": "Phase 2",
+    "time_on_market": 0
+}

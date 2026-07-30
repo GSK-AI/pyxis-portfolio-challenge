@@ -1,0 +1,29 @@
+{
+    "name": "Helminavax",
+    "therapeutic_area": "vaccines and infectious disease",
+    "type": "internal",
+    "description": "A recombinant vaccine candidate against schistosomiasis with scalable manufacturing. Designed for use in endemic regions to reduce morbidity and transmission.",
+    "max_revenue": 2400000000,
+    "time_until_max_revenue": 5,
+    "time_until_patent_expiry": 15,
+    "trials": {
+        "phase_1": {
+            "cost_remaining": 0,
+            "time_remaining": 0,
+            "ptrs": 0.77
+        },
+        "phase_2": {
+            "cost_remaining": 0,
+            "time_remaining": 0,
+            "ptrs": 0.47
+        },
+        "phase_3": {
+            "cost_remaining": 320000000,
+            "time_remaining": 4,
+            "ptrs": 0.74
+        }
+    },
+    "state": "Idle",
+    "pending_trial_phase": "Phase 3",
+    "time_on_market": 0
+}
