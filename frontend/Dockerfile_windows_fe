@@ -29,9 +29,9 @@ RUN Write-Host "Downloading Node.js..." ; \
 COPY find-node.ps1 C:\\find-node.ps1
 RUN powershell -File C:\\find-node.ps1
 
-# Install pnpm globally
+# Install pnpm globally (pinned to v10 to match pnpm-lock.yaml)
 RUN Write-Host "Installing pnpm..." ; \
-    npm install -g pnpm ; \
+    npm install -g pnpm@10 ; \
     Write-Host "PNPM version: $(pnpm -v)"
 
 # Copy package.json and pnpm-lock.yaml

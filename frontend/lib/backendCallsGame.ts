@@ -4,11 +4,7 @@ import {
   GameStart,
   gameStepResponseSchema,
   hintResponseSchema,
-  gameLevelsResponseSchema,
-  leaderboardResponseSchema,
-  leaderboardEntrySchema,
   agentsResponseSchema,
-  gameComparisonSchema,
   opponentAgentSchema,
   multiAgentGameStepSchema,
   MultiAgentGameStart,
@@ -102,34 +98,9 @@ async function endpointGameHint(
   return `${baseUrl}/game/${gameId}/hint${query}`;
 }
 
-async function endpointGameLevels(): Promise<string> {
-  const baseUrl = await getBackendGameUrl();
-  return `${baseUrl}/game/levels`;
-}
-
-async function endpointGameLeaderboardGlobal(): Promise<string> {
-  const baseUrl = await getBackendGameUrl();
-  return `${baseUrl}/game/leaderboard/global`;
-}
-
-async function endpointGameLeaderboardLevels(levelId: number): Promise<string> {
-  const baseUrl = await getBackendGameUrl();
-  return `${baseUrl}/game/leaderboard/${levelId}`;
-}
-
 async function endpointGameAgents(): Promise<string> {
   const baseUrl = await getBackendGameUrl();
   return `${baseUrl}/game/agents`;
-}
-
-async function endpointGameComparison(gameId: string): Promise<string> {
-  const baseUrl = await getBackendGameUrl();
-  return `${baseUrl}/game/${gameId}/comparison_dashboard`;
-}
-
-async function endpointGameHighscore(levelId: number): Promise<string> {
-  const baseUrl = await getBackendGameUrl();
-  return `${baseUrl}/game/level/${levelId}/highscore`;
 }
 
 export async function startGame(body: GameStart) {
@@ -169,46 +140,10 @@ export async function hintGame(gameId: string, agentName?: string) {
   );
 }
 
-export async function getLevels() {
-  return await fetchAndValidate(
-    await endpointGameLevels(),
-    gameLevelsResponseSchema,
-  );
-}
-
-export async function getGlobalLeaderboard() {
-  return await fetchAndValidate(
-    await endpointGameLeaderboardGlobal(),
-    leaderboardResponseSchema,
-  );
-}
-
-export async function getLevelLeaderboard(levelId: number) {
-  return await fetchAndValidate(
-    await endpointGameLeaderboardLevels(levelId),
-    leaderboardResponseSchema,
-  );
-}
-
 export async function getAgents() {
   return await fetchAndValidate(
     await endpointGameAgents(),
     agentsResponseSchema,
-  );
-}
-
-export async function getGameComparison(gameId: string) {
-  return await fetchAndValidate(
-    await endpointGameComparison(gameId),
-    gameComparisonSchema,
-    jsonPost({}),
-  );
-}
-
-export async function getLevelHighScore(levelId: number) {
-  return await fetchAndValidate(
-    await endpointGameHighscore(levelId),
-    leaderboardEntrySchema,
   );
 }
 
@@ -217,11 +152,6 @@ export async function getLevelHighScore(levelId: number) {
 async function endpointMultiAgentOpponents(): Promise<string> {
   const baseUrl = await getBackendGameUrl();
   return `${baseUrl}/game/multi/opponents`;
-}
-
-async function endpointMultiAgentConfig(): Promise<string> {
-  const baseUrl = await getBackendGameUrl();
-  return `${baseUrl}/game/multi/config`;
 }
 
 async function endpointMultiAgentStart(): Promise<string> {

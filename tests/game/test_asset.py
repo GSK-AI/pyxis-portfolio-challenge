@@ -1,4 +1,3 @@
-import random
 import uuid
 from typing import Optional
 
@@ -96,6 +95,7 @@ def drug_asset_factory(
         type="internal",
         description="A test drug asset.",
         max_revenue=max_revenue,
+        raw_max_revenue=max_revenue,
         time_until_max_revenue=time_until_max_revenue,
         time_until_patent_expiry=time_until_patent_expiry,
         trial=trial,
@@ -396,15 +396,98 @@ def test_asset_evolve_in_development_success_final_trial():
     evolved_asset = asset.evolve()
     assert evolved_asset.state == AssetState.OnMarket
     assert evolved_asset.id == asset.id
-    assert evolved_asset.time_on_market == 0
+    # On reaching the market the asset starts at time_on_market == 1 so its very
+    # first on-market step earns revenue (revenue_formula(1) > 0) instead of
+    # wasting a step on revenue_formula(0) == 0.
+    assert evolved_asset.time_on_market == 1
+    assert evolved_asset.revenue_this_step > 0.0
     assert evolved_asset.trial.state == TrialState.PHASE_SUCCESS
 
-    # evolve again, we should start accruing revenue
+    # evolve again, revenue keeps ramping up
     evolved_asset_2 = evolved_asset.evolve()
     assert evolved_asset_2.state == AssetState.OnMarket
-    assert evolved_asset_2.time_on_market == 1
-    assert evolved_asset_2.revenue_this_step > 0.0
+    assert evolved_asset_2.time_on_market == 2
+    assert evolved_asset_2.revenue_this_step > evolved_asset.revenue_this_step
     assert evolved_asset_2.cost_this_step == 0.0
+
+
+def test_realized_revenue_matches_enpv_projection():
+    """The realized on-market revenue stream matches the eNPV projection.
+
+    Regression for the off-by-one where a launching drug's first on-market step
+    earned revenue_formula(0) = 0. ``_get_future_events`` (the basis of eNPV)
+    increments time_on_market *before* computing revenue, so the realized loop
+    must too: the first market step earns revenue_formula(1), and the whole
+    stream lines up with the projection step-for-step.
+    """
+    trial = Trial(
+        cost_remaining=100.0,
+        time_remaining=1,
+        ptrs=1.0,  # force launch on the next evolve
+        phase=TrialPhase.PHASE_3,
+        state=TrialState.IN_PROGRESS,
+        next_trial_on_success=None,
+    )
+    asset = drug_asset_factory(
+        state=AssetState.InDevelopment,
+        trial=trial,
+        max_revenue=100.0,
+        time_until_max_revenue=5,
+        time_until_patent_expiry=10,
+    )
+
+    # eNPV revenue projection, captured before the drug reaches the market.
+    projected = [rev for rev, _prob in asset._get_future_events() if rev > 0.0]
+
+    # Realized revenue, collected as the asset lives out its full on-market life.
+    realized = []
+    cur = asset
+    for _ in range(asset.time_until_patent_expiry + 5):
+        cur = cur.evolve()
+        if cur.state == AssetState.OnMarket:
+            realized.append(cur.revenue_this_step)
+        elif cur.state in (AssetState.Expired, AssetState.Failed):
+            break
+
+    assert realized, "asset never reached the market"
+    # First on-market step earns revenue (revenue_formula(1)), not zero.
+    assert realized[0] == pytest.approx(revenue_formula(1, 100.0, 5))
+    assert realized[0] > 0.0
+    # Realized stream lines up with the projection step-for-step.
+    assert realized == pytest.approx(projected)
+
+
+def test_asset_transitions_preserve_raw_max_revenue():
+    """
+    raw_max_revenue must survive every DrugAsset-rebuilding transition.
+
+    It drives the brand-equity floor, which is read only once a drug is
+    OnMarket. Drugs reach the market via evolve()/evolve_with_level(), and the
+    field has no default, so an omission in any explicit constructor would raise
+    rather than silently zero the value.
+    """
+    trial = Trial(
+        cost_remaining=100.0,
+        time_remaining=1,
+        ptrs=1.0,  # force success
+        phase=TrialPhase.PHASE_3,
+        state=TrialState.IN_PROGRESS,
+        next_trial_on_success=None,
+    )
+    # raw_max_revenue deliberately differs from max_revenue to catch a reset.
+    base = drug_asset_factory(
+        state=AssetState.InDevelopment, trial=trial, max_revenue=100.0
+    ).model_copy(update={"raw_max_revenue": 42.0})
+
+    on_market = base.evolve()
+    assert on_market.state == AssetState.OnMarket
+    assert on_market.raw_max_revenue == 42.0
+    # Survives subsequent evolves once on-market.
+    assert on_market.evolve().raw_max_revenue == 42.0
+
+    assert base.evolve_with_level(1.0, 1.0).raw_max_revenue == 42.0
+    assert base.stop_development().raw_max_revenue == 42.0
+    assert base.drop().raw_max_revenue == 42.0
 
 
 def test_asset_evolve_in_development_failure():
@@ -550,3 +633,51 @@ def test_asset_revenue_this_step_on_market():
     max_revenue = 1000.0
     asset = drug_asset_factory(state=AssetState.OnMarket, time_on_market=time_on_market, time_until_max_revenue=time_until_max_revenue, max_revenue=max_revenue)
     assert asset.revenue_this_step == 500.0
+
+
+# --- drop() tests ---
+
+def test_asset_drop_from_idle():
+    asset = drug_asset_factory(state=AssetState.Idle)
+    dropped = asset.drop()
+    assert dropped.state == AssetState.Dropped
+    assert dropped.id == asset.id
+
+
+def test_asset_drop_from_in_development():
+    trial = Trial(
+        cost_remaining=5000.0,
+        time_remaining=3,
+        ptrs=0.7,
+        phase=TrialPhase.PHASE_3,
+        state=TrialState.IN_PROGRESS,
+        next_trial_on_success=None,
+    )
+    asset = drug_asset_factory(state=AssetState.InDevelopment, trial=trial)
+    dropped = asset.drop()
+    assert dropped.state == AssetState.Dropped
+    assert dropped.id == asset.id
+    # Trial should be terminated (PHASE_FAILED, same as stop_development)
+    assert dropped.trial.state == TrialState.PHASE_FAILED
+
+
+def test_asset_drop_from_on_market():
+    trial = Trial(
+        cost_remaining=0.0,
+        time_remaining=0,
+        ptrs=1.0,
+        phase=TrialPhase.PHASE_3,
+        state=TrialState.PHASE_SUCCESS,
+        next_trial_on_success=None,
+    )
+    asset = drug_asset_factory(state=AssetState.OnMarket, trial=trial)
+    dropped = asset.drop()
+    assert dropped.state == AssetState.Dropped
+    assert dropped.id == asset.id
+
+
+@pytest.mark.parametrize("terminal_state", [AssetState.Failed, AssetState.Expired, AssetState.Dropped])
+def test_asset_drop_raises_for_terminal_states(terminal_state):
+    asset = drug_asset_factory(state=terminal_state)
+    with pytest.raises(ValueError):
+        asset.drop()

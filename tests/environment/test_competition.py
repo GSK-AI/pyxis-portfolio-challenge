@@ -8,11 +8,15 @@ import upath
 from pyxis_portfolio_challenge.config import (
     ApprovalPhaseConfig,
     CapacityConfig,
+    ClinicalSitesConfig,
     DistributionalPtrsConfig,
+    DropActionConfig,
     InterimTrialObservationsConfig,
     InvestmentLevelParams,
     InvestmentLevelsConfig,
+    MarketingConfig,
     PricingConfig,
+    PtrsReadingsConfig,
     TAExperienceConfig,
     UncertainPtrsConfig,
 )
@@ -48,8 +52,7 @@ def _make_env(num_agents=2, **kwargs):
         bd_base_lambda=0.3,
         bd_leak_lambda_boost=0.3,
         bd_min_step=5,
-        bd_num_bid_levels=11,
-        bd_break_even_bid_level=7,
+        bd_max_bid=10000.0,
         bd_max_slots=1,
         bd_phase_weights=[0.2, 0.4, 0.4],
         bd_indication_activity_bias=0.8,
@@ -58,6 +61,8 @@ def _make_env(num_agents=2, **kwargs):
         disable_market_share_competition=False,
         alert_history_length=5,
         leak_phase_probabilities=[0.2, 0.5, 0.7],
+        be_leak_probability=0.8,
+        dc_leak_probability=0.8,
         alerts_per_agent=5,
         reward_fn=NetCashFlowReward(),
         reward_type="absolute",
@@ -126,6 +131,47 @@ def _make_env(num_agents=2, **kwargs):
             default_level=2,
             elasticity=2.0,
         ),
+        drop_action_config=DropActionConfig(
+            enabled=False,
+            drop_price_fraction=0.0,
+            drop_price_rounding=1_000_000,
+        ),
+        render_mode=None,
+        marketing_config=MarketingConfig(
+            enabled=False,
+            dc_cost_fraction=0.035,
+            dc_step_boost=0.10,
+            dc_decay_rate=0.206,
+            be_cost_fraction=0.0175,
+            be_boost=0.25,
+            be_decay_rate=0.206,
+            be_effectiveness=3.5,
+        ),
+        clinical_sites_config=ClinicalSitesConfig(
+            enabled=False,
+            starting_sites=4,
+            purchase_base_cost=500_000_000,
+            purchase_cost_rounding=1_000_000,
+            site_development_steps=2,
+            agent_priority=False,
+            priority_entropy_weight=1.0,
+            auction_enabled=True,
+            auction_interval_steps=20,
+            auction_min_step=10,
+            site_max_bid=100_000,
+        ),
+        ptrs_readings_config=PtrsReadingsConfig(
+            enabled=False,
+            cost_fraction=0.05,
+            cost_rounding=1_000_000,
+            action_space_max_readings=10,
+            sigma_logit_base=1.5,
+            sigma_ep=None,
+            noise_multipliers=[1.0, 1.5, 2.0],
+            max_sample_obs=20,
+        ),
+        bd_persist_steps=1,
+        dc_leak_min_agents=3,
     )
     defaults.update(kwargs)
     return MultiAgentInvestmentGameEnv(**defaults)
@@ -135,7 +181,7 @@ class TestResolveAgent:
     """Tests for named agent resolution."""
 
     def test_resolve_knapsack(self):
-        agent = _resolve_agent("knapsack(c12)", "pharma_0")
+        agent = _resolve_agent("knapsack", "pharma_0")
         assert agent.agent_name == "pharma_0"
         assert hasattr(agent, "set_env")
 
@@ -228,7 +274,8 @@ class TestTrainer:
         trainer.reset(seed=42)
         masks = trainer.action_masks()
         assert "investments" in masks
-        assert "bd_bids" in masks
+        # BD bids are a continuous Box and are not masked.
+        assert "bd_bids" not in masks
 
     def test_trainer_runs_full_episode(self):
         env = _make_env(num_agents=2, horizon=5)
@@ -320,7 +367,7 @@ class TestTrainFunction:
     def test_train_rejects_flat_obs_for_named(self):
         env = _make_env(num_agents=2)
         with pytest.raises(ValueError, match="Cannot override"):
-            train(env, [None, "knapsack(c12)"], flat_obs={1: True})
+            train(env, [None, "knapsack"], flat_obs={1: True})
 
 
 class TestFlatObsHandling:
@@ -329,16 +376,16 @@ class TestFlatObsHandling:
     def test_validate_rejects_override_for_named_agent(self):
         with pytest.raises(ValueError, match="Cannot override flat_obs"):
             _validate_flat_obs_overrides(
-                ["knapsack(c12)", "do_nothing"],
+                ["knapsack", "do_nothing"],
                 flat_obs={0: True},
             )
 
     def test_validate_allows_override_for_user_agent(self):
         my_agent = lambda obs: obs  # noqa: E731
-        _validate_flat_obs_overrides([my_agent, "knapsack(c12)"], flat_obs={0: True})
+        _validate_flat_obs_overrides([my_agent, "knapsack"], flat_obs={0: True})
 
     def test_validate_allows_no_overrides(self):
-        _validate_flat_obs_overrides(["knapsack(c12)", "do_nothing"], flat_obs=None)
+        _validate_flat_obs_overrides(["knapsack", "do_nothing"], flat_obs=None)
 
     def test_flat_obs_wrapper_flattens_dict_obs(self):
         env = _make_env(num_agents=2, flatten_obs=False)

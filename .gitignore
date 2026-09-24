@@ -186,7 +186,7 @@ cython_debug/
 #   be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
 #   and can be added to the global gitignore or merged into this file.  For a more nuclear
 #   option (not recommended) you can uncomment the following to ignore the entire idea folder.
-# .idea/
+.idea/
 
 # Abstra
 #   Abstra is an AI-powered process automation framework.
@@ -235,7 +235,14 @@ next-env.d.ts
 
 # Claude AI assistant
 claude/
-.claude/
+.claude/*
+!.claude/skills/
 
 # Environment variables
 .env*.local
+
+# Local benchmark harness — depends on an external agents repo, not part of the package
+run_elo_leaderboard.py
+
+# Rejected Gemini one-shot de-identification attempt — kept locally, never committed
+rl-environment-assets/15sep2026_deident/

@@ -7,7 +7,124 @@ from pyxis_portfolio_challenge.agents.utils import (
     get_agent_investment_decisions,
     get_all_agents_investment_decisions,
 )
-from pyxis_portfolio_challenge.config import CapacityConfig
+from pyxis_portfolio_challenge.config import (
+    ApprovalPhaseConfig,
+    CapacityConfig,
+    ClinicalSitesConfig,
+    DistributionalPtrsConfig,
+    DropActionConfig,
+    InterimTrialObservationsConfig,
+    InvestmentLevelParams,
+    InvestmentLevelsConfig,
+    MarketingConfig,
+    PtrsReadingsConfig,
+    TAExperienceConfig,
+    UncertainPtrsConfig,
+    config,
+)
+
+# Disabled feature configs now required as keyword-only args by
+# GameState.initialise_new_game (rd_capacity passed explicitly at the call site).
+_EXTRA_DISABLED_CONFIGS = dict(
+    investment_levels_config=InvestmentLevelsConfig(
+        enabled=False,
+        levels={
+            "none": InvestmentLevelParams(
+                cost_modifier=0.0, speed_modifier=0.0, success_modifier=1.0,
+                capacity_cost=0, experience_modifier=0.0,
+            ),
+            "standard": InvestmentLevelParams(
+                cost_modifier=1.0, speed_modifier=1.0, success_modifier=1.0,
+                capacity_cost=2, experience_modifier=1.0,
+            ),
+        },
+    ),
+    interim_trial_observations_config=InterimTrialObservationsConfig(
+        enabled=False, latent_quality_concentration=10.0, initial_noise_scale=0.3,
+    ),
+    distributional_ptrs_config=DistributionalPtrsConfig(
+        enabled=False,
+        ta_quality_variance={
+            "oncology": 0.08,
+            "respiratory and immunology": 0.05,
+            "vaccines and infectious disease": 0.03,
+        },
+        asset_noise_std=0.03, prior_concentration=5.0, observation_noise=0.1,
+    ),
+    drop_action_config=DropActionConfig(
+        enabled=False, drop_price_fraction=0.0, drop_price_rounding=1_000_000,
+    ),
+    marketing_config=MarketingConfig(
+        enabled=False, dc_cost_fraction=0.035, dc_step_boost=0.10, dc_decay_rate=0.206,
+        be_cost_fraction=0.0175, be_boost=0.25, be_decay_rate=0.206, be_effectiveness=3.5,
+    ),
+    clinical_sites_config=ClinicalSitesConfig(
+        enabled=False, starting_sites=4, purchase_base_cost=500_000_000,
+        purchase_cost_rounding=1_000_000, site_development_steps=2, agent_priority=False,
+        priority_entropy_weight=1.0, auction_enabled=True, auction_interval_steps=20,
+        auction_min_step=10, site_max_bid=100_000,
+    ),
+    ptrs_readings_config=PtrsReadingsConfig(
+        enabled=False, cost_fraction=0.05, cost_rounding=1_000_000,
+        action_space_max_readings=10, sigma_logit_base=1.5, sigma_ep=None,
+        noise_multipliers=[1.0, 1.5, 2.0], max_sample_obs=20,
+    ),
+    ta_experience_config=TAExperienceConfig(
+        enabled=False, experience_to_full_knowledge=30.0, max_expertise_boost=0.05,
+        experience_to_max_boost=40.0, experience_decay_rate=0.98,
+        max_total_experience=60.0,
+        phase_experience_weights={
+            "phase_1": 0.5, "phase_2": 1.0, "phase_3": 1.5, "approval": 0.5,
+        },
+        asset_arrival_temperature=0.1,
+    ),
+    uncertain_ptrs_config=UncertainPtrsConfig(
+        enabled=False,
+        ta_noise_config={
+            "oncology": 0.12,
+            "respiratory and immunology": 0.10,
+            "vaccines and infectious disease": 0.08,
+        },
+        phase_noise_multipliers={
+            "phase_1": 1.5, "phase_2": 1.0, "phase_3": 0.75, "approval": 0.5,
+        },
+    ),
+    approval_phase_config=ApprovalPhaseConfig(
+        enabled=False, duration_min=1, duration_max=3,
+        success_rate_min=0.85, success_rate_max=0.95, cost=50_000_000,
+    ),
+)
+
+
+def test_get_agent_investment_decisions_handles_enabled_multi_agent_features(
+    json_game_state_factory,
+):
+    """Regression: competition game_states carry the multi-agent-only features
+    (marketing, clinical sites, PTRS readings, approval phase) enabled. The
+    single-agent reasoning env used here rejects those when enabled, so the helper
+    must force them disabled internally rather than raise ValueError.
+    """
+    game_state = json_game_state_factory()
+    # Mimic a competition game_state that carries these features enabled.
+    game_state._marketing_config = config.marketing
+    game_state._clinical_sites_config = config.clinical_sites
+    game_state._ptrs_readings_config = config.ptrs_readings
+    game_state._asset_generator.approval_phase_config = config.approval_phase
+    assert game_state._marketing_config.enabled
+    assert game_state._clinical_sites_config.enabled
+    assert game_state._ptrs_readings_config.enabled
+    assert game_state._asset_generator.approval_phase_config.enabled
+
+    agent = get_agent("Knapsack")
+
+    # Previously raised ValueError from InvestmentGameEnv's multi-only guard.
+    decisions = get_agent_investment_decisions(agent=agent, game_state=game_state)
+
+    assert isinstance(decisions, dict)
+    for asset_id, decision in decisions.items():
+        assert isinstance(asset_id, uuid.UUID)
+        assert asset_id in game_state.assets
+        assert decision in ["invest", None]
 
 
 def test_get_agent_investment_decisions_knapsack(
@@ -132,7 +249,7 @@ def test_get_agent_investment_decisions_empty_game_state(valid_json_assets_path)
         reinvestment_percentage=1.0,
         cash=10_000_000,
         horizon=20,
-        global_seed=42,
+        seed=42,
         assets_dir=valid_json_assets_path,
         indication_spread=1.5,
         indication_drift_speed=1.0,
@@ -141,6 +258,7 @@ def test_get_agent_investment_decisions_empty_game_state(valid_json_assets_path)
             enabled=False, base_capacity=80.0, overage_max_penalty=0.5,
             overage_cost_max_penalty=0.5, overage_scaling="linear",
         ),
+        **_EXTRA_DISABLED_CONFIGS,
     )
 
     # Put all assets in development

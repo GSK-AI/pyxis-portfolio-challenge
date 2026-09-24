@@ -12,6 +12,12 @@ TEST_ASSETS_DIR = PROJECT_ROOT / "tests/data/generated_assets"
 @pytest.fixture
 def patched_config(monkeypatch):
     """Patch config.from_yaml to always return a patched cfg object"""
+    from pyxis_portfolio_challenge.config import (
+        ApprovalPhaseConfig,
+        ClinicalSitesConfig,
+        MarketingConfig,
+        PtrsReadingsConfig,
+    )
     from pyxis_portfolio_challenge.config import config as config_mod
 
     return config_mod.model_copy(
@@ -20,6 +26,28 @@ def patched_config(monkeypatch):
             "num_eval_episodes": 2,
             "equilibrium_num_assets": 5,  # Test data only has 20 assets
             "max_num_assets": 20,
+            # The single-agent InvestmentGameEnv used by evaluate() rejects these
+            # multi-agent-only features, so disable them for evaluation.
+            "marketing": MarketingConfig(
+                enabled=False, dc_cost_fraction=0.035, dc_step_boost=0.10,
+                dc_decay_rate=0.206, be_cost_fraction=0.0175, be_boost=0.25,
+                be_decay_rate=0.206, be_effectiveness=3.5,
+            ),
+            "clinical_sites": ClinicalSitesConfig(
+                enabled=False, starting_sites=4, purchase_base_cost=500_000_000,
+                purchase_cost_rounding=1_000_000, site_development_steps=2,
+                agent_priority=False, priority_entropy_weight=1.0, auction_enabled=True,
+                auction_interval_steps=20, auction_min_step=10, site_max_bid=100_000,
+            ),
+            "ptrs_readings": PtrsReadingsConfig(
+                enabled=False, cost_fraction=0.05, cost_rounding=1_000_000,
+                action_space_max_readings=10, sigma_logit_base=1.5, sigma_ep=None,
+                noise_multipliers=[1.0, 1.5, 2.0], max_sample_obs=20,
+            ),
+            "approval_phase": ApprovalPhaseConfig(
+                enabled=False, duration_min=1, duration_max=3,
+                success_rate_min=0.85, success_rate_max=0.95, cost=50_000_000,
+            ),
         }
     )
 

@@ -27,6 +27,11 @@ export function calculateChartYAxisMax({
   bufferPercentage?: number;
   minDomain?: number;
 }): number {
+  // Revenue-labelled charts show the "Budget" — the cash actually retained
+  // (gross sales scaled by the reinvestment rate). Costs are paid in full.
+  const revenueScale =
+    dataType === "revenue" ? (gameState?.reinvestment_percentage ?? 1) : 1;
+
   // Filter assets based on data type to get all potentially relevant assets
   const allAssets = assets.filter((asset) => {
     if (dataType === "revenue") {
@@ -89,7 +94,7 @@ export function calculateChartYAxisMax({
         asset.state === "On Market" ||
         asset.state === "Idle"
       ) {
-        totalForThisTime += value / 1000000; // Convert to millions
+        totalForThisTime += (value * revenueScale) / 1000000; // Convert to millions
       }
     });
 
@@ -123,6 +128,11 @@ export function processAssetDataForChart({
   gameState?: GameStepSchemaType;
   hintCosts?: number;
 }) {
+  // Revenue-labelled charts show the "Budget" — the cash actually retained
+  // (gross sales scaled by the reinvestment rate). Costs are paid in full.
+  const revenueScale =
+    dataType === "revenue" ? (gameState?.reinvestment_percentage ?? 1) : 1;
+
   const relevantAssets = assets.filter((asset) => {
     const selVal = selection[asset.id];
 
@@ -180,7 +190,7 @@ export function processAssetDataForChart({
       }
       realisedSeries.push({
         time,
-        value,
+        value: value * revenueScale,
         assetId: "historical-data",
         assetName: "Historical Data",
         isSelected: true,
@@ -219,11 +229,25 @@ export function processAssetDataForChart({
           expectedIndex >= 0 && expectedIndex < expectedDataArray.length
             ? expectedDataArray[expectedIndex]
             : 0;
+
+        // Fold current-year discretionary spend (e.g. marketing) into the cost
+        // projection once, on the first layer, at the decision year. The
+        // realised-branch injection above cannot fire here because
+        // realised_costs.length === currentTime at the decision point, so the
+        // current year is the first *expected* point rather than a realised one.
+        if (
+          assetIndex === 0 &&
+          time === currentTime &&
+          dataType === "cost" &&
+          hintCosts > 0
+        ) {
+          value += hintCosts;
+        }
       }
 
       assetSeries.push({
         time,
-        value,
+        value: value * revenueScale,
         assetId: asset.id,
         assetName: asset.name,
         isSelected,

@@ -8,6 +8,7 @@ from typing import Any, Callable
 
 from tqdm import tqdm
 
+from app.endpoint_datamodels import bd_asset_to_response
 from pyxis_portfolio_challenge.config import config, instantiate_from_config
 from pyxis_portfolio_challenge.environment.metrics import (
     EvaluationMetric,
@@ -30,7 +31,6 @@ from pyxis_portfolio_challenge.environment.playthrough import (
 from pyxis_portfolio_challenge.environment.warmup_wrapper import (
     MultiAgentWarmupOnResetWrapper,
 )
-from app.endpoint_datamodels import bd_asset_to_response
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +46,7 @@ def evaluate_multi_agent(
     agent_names: dict[str, str] | None = None,
     agent_labels: dict[str, str] | None = None,
     seed: int | None = None,
+    seed_offset: int | None = None,
 ) -> tuple[
     dict[str, list[EvaluationMetric]],
     list[EvaluationMetric],
@@ -64,8 +65,11 @@ def evaluate_multi_agent(
         capture_playthrough: If True, capture a full playthrough for replay.
             Only valid with episodes_per_worker=1.
         agent_names: Optional mapping of agent_id -> display name for playthrough data.
+        agent_labels: Optional display labels for agents.
         seed: Optional explicit seed. If provided, overrides the
             config-based seed calculation.
+        seed_offset: Optional offset added to the computed seed, used to
+            de-correlate the two halves of a symmetric evaluation.
 
     Returns:
         Tuple of:
@@ -102,6 +106,8 @@ def evaluate_multi_agent(
     for local_idx in range(episodes_per_worker):
         if seed is not None:
             episode_seed = seed
+        elif seed_offset is not None:
+            episode_seed = base_seed + seed_offset + local_idx
         else:
             global_episode_idx = worker_id * episodes_per_worker + local_idx
             episode_seed = base_seed + global_episode_idx
@@ -129,7 +135,6 @@ def evaluate_multi_agent(
         # Begin episode for per-agent metrics
         shared_market = env.multi_agent_game.shared_market
         all_states = env.agent_portfolios
-        episode_fingerprint = env.multi_agent_game.content_fingerprint(episode_seed)
         for agent_id in env.possible_agents:
             game_state = all_states[agent_id]
             ctx = MetricsContext(
@@ -138,7 +143,6 @@ def evaluate_multi_agent(
                 shared_market_state=shared_market,
                 agent_id=agent_id,
                 all_agent_states=all_states,
-                episode_id=episode_fingerprint,
             )
             collect_metrics(
                 "on_episode_begin",
@@ -159,7 +163,11 @@ def evaluate_multi_agent(
             if capture_playthrough:
                 pre_step_bd_assets = [
                     bd_asset_to_response(
-                        a, env.multi_agent_game.shared_market.indication_name_map
+                        a,
+                        env.multi_agent_game.shared_market.indication_name_map,
+                        env.reinvestment_percentage,
+                        ptrs_cfg=None,
+                        clone=None,
                     )
                     for a in env.multi_agent_game.shared_market.current_bd_assets
                 ]
@@ -168,6 +176,38 @@ def evaluate_multi_agent(
                     env._asset_id_orders,
                     use_levels,
                     pre_step_bd_assets=pre_step_bd_assets,
+                    bd_bid_decoder=env._decode_bd_bids,
+                    env=env,
+                )
+
+            # Fire on_step_begin with investment decisions before env steps
+            pre_step_portfolios = env.agent_portfolios
+            pre_step_shared = env.multi_agent_game.shared_market
+            for agent_id in env.possible_agents:
+                agent_action = actions.get(agent_id, {})
+                inv_array = (
+                    agent_action.get("investments", [])
+                    if isinstance(agent_action, dict)
+                    else []
+                )
+                asset_order = env._asset_id_orders.get(agent_id, [])
+                investment_decisions = {
+                    asset_id: "invest"
+                    for idx, asset_id in enumerate(asset_order)
+                    if asset_id is not None and idx < len(inv_array) and inv_array[idx]
+                }
+                ctx = MetricsContext(
+                    game_state=pre_step_portfolios[agent_id],
+                    reward=0.0,
+                    shared_market_state=pre_step_shared,
+                    agent_id=agent_id,
+                    all_agent_states=pre_step_portfolios,
+                    investment_decisions=investment_decisions,
+                )
+                collect_metrics(
+                    "on_step_begin",
+                    metrics=agent_metrics[agent_id],
+                    context=ctx,
                 )
 
             observations, rewards, terminations, truncations, infos = env.step(actions)
@@ -290,7 +330,6 @@ def _parallel_evaluate_raw(
     total_episodes = num_episodes if num_episodes is not None else cfg.num_eval_episodes
     # Don't spawn more workers than episodes
     num_workers = min(num_workers, total_episodes)
-    episodes_per_worker = total_episodes // num_workers
 
     if num_workers == 1:
         agent_metrics, _ = evaluate_multi_agent(
@@ -302,15 +341,26 @@ def _parallel_evaluate_raw(
         )
         return agent_metrics
 
+    # Distribute episodes: base count per worker, remainder goes to the last worker
+    base, remainder = divmod(total_episodes, num_workers)
+    counts = [base] * num_workers
+    counts[-1] += remainder
+    offsets = []
+    cumulative = 0
+    for c in counts:
+        offsets.append(cumulative)
+        cumulative += c
+
     with ProcessPoolExecutor(max_workers=num_workers) as pool:
         futures = [
             pool.submit(
                 evaluate_multi_agent,
                 agents,
                 worker_id=i,
-                episodes_per_worker=episodes_per_worker,
+                episodes_per_worker=counts[i],
                 env_kwargs=env_kwargs,
                 warmup_steps=warmup_steps,
+                seed_offset=offsets[i],
             )
             for i in range(num_workers)
         ]

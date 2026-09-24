@@ -5,22 +5,15 @@ from __future__ import annotations
 from typing import Any
 
 import upath
-
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize
 from stable_baselines3.common.vec_env.vec_monitor import VecMonitor
 
 from pyxis_portfolio_challenge.config import (
-    DistributionalPtrsConfig,
-    InterimTrialObservationsConfig,
-    InvestmentLevelsConfig,
-    UncertainPtrsConfig,
     config,
     instantiate_from_config,
 )
 from pyxis_portfolio_challenge.environment.training_gym import (  # noqa: E501
     InvestmentGameEnv,
-    LevelsInvestmentGameEnv,
-    Reward,
 )
 from pyxis_portfolio_challenge.environment.warmup_wrapper import (
     MultiAgentWarmupOnResetWrapper,
@@ -83,6 +76,13 @@ def _prepare_envs(
             interim_trial_observations_config=cfg.interim_trial_observations,
             distributional_ptrs_config=cfg.distributional_ptrs,
             rd_capacity_config=cfg.rd_capacity,
+            drop_action_config=cfg.drop_action,
+            marketing_config=cfg.marketing,
+            clinical_sites_config=cfg.clinical_sites,
+            ptrs_readings_config=cfg.ptrs_readings,
+            approval_phase_config=cfg.approval_phase,
+            metrics=[],
+            initial_game_state=None,
         )
         if cfg.warmup_on_reset_steps > 0:
             env = WarmupOnResetWrapper(
@@ -115,6 +115,13 @@ def _prepare_envs(
             interim_trial_observations_config=cfg.interim_trial_observations,
             distributional_ptrs_config=cfg.distributional_ptrs,
             rd_capacity_config=cfg.rd_capacity,
+            drop_action_config=cfg.drop_action,
+            marketing_config=cfg.marketing,
+            clinical_sites_config=cfg.clinical_sites,
+            ptrs_readings_config=cfg.ptrs_readings,
+            approval_phase_config=cfg.approval_phase,
+            metrics=[],
+            initial_game_state=None,
         )
         if cfg.warmup_on_reset_steps > 0:
             env = WarmupOnResetWrapper(
@@ -146,53 +153,6 @@ def _prepare_envs(
     )
 
     return train_env, eval_env
-
-
-def _prepare_level_envs(
-    level_idx: int,
-    assets_dir: upath.UPath,
-    reward_fn: Reward,
-    n_envs: int,
-    norm_obs: bool,
-    norm_reward: bool,
-    shuffle_order: bool,
-    flatten_obs: bool,
-    warmup_on_reset_steps: int,
-    warmup_on_reset_policy: str,
-    uncertain_ptrs_config: UncertainPtrsConfig | None = None,
-    investment_levels_config: InvestmentLevelsConfig | None = None,
-    interim_trial_observations_config: InterimTrialObservationsConfig | None = None,
-    distributional_ptrs_config: DistributionalPtrsConfig | None = None,
-):
-    """Prepare the level-specific environments."""
-
-    def train_env():
-        """Create the training environment."""
-        env = LevelsInvestmentGameEnv(
-            level_idx=level_idx,
-            assets_dir=assets_dir,
-            reward_fn=reward_fn,
-            shuffle_order=shuffle_order,
-            flatten_obs=flatten_obs,
-            uncertain_ptrs_config=uncertain_ptrs_config,
-            investment_levels_config=investment_levels_config,
-            interim_trial_observations_config=interim_trial_observations_config,
-            distributional_ptrs_config=distributional_ptrs_config,
-        )
-        # Apply warmup wrapper per-env BEFORE vectorization
-        if warmup_on_reset_steps > 0:
-            env = WarmupOnResetWrapper(
-                env,
-                warmup_steps=warmup_on_reset_steps,
-                policy=warmup_on_reset_policy,
-                verbose=False,
-            )
-        return env
-
-    train_env = SubprocVecEnv([train_env for _ in range(n_envs)])
-    train_env = VecNormalize(train_env, norm_obs=norm_obs, norm_reward=norm_reward)
-
-    return train_env
 
 
 def make_train_env(flatten_obs: bool = True) -> InvestmentGameEnv:
@@ -227,6 +187,13 @@ def make_train_env(flatten_obs: bool = True) -> InvestmentGameEnv:
         distributional_ptrs_config=cfg.distributional_ptrs,
         ta_experience_config=cfg.ta_experience,
         rd_capacity_config=cfg.rd_capacity,
+        drop_action_config=cfg.drop_action,
+        marketing_config=cfg.marketing,
+        clinical_sites_config=cfg.clinical_sites,
+        ptrs_readings_config=cfg.ptrs_readings,
+        approval_phase_config=cfg.approval_phase,
+        metrics=[],
+        initial_game_state=None,
     )
     if cfg.auto_center_rewards:
         env = AutoCenterWrapper(
@@ -288,9 +255,9 @@ def _build_multi_agent_env_kwargs(
         bd_base_lambda=ma.bd_base_lambda,
         bd_leak_lambda_boost=ma.bd_leak_lambda_boost,
         bd_min_step=ma.bd_min_step,
-        bd_num_bid_levels=ma.bd_num_bid_levels,
-        bd_break_even_bid_level=ma.bd_break_even_bid_level,
+        bd_max_bid=ma.bd_max_bid,
         bd_max_slots=ma.bd_max_slots,
+        bd_persist_steps=ma.bd_persist_steps,
         bd_phase_weights=list(ma.bd_phase_weights),
         bd_indication_activity_bias=ma.bd_indication_activity_bias,
         exclusivity_period=ma.exclusivity_period,
@@ -298,6 +265,9 @@ def _build_multi_agent_env_kwargs(
         disable_market_share_competition=ma.disable_market_share_competition,
         alert_history_length=ma.alert_history_length,
         leak_phase_probabilities=list(ma.leak_phase_probabilities),
+        be_leak_probability=ma.be_leak_probability,
+        dc_leak_probability=ma.dc_leak_probability,
+        dc_leak_min_agents=ma.dc_leak_min_agents,
         alerts_per_agent=ma.alerts_per_agent,
         reward_fn=instantiate_from_config(cfg.reward_fn),
         shuffle_order=cfg.shuffle_order,
@@ -309,6 +279,10 @@ def _build_multi_agent_env_kwargs(
         uncertain_ptrs_config=cfg.uncertain_ptrs,
         investment_levels_config=cfg.investment_levels,
         rd_capacity_config=cfg.rd_capacity,
+        drop_action_config=cfg.drop_action,
+        ptrs_readings_config=cfg.ptrs_readings,
+        marketing_config=cfg.marketing,
+        clinical_sites_config=cfg.clinical_sites,
         interim_trial_observations_config=cfg.interim_trial_observations,
         approval_phase_config=cfg.approval_phase,
         reward_type=ma.reward_type,
@@ -323,6 +297,7 @@ def _build_multi_agent_env_kwargs(
         congestion_ramp_steps=ma.congestion_ramp_steps,
         congestion_incumbent_penalty=ma.congestion_incumbent_penalty,
         pricing_config=cfg.pricing,
+        render_mode=None,
     )
 
 
@@ -345,7 +320,7 @@ def make_multi_agent_train_env(
         obs, infos = env.reset(seed=42)
 
         # Or get a gym-like trainer
-        trainer = env.train([None, "knapsack(c12)"])
+        trainer = env.train([None, "knapsack"])
         obs, info = trainer.reset()
 
     Parameters
@@ -384,8 +359,8 @@ def make_multi_agent_train_env(
         )
 
     # Attach .train() and .run() methods so the env supports the Kaggle-like pattern:
-    #   trainer = env.train([None, "knapsack(c12)"])
-    #   reports, playthrough = env.run(["knapsack(c12)", "random"], seed=42)
+    #   trainer = env.train([None, "knapsack"])
+    #   reports, playthrough = env.run(["knapsack", "random"], seed=42)
     env.train = MethodType(train, env)
     env.run = MethodType(run, env)
 

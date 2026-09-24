@@ -5,11 +5,10 @@ import { useQuery } from "@tanstack/react-query";
 import { getIdToken } from "@/lib/msal-auth";
 import { jwtDecode } from "jwt-decode";
 import type { JwtPayload } from "@/lib/definitions";
-import { Skeleton } from "./ui/skeleton";
 import { TheInactivityModal } from "./TheInactivityModal";
 import InactivityTracker from "@/lib/Inactivity";
-import { usePathname } from "next/navigation";
 import { useEffect } from "react";
+import { AuthSplashV2, AuthErrorSplashV2 } from "./v2/SplashScreenV2";
 
 const inactivity = new InactivityTracker(40);
 
@@ -37,9 +36,6 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
-  const pathname = usePathname();
-  const requireAuthentication = !pathname.includes("logged-out");
-
   const {
     data: token,
     isFetching,
@@ -49,7 +45,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     queryKey: ["getIdToken"],
     queryFn: () => getIdToken(),
     retry: false,
-    enabled: requireAuthentication,
   });
 
   // Decode the token to get user information
@@ -63,7 +58,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   }, [token]);
 
-  const isAuthenticated = !requireAuthentication || (!!token && !!user);
+  const isAuthenticated = !!token && !!user;
 
   useEffect(() => {
     if (isFetching || isError) return;
@@ -82,15 +77,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     isAuthenticated,
   };
 
-  // For pages that don't require authentication
-  if (!requireAuthentication) {
-    return (
-      <AuthContext.Provider value={contextValue}>
-        {children}
-      </AuthContext.Provider>
-    );
-  }
-
   // Error UI
   if (isError) {
     let errorMsg = "An unknown error occurred";
@@ -101,12 +87,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
     return (
       <AuthContext.Provider value={contextValue}>
-        <div className="flex h-screen w-screen items-center justify-center font-light">
-          <div className="min-w-[900px] rounded-lg bg-white p-10">
-            <h1 className="my-4 text-2xl">Authentication Error</h1>
-            <div>{errorMsg}</div>
-          </div>
-        </div>
+        <AuthErrorSplashV2 errorMsg={errorMsg} />
       </AuthContext.Provider>
     );
   }
@@ -115,15 +96,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   if (isFetching) {
     return (
       <AuthContext.Provider value={contextValue}>
-        <div className="c-splash-screen flex h-screen w-screen items-center justify-center font-light">
-          <div className="min-w-[900px] rounded-lg bg-white p-10">
-            <h1 className="my-4 text-2xl">Welcome to Pyxis</h1>
-            <div>Authenticating...</div>
-            <div className="mt-8">
-              <Skeleton className="h-[20px] w-[400px] rounded-md" />
-            </div>
-          </div>
-        </div>
+        <AuthSplashV2 />
       </AuthContext.Provider>
     );
   }

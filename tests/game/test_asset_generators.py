@@ -31,27 +31,24 @@ def test_generate_asset_id():
 
 
 @pytest.mark.parametrize(
-    "global_seed,data_list,should_raise",
+    "data_list,should_raise",
     [
-        (42, DUMMY_LIST_DATA, False),
-        (42, "invalid_data", True),
-        ("invalid_seed", DUMMY_LIST_DATA, True),
-        (None, DUMMY_LIST_DATA, True),
+        (DUMMY_LIST_DATA, False),
+        ("invalid_data", True),
     ],
 )
-def test_fixed_list_asset_generator_init(global_seed, data_list, should_raise):
+def test_fixed_list_asset_generator_init(data_list, should_raise):
     if should_raise:
         with pytest.raises(TypeError):
-            FixedListAssetGenerator(global_seed, data_list)
+            FixedListAssetGenerator(data_list)
     else:
-        generator = FixedListAssetGenerator(global_seed, data_list)
-        assert generator.global_seed == global_seed
+        generator = FixedListAssetGenerator(data_list)
         assert generator.assets_data_list == data_list
 
 
 def test_fixed_list_asset_generator_call():
     init_game_rng(42)
-    generator = FixedListAssetGenerator(42, DUMMY_LIST_DATA)
+    generator = FixedListAssetGenerator(DUMMY_LIST_DATA)
     assets = generator(5, "initial")
     assert len(assets) == 5
     for asset in assets.values():
@@ -72,9 +69,9 @@ def test_fixed_list_asset_generator_call():
 def test_fixed_list_asset_generator_reproducibility():
     seed0 = 42
     seed1 = 1337
-    generator1 = FixedListAssetGenerator(seed0, DUMMY_LIST_DATA)
-    generator2 = FixedListAssetGenerator(seed0, DUMMY_LIST_DATA)
-    generator3 = FixedListAssetGenerator(seed1, DUMMY_LIST_DATA)
+    generator1 = FixedListAssetGenerator(DUMMY_LIST_DATA)
+    generator2 = FixedListAssetGenerator(DUMMY_LIST_DATA)
+    generator3 = FixedListAssetGenerator(DUMMY_LIST_DATA)
 
     init_game_rng(seed0)
     assets1 = generator1(5, "initial")
@@ -122,26 +119,7 @@ def _make_generator(seed, path=None, **kwargs):
     kwargs.setdefault("indication_spread", _TEST_SPREAD)
     kwargs.setdefault("indication_drift_speed", _TEST_DRIFT)
     kwargs.setdefault("trial_cost_multiplier", _TEST_COST_MULT)
-    return JSONAssetGenerator(seed, path, **kwargs)
-
-
-@pytest.mark.parametrize(
-    "global_seed,should_raise",
-    [
-        (42, False),
-        ("invalid_seed", True),
-        (None, True),
-    ],
-)
-def test_json_asset_generator_init_seed(global_seed, should_raise):
-    assets_dir = valid_path
-    if should_raise:
-        with pytest.raises(TypeError):
-            _make_generator(global_seed, assets_dir)
-    else:
-        generator = _make_generator(global_seed, assets_dir)
-        assert generator.global_seed == global_seed
-        assert generator.assets_dir == assets_dir
+    return JSONAssetGenerator(path, **kwargs)
 
 
 @pytest.mark.parametrize(
@@ -153,18 +131,17 @@ def test_json_asset_generator_init_seed(global_seed, should_raise):
     ],
 )
 def test_json_asset_generator_init_assets_dir(assets_dir, raises):
-    global_seed = 42
     if raises is not None:
         with pytest.raises(raises):
+            init_game_rng(42)
             JSONAssetGenerator(
-                global_seed, assets_dir,
+                assets_dir,
                 indication_spread=_TEST_SPREAD,
                 indication_drift_speed=_TEST_DRIFT,
                 trial_cost_multiplier=_TEST_COST_MULT,
             )
     else:
-        generator = _make_generator(global_seed, assets_dir)
-        assert generator.global_seed == global_seed
+        generator = _make_generator(42, assets_dir)
         assert generator.assets_dir == assets_dir
 
 
@@ -352,15 +329,17 @@ def test_file_not_found_error():
 
 def test_json_asset_generator_reproducibility():
     for _ in range(100):
-        # Generate seed0 and seed1 randomly
         seed0 = random.randint(0, 2**32 - 1)
         seed1 = random.randint(0, 2**32 - 1)
         generator1 = _make_generator(seed0)
         generator2 = _make_generator(seed0)
         generator3 = _make_generator(seed1)
 
+        init_game_rng(seed0)
         assets1 = generator1(5, "initial")
+        init_game_rng(seed0)
         assets2 = generator2(5, "initial")
+        init_game_rng(seed1)
         assets3 = generator3(5, "initial")
 
         assert assets1.keys() == assets2.keys()
@@ -369,8 +348,11 @@ def test_json_asset_generator_reproducibility():
         assert assets1.keys() != assets3.keys()
         assert list(assets1.values()) != list(assets3.values())
 
+        init_game_rng(seed0)
         new_assets1 = generator1(1, "new")
+        init_game_rng(seed0)
         new_assets2 = generator2(1, "new")
+        init_game_rng(seed1)
         new_assets3 = generator3(1, "new")
 
         assert new_assets1.keys() == new_assets2.keys()

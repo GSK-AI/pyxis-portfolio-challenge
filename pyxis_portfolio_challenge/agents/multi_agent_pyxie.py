@@ -114,7 +114,11 @@ class MultiAgentPyxieAgent:
 
         n_inv = self.env.max_num_assets
         n_bd = self.env.bd_max_slots
+        # The trained policy only emits investments + bd_bids. Fill every other
+        # enabled head with its no-op value so the strict env parser accepts the
+        # action (all enabled heads are required each step).
         return {
+            **self.env.noop_action(),
             "investments": action[:n_inv],
             "bd_bids": action[n_inv : n_inv + n_bd],
         }

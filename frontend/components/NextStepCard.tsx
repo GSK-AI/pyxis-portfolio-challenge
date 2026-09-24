@@ -13,6 +13,15 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import steps from "@/lib/tours/gameOnboarding";
 
+/** True if the element or any ancestor is stuck to the viewport. */
+function isPinned(el: Element) {
+  for (let node: Element | null = el; node; node = node.parentElement) {
+    const position = getComputedStyle(node).position;
+    if (position === "sticky" || position === "fixed") return true;
+  }
+  return false;
+}
+
 interface NextStepCardProps {
   step: Step;
   currentStep: number;
@@ -41,11 +50,35 @@ export default function NextStepCard({
 
     if (selector) {
       const el = document.querySelector(selector);
-      if (el) {
-        const rect = el.getBoundingClientRect();
-        const center = window.scrollY + rect.top + rect.height / 2 - window.innerHeight / 2;
-        window.scrollTo({ top: Math.max(0, center), behavior: "instant" });
-      }
+      if (!el) return;
+
+      // Sticky and fixed targets (the top bar and everything in it) don't
+      // move when you scroll, so scrolling "to" them only drags the rest of
+      // the page out from under the player. They're always on screen anyway.
+      if (isPinned(el)) return;
+
+      // scrollIntoView, not window.scrollTo: the v2 game screen is a fixed
+      // -height shell that scrolls an inner container, so window scrolling
+      // moves nothing. This works in whichever ancestor actually scrolls,
+      // and still behaves on ordinary page-scrolled views.
+      //
+      // Centre anything that fits. Leaving an already-visible target alone
+      // isn't enough — nextstep hangs the card outside the element it
+      // highlights and clips whatever runs past the viewport, so a target
+      // sitting near an edge needs moving even though you can see it.
+      // Only targets too tall to centre fall back to nextstep's own block
+      // choice: it re-scrolls those itself and measures the spotlight before
+      // that smooth scroll lands, so matching its choice makes it a no-op.
+      const side = targetStep?.side ?? "right";
+      el.scrollIntoView({
+        behavior: "instant",
+        block:
+          el.getBoundingClientRect().height <= window.innerHeight
+            ? "center"
+            : side.includes("top")
+              ? "end"
+              : "start",
+      });
     } else {
       window.scrollTo({ top: 0, behavior: "instant" });
     }
@@ -73,7 +106,10 @@ export default function NextStepCard({
 
       <CardContent>
         <div className="mb-2">{step.content}</div>
-        {arrow}
+        {/* The arrow is a bare SVG filled with currentColor, so it picks up
+            the body text colour and lands as a black wedge. It's meant to
+            read as the card's own tail — paint it the card's background. */}
+        <span className="text-card">{arrow}</span>
       </CardContent>
 
       <CardFooter className="flex justify-between gap-6">

@@ -1,6 +1,166 @@
-import { Tour } from "nextstepjs";
+import { Step, Tour } from "nextstepjs";
+
+/**
+ * Tour for the v2 game screen.
+ *
+ * Every selector here resolves in both the full dashboard and focus view,
+ * so the tour never has to move the player between layouts mid-run. The
+ * anchors live on GameExperienceV2, GameTopBar and AssetTable — search for
+ * `v2-tour-` to find them.
+ *
+ * Multiplayer and single player differ enough to be worth two tours rather
+ * than one hedged script: the winning condition is different (NCF vs eNPV),
+ * multiplayer has a leaderboard and shared-market boards, single player has
+ * the AI hint shop.
+ *
+ * Two constraints on anchors and sides. nextstep positions the card outside
+ * the element it highlights and the overlay clips anything that runs past
+ * the viewport, so (a) anchors stay small — a full-height target leaves the
+ * card nowhere to go — and (b) `side` points inward: targets on the right
+ * edge take `left`/`bottom-right`, not `right`/`bottom-left`. Keep the copy
+ * tight for the same reason: a card taller than ~350px starts to clip.
+ */
+
+/**
+ * nextstep pads the spotlight by 30px a side by default, which reads as a
+ * loose box hovering around the thing it's meant to point at. Every anchor
+ * here is already sized to what it describes, so hug them instead. Applied
+ * to every step below; a step can still override it.
+ */
+const SPOTLIGHT = { pointerPadding: 6, pointerRadius: 6 };
+
+const v2GameSteps = (mode: "single" | "multi"): Step[] => {
+  const multi = mode === "multi";
+  const script: Step[] = [
+    {
+      icon: null,
+      title: "Welcome to the Portfolio Challenge",
+      content: multi
+        ? "You run a pharmaceutical company's R&D portfolio, competing against AI agents. Each year you decide which assets to fund. Whoever has the highest Cumulative Net Cash Flow (NCF) when the horizon runs out wins. This tour takes about a minute — you can reopen it any time from the ? button."
+        : "You run a pharmaceutical company's R&D portfolio. Each year you decide which assets to fund, and your goal is to keep the portfolio's eNPV (expected Net Present Value) as high as you can. This tour takes about a minute — you can reopen it any time from the ? button.",
+      side: "right",
+      showControls: true,
+      showSkip: true,
+    },
+    {
+      icon: null,
+      title: "Your position",
+      content: multi
+        ? "Available Capital is what you have to spend this year — commit more and you go bankrupt. eNPV and eROI value your current selection, but the score is NCF: eNPV is what a selection is worth, NCF is what you actually banked."
+        : "Available Capital is what you have to spend this year — commit more and you go bankrupt. eNPV and eROI value your current selection, and eNPV is what you are judged on.",
+      side: "bottom",
+      selector: "#v2-tour-stats",
+      showControls: true,
+      showSkip: true,
+    },
+    {
+      icon: null,
+      title: "Cost, budget and capital",
+      content:
+        "Total Cost this year is what your current selection commits. Alongside it, Budget next year is what your marketed drugs will pay in, and Capital tracks your cash across the game. Read cost against capital before you commit.",
+      side: "bottom",
+      selector: "#v2-tour-charts",
+      showControls: true,
+      showSkip: true,
+    },
+    {
+      icon: null,
+      title: "Your pipeline",
+      content:
+        "The table below is where you spend your year. Assets progress Phase 1 → 2 → 3 → Approval → Market, each phase with its own probability of success, and the ones that launch earn the revenue that keeps you going.",
+      side: "bottom",
+      // A stand-in overlay the width of the table frame, not the real thead:
+      // that is min-w-max and far wider than the window. See AssetTable.
+      selector: "#v2-tour-table",
+      showControls: true,
+      showSkip: true,
+    },
+    {
+      icon: null,
+      title: "Reading a row",
+      content:
+        "The control on the left funds the asset this year, and Cost This Year is what that costs. PTRS is the chance of clearing the current phase; eNPV and eROI summarise value and return. The info icon by the name opens the full breakdown.",
+      side: "bottom",
+      // Same kind of frame-width stand-in as the header above.
+      selector: "#v2-tour-row",
+      showControls: true,
+      showSkip: true,
+    },
+    {
+      icon: null,
+      title: "Table views",
+      content:
+        "In Development is where funding decisions happen. On Market holds launched drugs earning revenue, Expired/Failed the ones that didn't make it, and Dropped appears once you abandon something. A teal dot marks a tab that changed this year.",
+      side: "bottom",
+      selector: "#v2-tour-tabs",
+      showControls: true,
+      showSkip: true,
+    },
+    {
+      icon: null,
+      title: "The boards rail",
+      content: multi
+        ? "Each icon opens a side panel: Sales Market for indication-level competition, Competitive Intelligence for the alert feed on rivals, BD Market for the sealed-bid auctions, Clinical Sites for your capacity. You'll see whichever ones this game enables."
+        : "Each icon opens a side panel. AI Hints lets you buy an agent's recommended selection — it shows what it would fund, but actioning it is up to you. The rest cover whichever features this game enables.",
+      side: "left",
+      selector: "#v2-tour-rail",
+      showControls: true,
+      showSkip: true,
+    },
+    ...(multi
+      ? [
+          {
+            icon: null,
+            title: "Live leaderboard",
+            content:
+              "Standings update every year, ranked by Cumulative Net Cash Flow. Open this to see every competitor; the dashboard keeps your rank and the nearest rival in view. This is the scoreboard that decides the game.",
+            side: "left" as const,
+            selector: "#v2-tour-leaderboard",
+            showControls: true,
+            showSkip: true,
+          },
+        ]
+      : []),
+    {
+      icon: null,
+      title: "Focus view",
+      content:
+        "Short on screen height? Focus view collapses the dashboard into one row and hands the rest of the viewport to the table. The charts shrink to a sparkline strip rather than disappearing, and this tour works the same either way.",
+      side: "bottom",
+      selector: "#v2-tour-focus",
+      showControls: true,
+      showSkip: true,
+    },
+    {
+      icon: null,
+      title: "Advancing the year",
+      content: multi
+        ? "Next Year commits your decisions and plays the year out, waiting while the agents decide. Commit more than your available capital and you go bankrupt: the remaining years play out without you. Start Over abandons this game for a fresh one."
+        : "Next Year commits your decisions and plays the year out. Commit more than your available capital and you go bankrupt. Start Over abandons this game for a fresh one.",
+      // Top-right corner of the screen: the card has to hang left of the
+      // button, or the overlay clips it off the edge.
+      side: "bottom-right",
+      selector: "#v2-tour-controls",
+      showControls: true,
+      showSkip: true,
+    },
+    {
+      icon: null,
+      title: "You're ready",
+      content: multi
+        ? "That's the whole screen. Fund well, watch what your rivals launch, and try to finish top of the leaderboard. Good luck!"
+        : "That's the whole screen. Fund well, keep an eye on your capital, and see how high you can drive your eNPV. Good luck!",
+      side: "right",
+      showControls: true,
+      showSkip: false,
+    },
+  ];
+  return script.map((step) => ({ ...SPOTLIGHT, ...step }));
+};
 
 const steps: Tour[] = [
+  { tour: "gameV2Multi", steps: v2GameSteps("multi") },
+  { tour: "gameV2Single", steps: v2GameSteps("single") },
   {
     tour: "startScreen",
     steps: [
@@ -167,7 +327,7 @@ const steps: Tour[] = [
         icon: null,
         title: "End of Game",
         content:
-          "Well done for completing your first game! Here you can find a summary of your portfolio throughout your tenure, including how you did compared to our AI agents. Our agents have been trained to optimise eNPV. Did you beat either of them?",
+          "Well done for completing your first game! Here you can find a summary of your portfolio throughout your tenure, including how you did compared to our AI agent. Our agent optimises eNPV. Did you beat it?",
         side: "right",
         showControls: true,
         showSkip: true,
@@ -176,7 +336,7 @@ const steps: Tour[] = [
         icon: null,
         title: "Leaderboard",
         content:
-          "You get one chance per level to make it onto this eNPV leaderboard - so give it your best shot! You can repeat your games afterwards, but they won't count towards your final score. You are judged against other users and AI agents on the average eNPV of your portfolio throughout the whole game. Knapsack optimises a single year at a time, whereas Pyxie makes a strategy for the future. Which one performs better?",
+          "You get one chance per level to make it onto this eNPV leaderboard - so give it your best shot! You can repeat your games afterwards, but they won't count towards your final score. You are judged against other users and our AI agent on the average eNPV of your portfolio throughout the whole game. The Knapsack agent optimises a single year at a time - can you plan further ahead and beat it?",
         side: "right",
         showControls: true,
         showSkip: true,

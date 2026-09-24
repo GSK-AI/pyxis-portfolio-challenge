@@ -9,9 +9,13 @@ import numpy as np
 import upath
 
 from pyxis_portfolio_challenge.config import (
+    ApprovalPhaseConfig,
+    ClinicalSitesConfig,
     DistributionalPtrsConfig,
     InterimTrialObservationsConfig,
     InvestmentLevelsConfig,
+    MarketingConfig,
+    PtrsReadingsConfig,
     TAExperienceConfig,
     UncertainPtrsConfig,
 )
@@ -31,10 +35,7 @@ from pyxis_portfolio_challenge.environment.reward import (
 )
 from pyxis_portfolio_challenge.game.asset import AssetState
 from pyxis_portfolio_challenge.game.asset_generators import JSONAssetGenerator
-from pyxis_portfolio_challenge.game.constants import (
-    LEVELS,
-    InvestmentLevel,
-)
+from pyxis_portfolio_challenge.game.constants import InvestmentLevel
 from pyxis_portfolio_challenge.game.game_state import GameState
 from pyxis_portfolio_challenge.game.trial import TrialPhase, TrialState
 
@@ -65,8 +66,13 @@ class InvestmentGameEnv(gym.Env):
         investment_levels_config: Optional[InvestmentLevelsConfig],
         interim_trial_observations_config: Optional[InterimTrialObservationsConfig],
         rd_capacity_config,
-        metrics: list[EvaluationMetric] = None,
-        initial_game_state: Optional[GameState] = None,
+        drop_action_config,
+        marketing_config: MarketingConfig,
+        clinical_sites_config: ClinicalSitesConfig,
+        ptrs_readings_config: PtrsReadingsConfig,
+        approval_phase_config: ApprovalPhaseConfig,
+        metrics: list[EvaluationMetric],
+        initial_game_state: Optional[GameState],
     ):
         """
         Initialise Gym environment for the investment game.
@@ -126,6 +132,20 @@ class InvestmentGameEnv(gym.Env):
             Configuration for interim trial observations.
         rd_capacity_config:
             Configuration for R&D capacity constraint feature.
+        drop_action_config:
+            Configuration for the standalone drop action feature.
+        marketing_config: MarketingConfig
+            Configuration for the marketing feature. Multi-agent-only; must be
+            passed disabled to the single-agent env (enabling it raises).
+        clinical_sites_config: ClinicalSitesConfig
+            Configuration for the clinical sites feature. Multi-agent-only; must
+            be passed disabled to the single-agent env (enabling it raises).
+        ptrs_readings_config: PtrsReadingsConfig
+            Configuration for the PTRS readings feature. Multi-agent-only; must
+            be passed disabled to the single-agent env (enabling it raises).
+        approval_phase_config: ApprovalPhaseConfig
+            Configuration for the approval phase feature. Multi-agent-only; must
+            be passed disabled to the single-agent env (enabling it raises).
 
         """
         self.equilibrium_num_assets = equilibrium_num_assets
@@ -148,7 +168,41 @@ class InvestmentGameEnv(gym.Env):
         self.investment_levels_config = investment_levels_config
         self.interim_trial_observations_config = interim_trial_observations_config
         self.rd_capacity_config = rd_capacity_config
+        self.drop_action_config = drop_action_config
         self.distributional_ptrs_config = distributional_ptrs_config
+        self.marketing_config = marketing_config
+        self.clinical_sites_config = clinical_sites_config
+        self.ptrs_readings_config = ptrs_readings_config
+        self.approval_phase_config = approval_phase_config
+
+        # The single-agent env does not implement these multi-agent-only features.
+        # They must be passed (as disabled configs) but never enabled here — a
+        # disabled config keeps behaviour off; an enabled one is a config error.
+        unsupported_enabled = [
+            name
+            for name, cfg in (
+                ("marketing", self.marketing_config),
+                ("clinical_sites", self.clinical_sites_config),
+                ("ptrs_readings", self.ptrs_readings_config),
+                ("approval_phase", self.approval_phase_config),
+            )
+            if cfg.enabled
+        ]
+        if unsupported_enabled:
+            raise ValueError(
+                "The single-agent InvestmentGameEnv does not support the "
+                f"multi-agent-only feature(s): {', '.join(unsupported_enabled)}. "
+                "Disable them in the config to use the single-agent env."
+            )
+
+        if (
+            self.investment_levels_config.enabled
+            and self.drop_action_config.enabled
+        ):
+            raise ValueError(
+                "investment_levels and drop_action are mutually exclusive "
+                "— enable at most one."
+            )
 
         # Initialise now but will be overwritten in reset()
         if initial_game_state is not None:
@@ -163,7 +217,7 @@ class InvestmentGameEnv(gym.Env):
                 asset_arrival_sensitivity_below=asset_arrival_sensitivity_below,
                 asset_arrival_sensitivity_above=asset_arrival_sensitivity_above,
                 reinvestment_percentage=reinvestment_percentage,
-                global_seed=42,
+                seed=42,
                 assets_dir=assets_dir,
                 ta_experience_config=ta_experience_config,
                 uncertain_ptrs_config=uncertain_ptrs_config,
@@ -171,6 +225,11 @@ class InvestmentGameEnv(gym.Env):
                 interim_trial_observations_config=interim_trial_observations_config,  # noqa: E501
                 distributional_ptrs_config=distributional_ptrs_config,
                 rd_capacity_config=rd_capacity_config,
+                drop_action_config=drop_action_config,
+                marketing_config=marketing_config,
+                clinical_sites_config=clinical_sites_config,
+                ptrs_readings_config=ptrs_readings_config,
+                approval_phase_config=approval_phase_config,
                 indication_spread=4.0,
                 indication_drift_speed=1.0,
                 trial_cost_multiplier=1.0,
@@ -212,15 +271,19 @@ class InvestmentGameEnv(gym.Env):
         """
         logger.debug("Setting up gym observation spaces. .")
 
-        # Use MultiDiscrete for investment levels, otherwise MultiBinary
+        # Action space: MultiDiscrete(6) for investment levels, MultiDiscrete(3)
+        # for drop action, or MultiBinary for the default binary case.
         if (
-            self.investment_levels_config is not None
-            and self.investment_levels_config.enabled
+            self.investment_levels_config.enabled
         ):
-            # 4 choices per asset: NONE=0, MINIMAL=1, STANDARD=2, ACCELERATED=3
             self.action_space = gym.spaces.MultiDiscrete(
                 [len(InvestmentLevel)] * self.max_num_assets
             )
+        elif (
+            self.drop_action_config.enabled
+        ):
+            # Ternary: 0=do nothing, 1=invest, 2=drop
+            self.action_space = gym.spaces.MultiDiscrete([3] * self.max_num_assets)
         else:
             self.action_space = gym.spaces.MultiBinary(self.max_num_assets)
 
@@ -665,6 +728,8 @@ class InvestmentGameEnv(gym.Env):
         For MultiBinary (legacy): each asset has [can_not_invest, can_invest]
         For MultiDiscrete (investment levels): each asset has
             [can_NONE, can_MINIMAL, can_STANDARD, can_ACCELERATED, can_STOP]
+        For MultiDiscrete (drop action): each asset has
+            [can_do_nothing, can_invest, can_drop]
 
         As in _get_obs, assets are sorted according to self._asset_id_order.
 
@@ -675,12 +740,16 @@ class InvestmentGameEnv(gym.Env):
 
         """
         use_investment_levels = (
-            self.investment_levels_config is not None
-            and self.investment_levels_config.enabled
+            self.investment_levels_config.enabled
+        )
+        use_drop_action = (
+            self.drop_action_config.enabled
         )
 
         if use_investment_levels:
             return self._action_masks_investment_levels()
+        elif use_drop_action:
+            return self._action_masks_ternary()
         return self._action_masks_binary()
 
     def _action_masks_binary(self) -> list[list[bool]]:
@@ -711,6 +780,46 @@ class InvestmentGameEnv(gym.Env):
                     action_mask.append([True, False])
 
         return action_mask
+
+    def _action_masks_ternary(self) -> list[list[bool]]:
+        """
+        Return action masks for MultiDiscrete([3]*N) drop-action space.
+
+        Per asset: [can_do_nothing, can_invest, can_drop].
+        Padding slots block invest and drop. When mask_first_order_assets is set,
+        both invest and drop are masked out when their cost cannot be covered by
+        the cash on hand — dropping charges a fee, so it is not always free.
+        """
+        action_mask = []
+        available_cash = self.game_state.cash
+        for asset_id in self._asset_id_order:
+            if asset_id == 0:
+                action_mask.append([True, False, False])
+                continue
+
+            asset = self.game_state.assets[asset_id]
+            can_drop = True
+            if self.mask_first_order_assets:
+                if available_cash - self._drop_fee(asset) < 0:
+                    can_drop = False
+
+            if asset.state == AssetState.Idle:
+                can_invest = True
+                if self.mask_first_order_assets:
+                    if available_cash - asset.cost_to_invest_this_step < 0:
+                        can_invest = False
+                if self.mask_negative_enpv_assets and asset.enpv < 0:
+                    can_invest = False
+                action_mask.append([True, can_invest, can_drop])
+            else:
+                action_mask.append([True, False, can_drop])
+        return action_mask
+
+    def _drop_fee(self, asset) -> float:
+        """Fee charged for dropping this asset, or 0.0 if drops are free."""
+        if self.drop_action_config is None or asset.trial is None:
+            return 0.0
+        return self.drop_action_config.calculate_drop_fee(asset.trial.cost_remaining)
 
     def _action_masks_investment_levels(self) -> list[list[bool]]:
         """
@@ -795,6 +904,27 @@ class InvestmentGameEnv(gym.Env):
         )
         self._asset_id_order = padded_asset_ids
 
+    def extend_horizon_for_warmup(self, extra_steps: int) -> None:
+        """
+        Temporarily extend the game-state horizon by ``extra_steps``.
+
+        Lets a warmup pre-roll run without tripping ``time >= horizon``
+        termination, however long the warmup. Paired with
+        :meth:`rebase_clock_after_warmup`, which rebases the clock to 0 and
+        restores the configured horizon so warmup and horizon are additive.
+        """
+        self.game_state.horizon = self.game_state.horizon + extra_steps
+
+    def rebase_clock_after_warmup(self) -> None:
+        """
+        Rebase the clock to 0 and restore the configured horizon.
+
+        Treats the warmup steps as a pre-roll: the agent then plays a full
+        ``horizon`` starting at time 0 (see :meth:`extend_horizon_for_warmup`).
+        """
+        self.game_state.rebase_time_to_zero()
+        self.game_state.horizon = self.horizon
+
     def reset(
         self, seed: Optional[int] = None, options: Optional[dict] = None
     ) -> tuple[Union[dict[str, Union[np.ndarray, tuple]], np.ndarray], dict]:
@@ -842,7 +972,7 @@ class InvestmentGameEnv(gym.Env):
                     asset_arrival_sensitivity_below=self.asset_arrival_sensitivity_below,
                     asset_arrival_sensitivity_above=self.asset_arrival_sensitivity_above,
                     reinvestment_percentage=self.reinvestment_percentage,
-                    global_seed=seed,
+                    seed=seed,
                     **{
                         "assets_dir": self.assets_dir,
                         "ta_experience_config": self.ta_experience_config,
@@ -853,6 +983,11 @@ class InvestmentGameEnv(gym.Env):
                         ),
                         "distributional_ptrs_config": self.distributional_ptrs_config,
                         "rd_capacity_config": self.rd_capacity_config,
+                        "drop_action_config": self.drop_action_config,
+                        "marketing_config": self.marketing_config,
+                        "clinical_sites_config": self.clinical_sites_config,
+                        "ptrs_readings_config": self.ptrs_readings_config,
+                        "approval_phase_config": self.approval_phase_config,
                         "indication_spread": 4.0,
                         "indication_drift_speed": 1.0,
                         "trial_cost_multiplier": 1.0,
@@ -865,7 +1000,9 @@ class InvestmentGameEnv(gym.Env):
         info = self._get_info()
 
         self._episode_fingerprint = self.game_state.content_fingerprint(seed)
-        ctx = MetricsContext(self.game_state, reward=0.0, episode_id=self._episode_fingerprint)
+        ctx = MetricsContext(
+            self.game_state, reward=0.0, episode_id=self._episode_fingerprint
+        )
         collect_metrics(
             collection_fn="on_episode_begin", context=ctx, metrics=self.metrics
         )
@@ -888,6 +1025,11 @@ class InvestmentGameEnv(gym.Env):
             Action 2 = STANDARD
             Action 3 = ACCELERATED
 
+        For MultiDiscrete (drop action):
+            Action 0 = do nothing (exclude from dictionary)
+            Action 1 = "invest" (standard investment)
+            Action 2 = "drop" (remove asset from portfolio)
+
         As in _get_obs, assets are sorted according to self._asset_id_order.
 
         Parameters
@@ -902,8 +1044,10 @@ class InvestmentGameEnv(gym.Env):
 
         """
         use_investment_levels = (
-            self.investment_levels_config is not None
-            and self.investment_levels_config.enabled
+            self.investment_levels_config.enabled
+        )
+        use_drop_action = (
+            self.drop_action_config.enabled
         )
 
         investment_decisions = {}
@@ -912,12 +1056,15 @@ class InvestmentGameEnv(gym.Env):
                 continue
 
             if use_investment_levels:
-                # MultiDiscrete: map action to InvestmentLevel
                 level = InvestmentLevel.from_int(int(act))
                 if level != InvestmentLevel.NONE:
                     investment_decisions[asset_id] = level
+            elif use_drop_action:
+                if act == 1:
+                    investment_decisions[asset_id] = "invest"
+                elif act == 2:
+                    investment_decisions[asset_id] = "drop"
             else:
-                # MultiBinary: backward compatible
                 if act == 1:
                     investment_decisions[asset_id] = "invest"
 
@@ -1007,8 +1154,10 @@ class InvestmentGameEnv(gym.Env):
         pre_step_game_state = self.game_state
         investment_decisions = self._action_to_investment_decision(action)
 
+        episode_id = getattr(self, "_episode_fingerprint", None)
         metrics_ctx = MetricsContext(
-            pre_step_game_state, reward=0.0, investment_decisions=investment_decisions
+            pre_step_game_state, reward=0.0, investment_decisions=investment_decisions,
+            episode_id=episode_id,
         )
         collect_metrics(
             collection_fn="on_step_begin", context=metrics_ctx, metrics=self.metrics
@@ -1035,7 +1184,8 @@ class InvestmentGameEnv(gym.Env):
         )
 
         metrics_ctx = MetricsContext(
-            self.game_state, reward=reward, investment_decisions=investment_decisions
+            self.game_state, reward=reward, investment_decisions=investment_decisions,
+            episode_id=episode_id,
         )
         collect_metrics(
             collection_fn="on_step_end", context=metrics_ctx, metrics=self.metrics
@@ -1211,123 +1361,3 @@ class InvestmentGameEnv(gym.Env):
 
         result["assets"] = tuple(result["assets"])
         return result
-
-
-class LevelsInvestmentGameEnv(InvestmentGameEnv):
-    """Level-specific InvestmentGameEnv."""
-
-    def __init__(
-        self,
-        level_idx: int,
-        assets_dir: upath.UPath,
-        reward_fn: Reward,
-        shuffle_order: bool,
-        max_num_assets: int,
-        flatten_obs: bool,
-        distributional_ptrs_config: Optional[DistributionalPtrsConfig],
-        ta_experience_config: Optional[TAExperienceConfig],
-        uncertain_ptrs_config: Optional[UncertainPtrsConfig],
-        investment_levels_config: Optional[InvestmentLevelsConfig],
-        interim_trial_observations_config: Optional[InterimTrialObservationsConfig],
-        rd_capacity_config,
-    ) -> None:
-        """
-        Initialise level-specific Gym environment for the investment game.
-
-        Args:
-            level_idx (int): The index of the level to initialise.
-            assets_dir (upath.UPath): Path to the directory containing asset data.
-            reward_fn (Reward, optional): The reward function to use.  Defaults
-             to LegacyStaticNPVReward().
-            shuffle_order (bool, optional): Whether to shuffle the order of
-             assets. Defaults to True.
-            max_num_assets (int, optional): The maximum number of assets.
-             Defaults to MAX_NUM_ASSETS.
-            flatten_obs (bool, optional): Whether to return flattened observations.
-             Defaults to False.
-            uncertain_ptrs_config (Optional[UncertainPtrsConfig]): Configuration
-             for uncertain PTRS feature. If None, feature disabled.
-            investment_levels_config (Optional[InvestmentLevelsConfig]): Configuration
-             for investment levels feature. If None, feature disabled.
-            distributional_ptrs_config: Configuration
-             for distributional PTRS feature. If None, disabled.
-            ta_experience_config: Configuration
-             for TA experience feature. If None, disabled.
-            interim_trial_observations_config:
-             Configuration for interim trial observations.
-            rd_capacity_config: Configuration for R&D capacity constraint feature.
-
-        Raises:
-            ValueError: If the provided level_idx is not valid.
-
-        """
-        level_info = LEVELS[level_idx]
-        num_assets = level_info["num_assets"]
-        horizon = level_info["horizon"]
-        starting_cash = level_info["starting_cash"]
-        equilibrium_num_assets = level_info.get("equilibrium_num_assets", num_assets)
-        asset_arrival_sensitivity_below = level_info.get(
-            "asset_arrival_sensitivity_below", 1.5
-        )
-        asset_arrival_sensitivity_above = level_info.get(
-            "asset_arrival_sensitivity_above", 3.0
-        )
-        super().__init__(
-            equilibrium_num_assets=equilibrium_num_assets,
-            max_num_assets=max_num_assets,
-            asset_arrival_sensitivity_below=asset_arrival_sensitivity_below,
-            asset_arrival_sensitivity_above=asset_arrival_sensitivity_above,
-            starting_cash=starting_cash,
-            horizon=horizon,
-            assets_dir=assets_dir,
-            reinvestment_percentage=1.0,
-            reward_fn=reward_fn,
-            shuffle_order=shuffle_order,
-            mask_first_order_assets=False,
-            mask_negative_enpv_assets=False,
-            flatten_obs=flatten_obs,
-            distributional_ptrs_config=distributional_ptrs_config,
-            ta_experience_config=ta_experience_config,
-            uncertain_ptrs_config=uncertain_ptrs_config,
-            investment_levels_config=investment_levels_config,
-            interim_trial_observations_config=interim_trial_observations_config,
-            rd_capacity_config=rd_capacity_config,
-        )
-        self.global_seed = level_info["global_seed"]
-
-    def reset(
-        self, seed: Optional[int] = None, options: Optional[dict] = None
-    ) -> tuple[Union[dict[str, Union[np.ndarray, tuple]], np.ndarray], dict]:
-        """
-        Reset the environment and return the initial observation and info.
-
-        This will always deterministically reset to the specified level.
-        """
-        super().reset(seed=seed)
-
-        self.game_state = GameState.initialise_new_game(
-            asset_generator_cls=JSONAssetGenerator,
-            num_assets=self.equilibrium_num_assets,
-            max_num_assets=self.max_num_assets,
-            cash=self.starting_cash,
-            horizon=self.horizon,
-            asset_arrival_sensitivity_below=self.asset_arrival_sensitivity_below,
-            asset_arrival_sensitivity_above=self.asset_arrival_sensitivity_above,
-            reinvestment_percentage=self.reinvestment_percentage,
-            global_seed=self.global_seed,
-            assets_dir=self.assets_dir,
-            ta_experience_config=self.ta_experience_config,
-            uncertain_ptrs_config=self.uncertain_ptrs_config,
-            investment_levels_config=self.investment_levels_config,
-            interim_trial_observations_config=self.interim_trial_observations_config,
-            distributional_ptrs_config=self.distributional_ptrs_config,
-            rd_capacity_config=self.rd_capacity_config,
-            indication_spread=1.5,
-            indication_drift_speed=1.0,
-            trial_cost_multiplier=1.0,
-        )
-        self._create_shuffled_asset_order()
-        observation = self._get_obs()
-        info = self._get_info()
-
-        return observation, info

@@ -5,12 +5,21 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from pyxis_portfolio_challenge.game.asset_generators import JSONAssetGenerator
+from pyxis_portfolio_challenge.game.constants import InvestmentLevel
 from app.app import (
+    convert_action_to_investment_level,
     get_agents,
     lifespan,
     start_game,
     step_game,
 )
+
+
+def test_convert_action_to_investment_level_maps_drop():
+    """The 'drop' action must round-trip to InvestmentLevel.DROP (not None)."""
+    assert convert_action_to_investment_level("drop") == InvestmentLevel.DROP
+    assert convert_action_to_investment_level("invest") == InvestmentLevel.STANDARD
+    assert convert_action_to_investment_level(None) is None
 
 # create new FastAPI app instance without auth middleware for testing
 app = FastAPI(lifespan=lifespan)
@@ -46,7 +55,6 @@ def test_get_agents():
     data = response.json()
     assert data == [
         {"name": "Knapsack", "cost": 500000.0},
-        {"name": "Pyxie", "cost": 5000000.0},
     ]
 
 
@@ -74,7 +82,7 @@ async def test_start_game(
         assert call_kwargs["max_num_assets"] == start_game_request.max_num_assets
         assert call_kwargs["cash"] == start_game_request.starting_cash
         assert call_kwargs["horizon"] == start_game_request.horizon
-        assert call_kwargs["global_seed"] == start_game_request.global_seed
+        assert call_kwargs["seed"] == start_game_request.global_seed
         assert (
             "game_state:" + str(mock_game_state.id)
             in redis_cache_with_mock_client.client.store
@@ -86,10 +94,6 @@ async def test_start_game(
         )
         assert (
             "user:mudid:agent:Knapsack:hints_used"
-            in redis_cache_with_mock_client.client.store
-        )
-        assert (
-            "user:mudid:agent:Pyxie:hints_used"
             in redis_cache_with_mock_client.client.store
         )
         assert response.json()["id"] == str(mock_game_state.id)

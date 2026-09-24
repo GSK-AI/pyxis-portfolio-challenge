@@ -61,6 +61,7 @@ def mock_game_state():
         assets={},
         failed_assets={},
         expired_assets={},
+        dropped_assets={},
         realised_costs=[],
         realised_revenues=[],
         running_enpv=[],

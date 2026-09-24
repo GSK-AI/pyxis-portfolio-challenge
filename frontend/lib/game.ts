@@ -1,8 +1,4 @@
-import {
-  AssetSchemaType,
-  GameStepSchemaType,
-  TrialPhaseType,
-} from "./definitionsGameZ";
+import { AssetSchemaType, GameStepSchemaType } from "./definitionsGameZ";
 
 export function extractAssets(state: GameStepSchemaType): AssetSchemaType[] {
   if (!state) return [];
@@ -22,7 +18,7 @@ export function extractAssets(state: GameStepSchemaType): AssetSchemaType[] {
 export function extractAllAssets(state: GameStepSchemaType): AssetSchemaType[] {
   if (!state) return [];
 
-  const { assets, expired_assets } = state;
+  const { assets, expired_assets, dropped_assets } = state;
 
   const returnAssets: AssetSchemaType[] = [];
 
@@ -40,31 +36,11 @@ export function extractAllAssets(state: GameStepSchemaType): AssetSchemaType[] {
     });
   });
 
-  return returnAssets;
-}
-
-export function assetActiveTrial(
-  asset: AssetSchemaType,
-): TrialPhaseType | undefined {
-  const { pending_trial_phase } = asset;
-  return asset.trials[pending_trial_phase as keyof typeof asset.trials];
-}
-
-export function extractAssetTrials(asset: AssetSchemaType): TrialPhaseType[] {
-  if (!asset) return [];
-
-  const { trials } = asset;
-
-  const returnAssets: TrialPhaseType[] = [];
-  Object.keys(trials).forEach((_: string) => {
-    const trial = trials[_ as keyof typeof trials];
-    if (trial) {
-      returnAssets.push({
-        cost_remaining: trial.cost_remaining ?? 0,
-        time_remaining: trial.time_remaining ?? 0,
-        ptrs: trial.ptrs ?? 0,
-      });
-    }
+  // Add voluntarily dropped assets (drop_action feature)
+  Object.keys(dropped_assets ?? {}).forEach((_: string) => {
+    returnAssets.push({
+      ...dropped_assets[_],
+    });
   });
 
   return returnAssets;

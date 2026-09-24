@@ -29,7 +29,7 @@ class MetricsContext:
 
     @property
     def episode_key(self) -> str:
-        """Returns a prefixed key indicating the type and value of the episode identifier."""
+        """Return a prefixed key for the episode identifier."""
         if self.episode_id is not None:
             return f"episode_id_{self.episode_id}"
         return f"game_state_id_{self.game_state.id}"
@@ -133,8 +133,10 @@ class PerEvaluationCumulativeReward(PerEvaluationMetric):
             }
         sorted_combined = sorted(combined)
         n = len(sorted_combined)
-        q25 = statistics.median(sorted_combined[: n // 2]) if n >= 2 else sorted_combined[0]
-        q75 = statistics.median(sorted_combined[(n + 1) // 2 :]) if n >= 2 else sorted_combined[0]
+        half = n // 2
+        fallback = sorted_combined[0]
+        q25 = statistics.median(sorted_combined[:half]) if n >= 2 else fallback
+        q75 = statistics.median(sorted_combined[(n + 1) // 2 :]) if n >= 2 else fallback
 
         return {
             self.__class__.__name__: {
@@ -217,6 +219,40 @@ class PerEvaluationBankruptcyRate(PerEvaluationMetric):
         return {
             self.__class__.__name__: {
                 "bankruptcy_rate": sum(combined) / len(combined),
+            }
+        }
+
+
+class PerEpisodeBankruptcyStep(PerEpisodeMetric):
+    """Records the time step at which bankruptcy occurs for each episode."""
+
+    def __init__(self) -> None:
+        """Initialize PerEpisodeBankruptcyStep."""
+        self.history: dict[str, int | None] = {}
+
+    def on_evaluation_begin(self, context: MetricsContext) -> None:
+        """Called once before a multi-episode evaluation run starts."""
+        self.history.clear()
+
+    def on_episode_begin(self, context: MetricsContext) -> None:
+        """Called once before an episode run starts."""
+        key = f"episode_id_{str(context.game_state.id)}"
+        self.history[key] = None
+
+    def on_episode_end(self, context: MetricsContext) -> None:
+        """Called once after a multi-episode evaluation run ends."""
+        key = f"episode_id_{str(context.game_state.id)}"
+        if context.game_state.game_ended and context.game_state.bankrupt:
+            self.history[key] = context.game_state.time
+
+    def report(self) -> dict[str, Any]:
+        """Returns the collected metrics in a dictionary format."""
+        steps = [s for s in self.history.values() if s is not None]
+        return {
+            self.__class__.__name__: {
+                "bankruptcy_steps": steps,
+                "count": len(steps),
+                "total_episodes": len(self.history),
             }
         }
 
@@ -870,6 +906,49 @@ class PerStepFractionOfPossibleInvestmentsPosEnpv(PerStepMetric):
             fraction = num_investments_made / len(assets_available_for_inv)
         key = context.episode_key
         self.history[key] = self.history[key] + [fraction]
+
+    def report(self) -> dict:
+        """Returns the collected metrics in a dictionary format."""
+        return {self.__class__.__name__: self.history}
+
+
+class PerStepNumSkippedPosEnpvAssets(PerStepMetric):
+    """
+    Count of positive-eNPV idle assets the agent chose not to invest in each step.
+
+    Fires at on_step_begin so it only counts assets the agent saw and skipped,
+    not assets that returned to Idle mid-step from a completed trial phase.
+    """
+
+    def __init__(self) -> None:
+        """Initialize PerStepNumSkippedPosEnpvAssets."""
+        self.history: dict[str, list[int]] = {}
+
+    def on_evaluation_begin(self, context: MetricsContext) -> None:
+        """Called once before a multi-episode evaluation run starts."""
+        self.history.clear()
+
+    def on_episode_begin(self, context: MetricsContext) -> None:
+        """Called once before an episode run starts."""
+        key = f"episode_id_{str(context.game_state.id)}"
+        assert key not in self.history
+        self.history[key] = []
+
+    def on_step_begin(self, context: MetricsContext) -> None:
+        """Called at the start of every step."""
+        pos_enpv_idle = [
+            asset_id
+            for asset_id, asset in context.game_state.assets.items()
+            if asset.state == AssetState.Idle and asset.enpv > 0
+        ]
+        investment_decisions = context.investment_decisions
+        skipped = sum(
+            1
+            for asset_id in pos_enpv_idle
+            if investment_decisions.get(asset_id) != "invest"
+        )
+        key = f"episode_id_{str(context.game_state.id)}"
+        self.history[key] = self.history[key] + [skipped]
 
     def report(self) -> dict:
         """Returns the collected metrics in a dictionary format."""

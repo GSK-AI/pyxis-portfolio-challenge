@@ -18,7 +18,7 @@ from pyxis_portfolio_challenge.game.constants import (
     DISCOUNT_RATE,
     InvestmentLevel,
 )
-from pyxis_portfolio_challenge.game.trial import Trial, TrialState
+from pyxis_portfolio_challenge.game.trial import Trial, TrialPhase, TrialState
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +38,7 @@ class AssetState(str, Enum):
     OnMarket = ("On Market", 2)
     Failed = ("Failed", 3)
     Expired = ("Expired", 4)
+    Dropped = ("Dropped", 5)
 
     @classmethod
     def from_int(cls, input_int):
@@ -124,7 +125,8 @@ class DrugAsset(BaseModel):
     indication: int = 0
     type: Literal["internal", "BD"]
     description: str
-    max_revenue: float  # M
+    max_revenue: float  # M (scaled by dynamic scope at arrival)
+    raw_max_revenue: float  # M before dynamic scope scaling; used for BE floor norm
     time_until_max_revenue: int  # H
     time_until_patent_expiry: int  # T
     trial: Trial
@@ -238,6 +240,17 @@ class DrugAsset(BaseModel):
         # Multiply cash_flows by probabilities by discount_factors
         enpv = float(np.sum(cash_flows * probabilities * discount_factors))
         return enpv
+
+    def cash_enpv(self, reinvestment_percentage: float) -> float:
+        """Expected NPV under cash accounting: revenues scaled, costs at full."""
+        cash_flows = np.array(self._projected_cash_flows)
+        probabilities = np.array(self._projected_probs)
+        time_steps = np.arange(len(cash_flows))
+        discount_factors = 1 / ((1 + DISCOUNT_RATE) ** time_steps)
+        scaled = np.where(
+            cash_flows > 0, cash_flows * reinvestment_percentage, cash_flows
+        )
+        return float(np.sum(scaled * probabilities * discount_factors))
 
     @property
     def eroi(self) -> float:
@@ -391,6 +404,51 @@ class DrugAsset(BaseModel):
         """Check if interim observations are enabled for this asset's trial."""
         return self.trial._interim_observations_enabled
 
+    @property
+    def pending_trial_chain(self) -> list[Trial]:
+        """Ordered list of non-approval, non-terminal trials from current position."""
+        chain = []
+        t = self.trial
+        while t is not None:
+            terminal = (TrialState.PHASE_FAILED, TrialState.PHASE_SUCCESS)
+            if t.phase != TrialPhase.APPROVAL and t.state not in terminal:
+                chain.append(t)
+            t = t.next_trial_on_success
+        return chain
+
+    def apply_pending_readings(
+        self,
+        n: int,
+        sigma_base: float,
+        noise_multipliers: list[float],
+        rng,
+    ) -> None:
+        """Draw n readings for every pending trial, scaling noise by phase distance."""
+        chain = self.pending_trial_chain
+        if len(chain) > len(noise_multipliers):
+            raise ValueError(
+                f"pending_trial_chain length {len(chain)} exceeds "
+                f"noise_multipliers length {len(noise_multipliers)}"
+            )
+        for i, trial in enumerate(chain):
+            trial.draw_and_accumulate(sigma_base * noise_multipliers[i], n, rng)
+
+    def initialise_ptrs_readings(
+        self,
+        sigma_base: float,
+        noise_multipliers: list[float],
+        rng,
+    ) -> None:
+        """Seed each pending trial with one free reading at asset creation."""
+        chain = self.pending_trial_chain
+        if len(chain) > len(noise_multipliers):
+            raise ValueError(
+                f"pending_trial_chain length {len(chain)} exceeds "
+                f"noise_multipliers length {len(noise_multipliers)}"
+            )
+        for i, trial in enumerate(chain):
+            trial.draw_and_accumulate(sigma_base * noise_multipliers[i], 1, rng)
+
     def cost_this_step_with_modifier(self, cost_modifier: float) -> float:
         """Get the cost incurred this step with investment level modifier."""
         if self.state == AssetState.InDevelopment:
@@ -477,6 +535,7 @@ class DrugAsset(BaseModel):
             type=self.type,
             description=self.description,
             max_revenue=self.max_revenue,
+            raw_max_revenue=self.raw_max_revenue,
             time_until_max_revenue=self.time_until_max_revenue,
             time_until_patent_expiry=self.time_until_patent_expiry,
             state=AssetState.Failed,
@@ -485,6 +544,40 @@ class DrugAsset(BaseModel):
             current_investment_level=InvestmentLevel.NONE,
         )
         return new_asset
+
+    def drop(self) -> "DrugAsset":
+        """
+        Drop this asset from the portfolio (agent decision, any state).
+
+        Distinct from Failed (trial outcome) — Dropped means the agent
+        deliberately removed the asset regardless of its development status.
+        Valid for Idle, InDevelopment, and OnMarket assets.
+        """
+        if self.state in (AssetState.Failed, AssetState.Expired, AssetState.Dropped):
+            raise ValueError(
+                f"Cannot drop asset {self.name} in terminal state {self.state}."
+            )
+        logger.debug(f"Dropping asset: {self.name} (was {self.state})")
+        return DrugAsset(
+            id=self.id,
+            name=self.name,
+            therapeutic_area=self.therapeutic_area,
+            indication=self.indication,
+            type=self.type,
+            description=self.description,
+            max_revenue=self.max_revenue,
+            raw_max_revenue=self.raw_max_revenue,
+            time_until_max_revenue=self.time_until_max_revenue,
+            time_until_patent_expiry=self.time_until_patent_expiry,
+            state=AssetState.Dropped,
+            time_on_market=0,
+            trial=(
+                self.trial.stop_trial()
+                if self.state == AssetState.InDevelopment
+                else self.trial
+            ),
+            current_investment_level=InvestmentLevel.NONE,
+        )
 
     def evolve(self) -> "DrugAsset":
         """Evolve the asset by one time step."""
@@ -516,6 +609,14 @@ class DrugAsset(BaseModel):
                     f"Final trial succeeded asset set to OnMarket: {self.name}"
                 )
                 new_state = AssetState.OnMarket
+                # Start on the market at time_on_market = 1 so the drug's first
+                # on-market step earns revenue. Revenue is collected (game_state
+                # Step B) before evolve (Step C) each step, so this value is what
+                # the first collection reads; leaving it at 0 makes
+                # revenue_formula(0) = 0 and wastes the first market step. This
+                # matches the eNPV projection in _get_future_events, which
+                # increments time_on_market before computing revenue.
+                new_time_on_market = 1
             elif new_trial.state == TrialState.IN_PROGRESS:
                 logger.debug(
                     f"Trial still in progress asset stays InDevelopment: {self.name}"
@@ -536,6 +637,7 @@ class DrugAsset(BaseModel):
             type=self.type,
             description=self.description,
             max_revenue=self.max_revenue,
+            raw_max_revenue=self.raw_max_revenue,
             time_until_max_revenue=self.time_until_max_revenue,
             time_until_patent_expiry=new_time_until_patent_expiry,
             state=new_state,
@@ -604,6 +706,9 @@ class DrugAsset(BaseModel):
                 )
                 new_state = AssetState.OnMarket
                 new_investment_level = InvestmentLevel.NONE
+                # See evolve(): start at time_on_market = 1 so the first
+                # on-market step earns revenue instead of revenue_formula(0) = 0.
+                new_time_on_market = 1
             elif new_trial.state == TrialState.IN_PROGRESS:
                 logger.debug(
                     f"Trial in progress, asset stays InDevelopment: {self.name}"
@@ -623,6 +728,7 @@ class DrugAsset(BaseModel):
             type=self.type,
             description=self.description,
             max_revenue=self.max_revenue,
+            raw_max_revenue=self.raw_max_revenue,
             time_until_max_revenue=self.time_until_max_revenue,
             time_until_patent_expiry=new_time_until_patent_expiry,
             state=new_state,

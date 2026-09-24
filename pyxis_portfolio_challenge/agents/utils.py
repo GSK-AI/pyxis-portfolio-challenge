@@ -11,6 +11,7 @@ from pyxis_portfolio_challenge.config import (
     InvestmentLevelsConfig,
     TAExperienceConfig,
     UncertainPtrsConfig,
+    config,
 )
 from pyxis_portfolio_challenge.environment.reward import LegacyStaticNPVReward
 from pyxis_portfolio_challenge.environment.training_gym import InvestmentGameEnv
@@ -93,6 +94,17 @@ _DISABLED_RD_CAPACITY = CapacityConfig(
     overage_scaling="linear",
 )
 
+# The single-agent InvestmentGameEnv cannot model the multi-agent-only features
+# (marketing, clinical sites, PTRS readings, approval phase) and raises if any is
+# enabled. This reasoning env only extracts investment decisions, so we feed it
+# disabled copies of the shipped configs — matching main's behaviour of ignoring
+# these features here. Copying the live config (rather than hand-building) keeps
+# every now-required field valid; the values are never read while disabled.
+_DISABLED_MARKETING = config.marketing.model_copy(update={"enabled": False})
+_DISABLED_CLINICAL_SITES = config.clinical_sites.model_copy(update={"enabled": False})
+_DISABLED_PTRS_READINGS = config.ptrs_readings.model_copy(update={"enabled": False})
+_DISABLED_APPROVAL_PHASE = config.approval_phase.model_copy(update={"enabled": False})
+
 
 def get_agent_investment_decisions(
     agent,
@@ -162,6 +174,15 @@ def get_agent_investment_decisions(
         interim_trial_observations_config=game_state._interim_trial_observations_config
         or _DISABLED_INTERIM_TRIAL_OBSERVATIONS,
         rd_capacity_config=game_state._rd_capacity_config or _DISABLED_RD_CAPACITY,
+        drop_action_config=game_state._drop_action_config,
+        # These four are multi-agent-only: the single-agent env rejects them when
+        # enabled, so force them disabled unconditionally (a competition game_state
+        # carries them enabled). This matches main, which ignored them here.
+        marketing_config=_DISABLED_MARKETING,
+        clinical_sites_config=_DISABLED_CLINICAL_SITES,
+        ptrs_readings_config=_DISABLED_PTRS_READINGS,
+        approval_phase_config=_DISABLED_APPROVAL_PHASE,
+        metrics=[],
     )
 
     # Set environment on agent

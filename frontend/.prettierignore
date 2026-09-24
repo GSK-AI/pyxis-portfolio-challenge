@@ -1,0 +1,6 @@
+# Generated — pnpm rewrites this, so formatting it just churns the diff.
+pnpm-lock.yaml
+
+# Build output
+.next
+coverage

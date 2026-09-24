@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import random
 import uuid
+from typing import TYPE_CHECKING
 
 from pyxis_portfolio_challenge.game.asset import AssetState, DrugAsset
 from pyxis_portfolio_challenge.game.game_state import GameState
@@ -14,72 +15,90 @@ from pyxis_portfolio_challenge.game.shared_market_state import (
     indication_key,
 )
 
+if TYPE_CHECKING:
+    from pyxis_portfolio_challenge.config import MarketingConfig
+
 logger = logging.getLogger(__name__)
 
 
-def bd_bid_price(
-    enpv: float,
-    level: int,
-    break_even_level: int,
-    reinvestment_percentage: float,
-) -> float:
-    """
-    Compute the cash price for a BD bid level.
-
-    Scaled so that ``break_even_level`` pays exactly
-    ``enpv * reinvestment_percentage`` (the agent's expected cash value).
-    Levels above break-even overpay for strategic gain.
-    """
-    return (level / break_even_level) * enpv * reinvestment_percentage
-
-
 def resolve_bd_bid(
-    bids: dict[str, int],
+    bids: dict[str, float],
     asset: DrugAsset,
-    num_levels: int,
-    break_even_level: int,
-    reinvestment_percentage: float,
     rng: random.Random,
 ) -> tuple[str | None, float]:
     """
-    Resolve a single BD asset auction. Highest bid wins (first-price sealed-bid).
+    Resolve a single BD asset auction (first-price sealed-bid).
+
+    Highest cash bid wins and the winner pays their own bid.
+
+    Bids are raw cash amounts (GBP). There is no affordability check here — a
+    winner whose bid exceeds their cash simply pays it and may go bankrupt.
+    The shared asset's ``cash_enpv`` is still exposed in the observation as
+    value guidance, but it no longer parameterises pricing.
 
     Args:
-        bids: Dict mapping agent_id -> bid level (0=pass, 1-N = fraction of eNPV).
+        bids: Dict mapping agent_id -> cash bid in GBP (``<= 0`` = pass).
         asset: The BD asset being auctioned.
-        num_levels: Total number of bid levels (e.g., 11 for 0-10).
-        break_even_level: Level at which price = eNPV * reinvestment_percentage.
-        reinvestment_percentage: Fraction of revenue captured as cash.
         rng: Random number generator for tie-breaking.
 
     Returns:
         Tuple of (winner_agent_id, price_paid) or (None, 0.0) if no bids.
 
     """
-    enpv = asset.enpv
-    active_bids: list[tuple[str, int, float]] = []
-
-    for agent_id, level in bids.items():
-        if level <= 0:
-            continue
-        price = bd_bid_price(enpv, level, break_even_level, reinvestment_percentage)
-        active_bids.append((agent_id, level, price))
+    active_bids: list[tuple[str, float]] = [
+        (agent_id, float(bid)) for agent_id, bid in bids.items() if bid > 0
+    ]
 
     if not active_bids:
         return None, 0.0
 
-    # Sort by level (highest first)
+    # Highest cash bid wins (ties broken at random)
     active_bids.sort(key=lambda x: x[1], reverse=True)
-    highest_level = active_bids[0][1]
-    top_bidders = [b for b in active_bids if b[1] == highest_level]
+    highest_bid = active_bids[0][1]
+    top_bidders = [b for b in active_bids if b[1] == highest_bid]
 
     if len(top_bidders) > 1:
         rng.shuffle(top_bidders)
 
-    winner_agent, _, winner_price = top_bidders[0]
+    winner_agent, winner_price = top_bidders[0]
     logger.debug(
-        f"BD Auction: {winner_agent} wins {asset.name} "
-        f"(level {highest_level}/{num_levels - 1}, price ${winner_price:,.0f})"
+        f"BD Auction: {winner_agent} wins {asset.name} (bid ${winner_price:,.0f})"
+    )
+    return winner_agent, winner_price
+
+
+def resolve_site_bid(
+    bids: dict[str, float],
+    rng: random.Random,
+) -> tuple[str | None, float]:
+    """
+    Resolve a single clinical-site auction. Highest cash bid wins.
+
+    First-price sealed-bid: the winner pays their own bid. Bids of zero or less
+    are treated as passes. Ties are broken by ``rng.shuffle`` (like the BD
+    auction). No affordability mask — an overbid may bankrupt the winner.
+
+    Args:
+        bids: Dict mapping agent_id -> cash bid (£).
+        rng: Random number generator for tie-breaking.
+
+    Returns:
+        Tuple of (winner_agent_id, price_paid) or (None, 0.0) if no bids.
+
+    """
+    active_bids = [(agent_id, bid) for agent_id, bid in bids.items() if bid > 0]
+    if not active_bids:
+        return None, 0.0
+
+    highest = max(bid for _, bid in active_bids)
+    top_bidders = [b for b in active_bids if b[1] == highest]
+    if len(top_bidders) > 1:
+        rng.shuffle(top_bidders)
+
+    winner_agent, winner_price = top_bidders[0]
+    logger.debug(
+        f"Site Auction: {winner_agent} wins a clinical site "
+        f"(price ${winner_price:,.0f})"
     )
     return winner_agent, winner_price
 
@@ -92,6 +111,9 @@ def calculate_per_drug_indication_shares(
     current_time: int,
     pricing_multipliers: dict[uuid.UUID, float] | None = None,
     pricing_elasticity: float = 1.0,
+    brand_scores: dict[uuid.UUID, float] | None = None,
+    brand_floors: dict[uuid.UUID, float] | None = None,
+    marketing_config: "MarketingConfig | None" = None,
 ) -> dict[uuid.UUID, float]:
     """
     Compute market share for each on-market drug in an indication.
@@ -132,8 +154,24 @@ def calculate_per_drug_indication_shares(
                 if pricing_multipliers is not None:
                     price_mult = pricing_multipliers.get(asset.id, 1.0)
                 price_quality = 1.0 / (price_mult**pricing_elasticity)
+                brand_mult = 1.0
+                if brand_scores is not None and marketing_config is not None:
+                    score = brand_scores.get(asset.id, 0.0)
+                    floor = (
+                        brand_floors.get(asset.id, 0.0)
+                        if brand_floors is not None
+                        else 0.0
+                    )
+                    # Underdog-weighted brand equity: the (1 - floor) factor drives
+                    # a large drug's multiplier toward 1.0 (little headroom) while
+                    # keeping BE strong for small drugs (large headroom), so a big
+                    # drug cannot cheaply combat a small rival's catch-up by
+                    # spending itself. score is already max(0, brand_score - floor).
+                    brand_mult = 1.0 + marketing_config.be_effectiveness * (
+                        1.0 - floor
+                    ) * score
                 drug_qualities[asset.id] = (
-                    asset.max_revenue * price_quality * tenure_bonus
+                    asset.max_revenue * price_quality * tenure_bonus * brand_mult
                 )
 
     if not drug_qualities:
@@ -192,6 +230,9 @@ def calculate_per_drug_ta_shares(
     current_time: int,
     pricing_multipliers: dict[uuid.UUID, float] | None = None,
     pricing_elasticity: float = 1.0,
+    brand_scores: dict[uuid.UUID, float] | None = None,
+    brand_floors: dict[uuid.UUID, float] | None = None,
+    marketing_config: "MarketingConfig | None" = None,
 ) -> dict[uuid.UUID, float]:
     """Compute per-drug market shares within a TA."""
     if shared_market.disable_market_share_competition:
@@ -221,8 +262,24 @@ def calculate_per_drug_ta_shares(
                 if pricing_multipliers is not None:
                     price_mult = pricing_multipliers.get(asset.id, 1.0)
                 price_quality = 1.0 / (price_mult**pricing_elasticity)
+                brand_mult = 1.0
+                if brand_scores is not None and marketing_config is not None:
+                    score = brand_scores.get(asset.id, 0.0)
+                    floor = (
+                        brand_floors.get(asset.id, 0.0)
+                        if brand_floors is not None
+                        else 0.0
+                    )
+                    # Underdog-weighted brand equity: the (1 - floor) factor drives
+                    # a large drug's multiplier toward 1.0 (little headroom) while
+                    # keeping BE strong for small drugs (large headroom), so a big
+                    # drug cannot cheaply combat a small rival's catch-up by
+                    # spending itself. score is already max(0, brand_score - floor).
+                    brand_mult = 1.0 + marketing_config.be_effectiveness * (
+                        1.0 - floor
+                    ) * score
                 drug_qualities[asset.id] = (
-                    asset.max_revenue * price_quality * tenure_bonus
+                    asset.max_revenue * price_quality * tenure_bonus * brand_mult
                 )
 
     if not drug_qualities:
@@ -276,6 +333,9 @@ def calculate_agent_market_shares(
     current_time: int,
     all_pricing_multipliers: dict[uuid.UUID, float] | None = None,
     pricing_elasticity: float = 1.0,
+    brand_scores: dict[uuid.UUID, float] | None = None,
+    brand_floors: dict[uuid.UUID, float] | None = None,
+    marketing_config: "MarketingConfig | None" = None,
 ) -> dict[uuid.UUID, float]:
     """
     Calculate per-drug market shares for a specific agent's on-market drugs.
@@ -292,6 +352,14 @@ def calculate_agent_market_shares(
         all_pricing_multipliers: Merged pricing multipliers from ALL agents'
             on-market drugs (asset_id -> price_mult). Used in quality formula.
         pricing_elasticity: Demand elasticity for price-share tradeoff.
+        brand_scores: Per-drug brand-equity contribution (asset_id -> value),
+            already reduced to max(0, brand_score - floor). If None, no
+            brand-equity effect is applied.
+        brand_floors: Per-drug brand-score floor (asset_id -> floor in [0, 1]),
+            i.e. raw_max_rev / pool_peak. Weights the multiplier by (1 - floor)
+            so BE is strong for small drugs and near-inert for large ones.
+        marketing_config: Marketing feature configuration. If None, marketing
+            mechanics are disabled.
 
     """
     agent_drug_ids = {
@@ -312,6 +380,9 @@ def calculate_agent_market_shares(
                 current_time,
                 pricing_multipliers=all_pricing_multipliers,
                 pricing_elasticity=pricing_elasticity,
+                brand_scores=brand_scores,
+                brand_floors=brand_floors,
+                marketing_config=marketing_config,
             )
             for drug_id, share in all_drug_shares.items():
                 if drug_id in agent_drug_ids:
@@ -325,6 +396,9 @@ def calculate_agent_market_shares(
                 current_time,
                 pricing_multipliers=all_pricing_multipliers,
                 pricing_elasticity=pricing_elasticity,
+                brand_scores=brand_scores,
+                brand_floors=brand_floors,
+                marketing_config=marketing_config,
             )
             for drug_id, share in all_drug_shares.items():
                 if drug_id in agent_drug_ids:

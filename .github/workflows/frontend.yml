@@ -7,9 +7,9 @@ on:
     paths:
       - 'frontend/**'
       - '.github/workflows/frontend.yml'
+  # No branch filter: runs on every pull request, including stacked PRs
+  # whose base is a feature branch rather than main.
   pull_request:
-    branches:
-      - main
     paths:
       - 'frontend/**'
       - '.github/workflows/frontend.yml'

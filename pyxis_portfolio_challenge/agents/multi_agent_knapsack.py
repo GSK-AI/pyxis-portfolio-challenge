@@ -12,6 +12,11 @@ from pyxis_portfolio_challenge.game.shared_market_state import indication_key
 _BD_ITEM = "bd"
 _INV_ITEM = "inv"
 
+# Fraction of an asset's cash-adjusted eNPV the heuristic bids in the
+# continuous BD auction. 3/7 reproduces the old discrete level-3 (of
+# break-even level 7) economics.
+_BD_BID_FRACTION = 3.0 / 7.0
+
 
 class MultiAgentKnapsackAgent:
     """
@@ -22,8 +27,11 @@ class MultiAgentKnapsackAgent:
     subject to a concurrent investment capacity limit.
 
     This is the benchmark agent described in the strategic depth analysis.
-    With ``capacity=12`` and ``enable_bd_bidding=True`` it represents the
-    strongest viable heuristic baseline (Knapsack cap=12).
+    With ``capacity=None`` and ``enable_bd_bidding=True`` it represents the
+    strongest viable heuristic baseline. When the clinical-sites feature is
+    active it caps its own concurrent trials at the operational-site count
+    and advances only its highest-value assets, rather than over-submitting
+    and relying on the environment's index arbitration to pick survivors.
     """
 
     CAPACITY_PER_INVESTMENT = 1
@@ -166,36 +174,59 @@ class MultiAgentKnapsackAgent:
 
         return selected_items
 
+    def _get_capacity(self, portfolio) -> int:
+        """Max simultaneous in-development assets. Override for dynamic strategies."""
+        if self.capacity is not None:
+            return self.capacity
+        if (
+            getattr(self.env, "rd_capacity_config", None) is not None
+            and self.env.rd_capacity_config.enabled
+        ):
+            return portfolio.capacity_base
+        # Respect the clinical-sites concurrency limit: an agent can host at most
+        # one in-development asset per operational site, so cap concurrent trials
+        # at the operational-site count. Combined with the value-sorted truncation
+        # below, this makes the agent advance only its highest-value assets rather
+        # than over-submitting and letting index arbitration pick the survivors.
+        if getattr(portfolio, "clinical_sites_enabled", False):
+            return portfolio.operational_sites
+        return 999
+
+    def _effective_budget(self, portfolio) -> float:
+        """Budget available for new investments. Override to inject projected cash."""
+        return portfolio.cash
+
     def __call__(self, observation) -> dict:
         """Return action based on knapsack optimisation with capacity awareness."""
         portfolio = self.env.agent_portfolios[self.agent_name]
         masks = self.env.action_masks(self.agent_name)
 
-        budget = portfolio.cash
+        budget = self._effective_budget(portfolio)
 
         investments = np.zeros(self.env.max_num_assets, dtype=np.int64)
-        bd_bids = np.zeros(self.env.bd_max_slots, dtype=np.int64)
+        # Continuous BD bids: cash amount per slot in GBP millions (0 = pass).
+        bd_bids = np.zeros(self.env.bd_max_slots, dtype=np.float32)
 
         if budget <= 0:
-            return {"investments": investments, "bd_bids": bd_bids}
+            return {
+                **self.env.noop_action(),
+                "investments": investments,
+                "bd_bids": bd_bids,
+            }
 
         # Capacity constraint
-        if self.capacity is not None:
-            cap = self.capacity
-        elif (
-            getattr(self.env, "rd_capacity_config", None) is not None
-            and self.env.rd_capacity_config.enabled
-        ):
-            cap = portfolio.capacity_base
-        else:
-            cap = 999
+        cap = self._get_capacity(portfolio)
         current_in_dev = sum(
             1 for a in portfolio.assets.values()
             if a.state == AssetState.InDevelopment
         )
         remaining_capacity = max(0, cap - current_in_dev)
         if remaining_capacity <= 0:
-            return {"investments": investments, "bd_bids": bd_bids}
+            return {
+                **self.env.noop_action(),
+                "investments": investments,
+                "bd_bids": bd_bids,
+            }
 
         # Build knapsack items from regular idle assets
         items = []
@@ -207,7 +238,7 @@ class MultiAgentKnapsackAgent:
             inv_mask = masks["investments"][i]
             # Support both binary mask (0/1) and MultiDiscrete mask (list of bools)
             if isinstance(inv_mask, list):
-                can_invest = len(inv_mask) > 2 and inv_mask[2]
+                can_invest = len(inv_mask) > 1 and inv_mask[1]
             else:
                 can_invest = inv_mask == 1
             if not can_invest:
@@ -243,19 +274,20 @@ class MultiAgentKnapsackAgent:
                     continue
                 value *= ms
 
-                from pyxis_portfolio_challenge.environment.market_mechanics import (
-                    bd_bid_price,
-                )
-
-                break_even = shared.bd_break_even_bid_level
+                # Continuous-bid heuristic: bid a fixed fraction of the asset's
+                # cash-adjusted eNPV. The 3/7 fraction reproduces the economics
+                # of the old discrete level-3 (of break-even level 7) bid.
                 reinv_pct = portfolio.reinvestment_percentage
-                bid_level = min(3, self.env.bd_num_bid_levels - 1)
-                bid_price = bd_bid_price(enpv, bid_level, break_even, reinv_pct)
+                cash_enpv = bd_asset.cash_enpv(reinv_pct)
+                bid_price = max(0.0, _BD_BID_FRACTION * cash_enpv)
+                # Clamp to the action-space cap (expressed in GBP millions).
+                bid_millions = min(bid_price / 1e6, float(self.env.bd_max_bid))
+                bid_price = bid_millions * 1e6
                 total_cost = bid_price + bd_asset.remaining_trial_cost
                 weight = math.ceil(total_cost / self.units)
                 if weight > 0:
                     items.append(
-                        (value, weight, (_BD_ITEM, (slot_idx, bid_level)))
+                        (value, weight, (_BD_ITEM, (slot_idx, bid_millions)))
                     )
 
         # Solve knapsack for optimal mix (budget constraint)
@@ -275,11 +307,12 @@ class MultiAgentKnapsackAgent:
                 elif item_type == _BD_ITEM:
                     if capacity_left <= 0:
                         continue
-                    slot_idx, bid_level = idx
-                    bd_bids[slot_idx] = bid_level
+                    slot_idx, bid_millions = idx
+                    bd_bids[slot_idx] = bid_millions
                     capacity_left -= self.CAPACITY_PER_INVESTMENT
 
         return {
+            **self.env.noop_action(),
             "investments": investments,
             "bd_bids": bd_bids,
         }

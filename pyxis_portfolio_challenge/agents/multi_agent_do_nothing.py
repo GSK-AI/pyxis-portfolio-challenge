@@ -1,7 +1,5 @@
 """Do-nothing agent for multi-agent competitive environment."""
 
-import numpy as np
-
 
 class MultiAgentDoNothingAgent:
     """
@@ -43,12 +41,10 @@ class MultiAgentDoNothingAgent:
         Returns
         -------
         dict
-            Action dict with all-zero ``"investments"`` and ``"bd_bids"``.
+            The env's canonical no-op action -- the do-nothing value for every
+            enabled action head (investments, bd_bids, and any of ptrs_research,
+            upgrade, site_bid, site_priority, pricing, demand_creation,
+            brand_equity that the current config enables).
 
         """
-        return {
-            "investments": np.zeros(
-                self.env.max_num_assets, dtype=np.int64
-            ),
-            "bd_bids": np.zeros(self.env.bd_max_slots, dtype=np.int64),
-        }
+        return self.env.noop_action()

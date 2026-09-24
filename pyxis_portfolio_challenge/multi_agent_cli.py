@@ -5,6 +5,7 @@ import logging
 
 import click
 import yaml
+
 from pyxis_portfolio_challenge.logging_utils import setup_logging
 
 NUM_AGENTS = 2
@@ -108,7 +109,9 @@ def _run_with_replay(agents_dict, env_kwargs, seed, agent_names, agent_labels=No
     default=None,
     help="Path to write replay JSON file.",
 )
-@click.option("--horizon", "-H", type=int, default=None, help="Override episode length (number of steps).")
+@click.option(
+    "--horizon", "-H", type=int, default=None, help="Override episode length."
+)
 @click.option("--seed", "-s", type=int, default=None, help="Random seed.")
 @click.option(
     "--agent-kwargs",
@@ -130,14 +133,14 @@ def main(agents, output, horizon, seed, agent_kwargs_list, names, log_level):
     Run a multi-agent investment game match.
 
     AGENTS: Exactly 2 agent specifications. Each is either a built-in name
-    (knapsack(c12), random, do_nothing, pyxie) or a path to a custom agent
+    (knapsack, random, do_nothing) or a path to a custom agent
     script.
 
     \b
     Examples:
-        pyxis knapsack(c12) random --seed 42
-        pyxis ./my_bot.py knapsack(c12) -o replay.json
-        pyxis knapsack(c12) knapsack(c12) --horizon 50
+        pyxis knapsack random --seed 42
+        pyxis ./my_bot.py knapsack -o replay.json
+        pyxis knapsack knapsack --horizon 50
     """  # noqa: D301
     setup_logging(level=log_level)
     logger = logging.getLogger(__name__)

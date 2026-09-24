@@ -83,7 +83,7 @@ class PlayLevelsCallback(BaseCallback):
                 max_num_assets=self.max_num_assets,
                 cash=level_info["starting_cash"],
                 horizon=level_info["horizon"],
-                global_seed=level_info["global_seed"],
+                seed=level_info["global_seed"],
                 **{
                     "assets_dir": self.assets_dir,
                     "indication_spread": 4.0,
@@ -254,6 +254,13 @@ class BenchmarkEvalCallback(BaseCallback):
             distributional_ptrs_config=config.distributional_ptrs,
             ta_experience_config=config.ta_experience,
             rd_capacity_config=config.rd_capacity,
+            drop_action_config=config.drop_action,
+            marketing_config=config.marketing,
+            clinical_sites_config=config.clinical_sites,
+            ptrs_readings_config=config.ptrs_readings,
+            approval_phase_config=config.approval_phase,
+            metrics=[],
+            initial_game_state=None,
         )
         agent.set_env(env)
 
@@ -359,6 +366,13 @@ class KnapsackBaselineCallback(BaseCallback):
             distributional_ptrs_config=cfg.distributional_ptrs,
             ta_experience_config=cfg.ta_experience,
             rd_capacity_config=cfg.rd_capacity,
+            drop_action_config=cfg.drop_action,
+            marketing_config=cfg.marketing,
+            clinical_sites_config=cfg.clinical_sites,
+            ptrs_readings_config=cfg.ptrs_readings,
+            approval_phase_config=cfg.approval_phase,
+            metrics=[],
+            initial_game_state=None,
         )
         self._knapsack = KnapsackAgent()
         self._knapsack.set_env(self._env)

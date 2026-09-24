@@ -17,6 +17,7 @@ class InvestmentLevel(int, Enum):
     STANDARD = 2  # Normal development
     ACCELERATED = 3  # Fast and expensive, less learning
     STOP = 4  # Stop development early (for in-development assets only)
+    DROP = 5  # Drop asset from portfolio regardless of state (agent decision)
 
     @classmethod
     def from_int(cls, value: int) -> "InvestmentLevel":

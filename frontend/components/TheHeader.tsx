@@ -1,13 +1,6 @@
-"use client";
-
 import LayoutContainer from "./LayoutContainer";
-import { usePathname } from "next/navigation";
-import { TheControlSignIn } from "./TheControlSignIn";
 
 export function TheHeader() {
-  const pathname = usePathname();
-  const requireAuthentication = !pathname.includes("logged-out");
-
   return (
     <header className="border-b-2 border-gray-100 bg-gray-50 px-4 text-black shadow">
       <LayoutContainer
@@ -26,8 +19,6 @@ export function TheHeader() {
             </div>
           </a>
         </div>
-
-        {!requireAuthentication && <TheControlSignIn />}
       </LayoutContainer>
     </header>
   );
