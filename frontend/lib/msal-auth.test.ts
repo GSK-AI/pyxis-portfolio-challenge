@@ -42,9 +42,9 @@ describe("useMsalAuth", () => {
 
     // Save and mock msal.PublicClientApplication
     originalMsalInstance = (msal as any).PublicClientApplication;
-    (msal as any).PublicClientApplication = vi.fn(() =>
-      createFakeMsalInstance(),
-    );
+    (msal as any).PublicClientApplication = vi.fn(function () {
+      return createFakeMsalInstance();
+    });
   });
 
   afterEach(() => {
@@ -64,7 +64,9 @@ describe("useMsalAuth", () => {
     fakeMsalInstance.loginRedirect = vi.fn().mockResolvedValue(undefined);
 
     // Rewire the msal instance factory to use our custom instance
-    (msal as any).PublicClientApplication = vi.fn(() => fakeMsalInstance);
+    (msal as any).PublicClientApplication = vi.fn(function () {
+      return fakeMsalInstance;
+    });
 
     // Clear cached config/instance (if running multiple tests)
     const { getIdToken: freshGetIdToken } = await import("./msal-auth");
@@ -82,7 +84,9 @@ describe("useMsalAuth", () => {
       .fn()
       .mockResolvedValue({ idToken: DUMMY_ID_TOKEN });
 
-    (msal as any).PublicClientApplication = vi.fn(() => fakeMsalInstance);
+    (msal as any).PublicClientApplication = vi.fn(function () {
+      return fakeMsalInstance;
+    });
 
     // First call populates cache
     const token1 = await getIdToken();
@@ -104,7 +108,9 @@ describe("useMsalAuth", () => {
       .mockRejectedValue(new Error("No token"));
     fakeMsalInstance.loginRedirect = vi.fn().mockResolvedValue(undefined);
 
-    (msal as any).PublicClientApplication = vi.fn(() => fakeMsalInstance);
+    (msal as any).PublicClientApplication = vi.fn(function () {
+      return fakeMsalInstance;
+    });
 
     const { getIdToken: freshGetIdToken } = await import("./msal-auth");
     await freshGetIdToken();
@@ -119,7 +125,9 @@ describe("useMsalAuth", () => {
     const fakeMsalInstance = createFakeMsalInstance();
     fakeMsalInstance.logoutRedirect = vi.fn().mockResolvedValue(undefined);
 
-    (msal as any).PublicClientApplication = vi.fn(() => fakeMsalInstance);
+    (msal as any).PublicClientApplication = vi.fn(function () {
+      return fakeMsalInstance;
+    });
 
     const { logout: freshLogout } = await import("./msal-auth");
     await freshLogout();
@@ -193,7 +201,9 @@ describe("useMsalAuth", () => {
       .fn()
       .mockResolvedValue({ idToken: DUMMY_ID_TOKEN });
 
-    (msal as any).PublicClientApplication = vi.fn(() => fakeMsalInstance);
+    (msal as any).PublicClientApplication = vi.fn(function () {
+      return fakeMsalInstance;
+    });
 
     const { getIdToken: freshGetIdToken } = await import("./msal-auth");
     await freshGetIdToken();
@@ -221,7 +231,9 @@ describe("useMsalAuth", () => {
       .fn()
       .mockResolvedValue({ idToken: DUMMY_ID_TOKEN });
 
-    (msal as any).PublicClientApplication = vi.fn(() => fakeMsalInstance);
+    (msal as any).PublicClientApplication = vi.fn(function () {
+      return fakeMsalInstance;
+    });
 
     const { getIdToken: freshGetIdToken } = await import("./msal-auth");
     await freshGetIdToken();
@@ -234,7 +246,9 @@ describe("useMsalAuth", () => {
     const fakeMsalInstance = createFakeMsalInstance();
     fakeMsalInstance.loginRedirect = vi.fn().mockResolvedValue(undefined);
 
-    (msal as any).PublicClientApplication = vi.fn(() => fakeMsalInstance);
+    (msal as any).PublicClientApplication = vi.fn(function () {
+      return fakeMsalInstance;
+    });
 
     const { login } = await import("./msal-auth");
     await login();
@@ -251,7 +265,9 @@ describe("useMsalAuth", () => {
       .fn()
       .mockRejectedValue(new Error("Login failed"));
 
-    (msal as any).PublicClientApplication = vi.fn(() => fakeMsalInstance);
+    (msal as any).PublicClientApplication = vi.fn(function () {
+      return fakeMsalInstance;
+    });
 
     // Mock location object
     const mockLocation = {
@@ -295,7 +311,9 @@ describe("useMsalAuth", () => {
       writable: true,
     });
 
-    (msal as any).PublicClientApplication = vi.fn(() => fakeMsalInstance);
+    (msal as any).PublicClientApplication = vi.fn(function () {
+      return fakeMsalInstance;
+    });
 
     const { getIdToken: freshGetIdToken } = await import("./msal-auth");
     await freshGetIdToken();
@@ -320,7 +338,9 @@ describe("useMsalAuth", () => {
       writable: true,
     });
 
-    (msal as any).PublicClientApplication = vi.fn(() => fakeMsalInstance);
+    (msal as any).PublicClientApplication = vi.fn(function () {
+      return fakeMsalInstance;
+    });
 
     const { getIdToken: freshGetIdToken } = await import("./msal-auth");
 
@@ -359,7 +379,9 @@ describe("useMsalAuth", () => {
       .fn()
       .mockResolvedValue({ idToken: DUMMY_ID_TOKEN });
 
-    (msal as any).PublicClientApplication = vi.fn(() => fakeMsalInstance);
+    (msal as any).PublicClientApplication = vi.fn(function () {
+      return fakeMsalInstance;
+    });
 
     const { getIdToken: freshGetIdToken } = await import("./msal-auth");
     await freshGetIdToken();
@@ -385,7 +407,9 @@ describe("useMsalAuth", () => {
       .fn()
       .mockResolvedValue({ idToken: DUMMY_ID_TOKEN });
 
-    (msal as any).PublicClientApplication = vi.fn(() => fakeMsalInstance);
+    (msal as any).PublicClientApplication = vi.fn(function () {
+      return fakeMsalInstance;
+    });
 
     const { getIdToken: freshGetIdToken } = await import("./msal-auth");
     await freshGetIdToken();
@@ -411,7 +435,9 @@ describe("useMsalAuth", () => {
       .fn()
       .mockResolvedValue({ idToken: DUMMY_ID_TOKEN });
 
-    (msal as any).PublicClientApplication = vi.fn(() => fakeMsalInstance);
+    (msal as any).PublicClientApplication = vi.fn(function () {
+      return fakeMsalInstance;
+    });
 
     const { getIdToken: freshGetIdToken } = await import("./msal-auth");
     await freshGetIdToken();

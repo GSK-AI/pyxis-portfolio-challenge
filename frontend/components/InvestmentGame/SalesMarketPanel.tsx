@@ -3,7 +3,7 @@
 import type { IndicationMarket } from "@/lib/definitionsGameZ";
 import { InformationButton } from "@/components/InformationButton";
 
-const SALES_MARKET_INFO = `The sales market tracks competition across indications. Your drug revenue depends on your market share in each indication.
+export const SALES_MARKET_INFO = `The sales market tracks competition across indications. Your drug revenue depends on your market share in each indication.
 
 First-Mover Exclusivity:
 The first company to launch a drug in an indication gets a period of exclusive sales — no competitors can earn revenue in that indication during this window. This is shown as "Exclusivity" remaining years.

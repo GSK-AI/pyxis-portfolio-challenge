@@ -4,8 +4,8 @@ FROM node:20-alpine AS builder
 COPY ./gsk-cert.crt /usr/local/share/ca-certificates/gsk-cert.crt
 ENV NODE_EXTRA_CA_CERTS=/usr/local/share/ca-certificates/gsk-cert.crt
 
-# Install pnpm
-RUN npm install -g pnpm
+# Install pnpm (pinned to v10 to match pnpm-lock.yaml; v11 ignores pnpm.overrides in package.json)
+RUN npm install -g pnpm@10
 
 # Set working directory
 WORKDIR /app
@@ -56,8 +56,8 @@ ENV NEXT_PUBLIC_AZURE_AUTHORITY=${NEXT_PUBLIC_AZURE_AUTHORITY}
 ENV NEXT_PUBLIC_TEST=${NEXT_PUBLIC_TEST}
 ENV NEXT_PUBLIC_BACKEND_URL_GAME=${NEXT_PUBLIC_BACKEND_URL_GAME}
 
-# Install pnpm
-RUN npm install -g pnpm
+# Install pnpm (pinned to v10 to match pnpm-lock.yaml)
+RUN npm install -g pnpm@10
 
 # Set working directory
 WORKDIR /app

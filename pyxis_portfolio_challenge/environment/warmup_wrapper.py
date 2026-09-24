@@ -70,25 +70,11 @@ class WarmupOnResetWrapper(gym.Wrapper):
         """
         super().__init__(env)
 
-        # Get horizon from environment if available to validate warmup_steps
-        horizon = getattr(getattr(env, "unwrapped", env), "horizon", None)
-        if horizon is not None:
-            if warmup_steps >= horizon:
-                raise ValueError(
-                    f"warmup_on_reset_steps ({warmup_steps}) must be < "
-                    f"horizon ({horizon})."
-                )
-            if warmup_steps > horizon * 0.8:
-                import warnings
-
-                warnings.warn(
-                    f"warmup_on_reset_steps ({warmup_steps}) is >80% of "
-                    f"horizon ({horizon}). Only {horizon - warmup_steps} "
-                    "steps remain for agent to act.",
-                    UserWarning,
-                    stacklevel=2,
-                )
-
+        # warmup_steps and horizon are independent, additive knobs: the warmup
+        # pre-roll runs on a temporarily extended horizon and the clock is then
+        # rebased to 0 (see reset()), so the agent always plays a full horizon
+        # regardless of how large warmup_steps is. No warmup_steps < horizon
+        # check.
         self.warmup_steps = warmup_steps
         self.policy = policy
         self.verbose = verbose
@@ -134,6 +120,13 @@ class WarmupOnResetWrapper(gym.Wrapper):
 
             # Reset the underlying environment (with metrics in warmup mode)
             obs, info = self.env.reset(**kwargs)
+
+            # Extend the horizon for the pre-roll so warmup never trips
+            # horizon-based termination, however long it runs; the configured
+            # horizon is restored after the clock is rebased below. This makes
+            # warmup_steps and horizon additive (warmup may exceed horizon).
+            if hasattr(unwrapped_env, "extend_horizon_for_warmup"):
+                unwrapped_env.extend_horizon_for_warmup(self.warmup_steps)
 
             # Run warmup steps
             terminated_during_warmup = False
@@ -213,6 +206,15 @@ class WarmupOnResetWrapper(gym.Wrapper):
         if hasattr(unwrapped_env, "game_state"):
             _clear_warmup_history(unwrapped_env.game_state)
 
+        # Rebase the clock so warmup counts as a pre-roll: the agent's clock
+        # resets to 0, the configured horizon is restored, and it plays a full
+        # horizon. Recompute obs/info so they reflect the rebased (time 0)
+        # state before returning to the agent.
+        if hasattr(unwrapped_env, "rebase_clock_after_warmup"):
+            unwrapped_env.rebase_clock_after_warmup()
+            obs = unwrapped_env._get_obs()
+            info = unwrapped_env._get_info()
+
         # Restore metrics after warmup
         if original_metrics is not None:
             # Disable warmup mode on all metrics
@@ -227,7 +229,9 @@ class WarmupOnResetWrapper(gym.Wrapper):
             )
 
             episode_id = getattr(unwrapped_env, "_episode_fingerprint", None)
-            ctx = MetricsContext(unwrapped_env.game_state, reward=0.0, episode_id=episode_id)
+            ctx = MetricsContext(
+                unwrapped_env.game_state, reward=0.0, episode_id=episode_id
+            )
             collect_metrics(
                 collection_fn="on_episode_begin", context=ctx, metrics=original_metrics
             )
@@ -263,32 +267,11 @@ class VecWarmupOnResetWrapper(VecEnvWrapper):
         super().__init__(venv)
         self.num_envs = getattr(venv, "num_envs", 1)
 
-        # Validate warmup_steps against horizon if available
-        # For VecEnv, we need to get horizon from the first environment
-        try:
-            horizons = venv.get_attr("horizon")
-            if horizons and len(horizons) > 0:
-                horizon = horizons[0]  # Assume all envs have same horizon
-                if warmup_steps >= horizon:
-                    raise ValueError(
-                        f"warmup_on_reset_steps ({warmup_steps}) must be less "
-                        f"than horizon ({horizon}). The agent needs time to "
-                        "act after warmup completes."
-                    )
-                if warmup_steps > horizon * 0.8:
-                    import warnings
-
-                    warnings.warn(
-                        f"warmup_on_reset_steps ({warmup_steps}) is >80% of "
-                        f"horizon ({horizon}). This leaves only "
-                        f"{horizon - warmup_steps} steps for the agent to act.",
-                        UserWarning,
-                        stacklevel=2,
-                    )
-        except (AttributeError, TypeError):
-            # VecEnv doesn't support get_attr or horizon not available, skip validation
-            pass
-
+        # warmup_steps and horizon are independent, additive knobs: each env's
+        # warmup pre-roll runs on a temporarily extended horizon and its clock
+        # is then rebased to 0 (see reset()), so the agent always plays a full
+        # horizon regardless of how large warmup_steps is. No
+        # warmup_steps < horizon check.
         self.warmup_steps = warmup_steps
         self.policy = policy
         self.verbose = verbose
@@ -302,6 +285,15 @@ class VecWarmupOnResetWrapper(VecEnvWrapper):
 
         if self.warmup_steps <= 0:
             return obs
+
+        # Extend every env's horizon for the pre-roll so warmup never trips
+        # horizon-based termination, however long it runs; the configured
+        # horizon is restored after each clock is rebased below. This makes
+        # warmup_steps and horizon additive (warmup may exceed horizon).
+        try:
+            self.venv.env_method("extend_horizon_for_warmup", self.warmup_steps)
+        except (AttributeError, TypeError):
+            pass
 
         # Temporarily disable metrics during warmup for all environments
         original_metrics = None
@@ -385,12 +377,25 @@ class VecWarmupOnResetWrapper(VecEnvWrapper):
                             )
 
                         # Reset this specific environment and restart its warmup
-                        # Note: VecEnv reset with indices resets specific environments
+                        # Note: VecEnv reset with indices resets specific environments.
+                        # Re-extend the horizon: reset() rebuilt a fresh game with
+                        # the configured (un-extended) horizon.
                         try:
                             self.venv.env_method("reset", indices=[i])
+                            self.venv.env_method(
+                                "extend_horizon_for_warmup",
+                                self.warmup_steps,
+                                indices=[i],
+                            )
                         except Exception:
-                            # env_method doesn't work, reset all
+                            # env_method doesn't work, reset all and re-extend
                             obs = self.venv.reset()
+                            try:
+                                self.venv.env_method(
+                                    "extend_horizon_for_warmup", self.warmup_steps
+                                )
+                            except (AttributeError, TypeError):
+                                pass
 
                         warmup_steps_done[i] = 0  # Restart count for this env
                     else:
@@ -446,6 +451,17 @@ class VecWarmupOnResetWrapper(VecEnvWrapper):
             game_states = self.venv.get_attr("game_state")
             for gs in game_states:
                 _clear_warmup_history(gs)
+        except (AttributeError, TypeError):
+            pass
+
+        # Rebase each env's clock so warmup counts as a pre-roll: clocks reset
+        # to 0, configured horizons are restored, and each agent plays a full
+        # horizon. Recompute obs so they reflect the rebased (time 0) state.
+        try:
+            self.venv.env_method("rebase_clock_after_warmup")
+            rebased_obs = self.venv.env_method("_get_obs")
+            if all(isinstance(o, np.ndarray) for o in rebased_obs):
+                obs = np.stack(rebased_obs)
         except (AttributeError, TypeError):
             pass
 
@@ -520,13 +536,10 @@ class MultiAgentWarmupOnResetWrapper:
                 "Multi-agent warmup only supports 'do_nothing'."
             )
 
-        horizon = getattr(env, "horizon", None)
-        if horizon is not None:
-            if warmup_steps >= horizon:
-                raise ValueError(
-                    f"warmup_on_reset_steps ({warmup_steps}) must be < "
-                    f"horizon ({horizon})."
-                )
+        # warmup_steps and horizon are independent, additive knobs: the warmup
+        # pre-roll runs on a temporarily extended horizon (see reset()) and the
+        # clock is then rebased to 0, so the agent always plays a full horizon
+        # no matter how large warmup_steps is. No warmup_steps < horizon check.
 
     def __getattr__(self, name):
         """Delegate attribute access to wrapped env."""
@@ -537,9 +550,19 @@ class MultiAgentWarmupOnResetWrapper:
         if self.warmup_steps <= 0:
             return self.env.reset(**kwargs)
 
+        configured_horizon = self.env.horizon
+
         max_attempts = 100
         for attempt in range(max_attempts):
             observations, infos = self.env.reset(**kwargs)
+
+            # Extend the horizon for the pre-roll so warmup never trips
+            # horizon-based termination, however long it runs; the configured
+            # horizon is restored after the clock is rebased below. This makes
+            # warmup_steps and horizon additive (warmup may exceed horizon).
+            self.env.multi_agent_game = self.env.multi_agent_game.with_horizon(
+                configured_horizon + self.warmup_steps
+            )
 
             terminated_during_warmup = False
             for step in range(self.warmup_steps):
@@ -547,12 +570,11 @@ class MultiAgentWarmupOnResetWrapper:
                     terminated_during_warmup = True
                     break
 
-                actions = {}
-                for agent_id in self.env.agents:
-                    actions[agent_id] = {
-                        "investments": np.zeros(self.env.max_num_assets, dtype=np.int8),
-                        "bd_bids": np.zeros(self.env.bd_max_slots, dtype=np.int64),
-                    }
+                # Do-nothing warmup: emit the env's canonical no-op for every
+                # enabled head (the strict parser requires all heads each step).
+                actions = {
+                    agent_id: self.env.noop_action() for agent_id in self.env.agents
+                }
 
                 observations, _, terminations, truncations, infos = self.env.step(
                     actions
@@ -582,6 +604,20 @@ class MultiAgentWarmupOnResetWrapper:
         # Clear warmup history on each agent's GameState
         for agent_state in self.env.multi_agent_game.agent_states.values():
             _clear_warmup_history(agent_state)
+
+        # Rebase the game clock so warmup counts as a pre-roll: the agent's
+        # clock resets to 0 and it plays a full horizon. Restore the configured
+        # horizon (dropped from the extended pre-roll value) so the agent plays
+        # exactly `horizon` steps. Recompute observations/infos so they reflect
+        # the rebased (time 0) state.
+        self.env.multi_agent_game = self.env.multi_agent_game.rebase_time_to_zero()
+        self.env.multi_agent_game = self.env.multi_agent_game.with_horizon(
+            configured_horizon
+        )
+        observations = {
+            agent: self.env._get_observation(agent) for agent in self.env.agents
+        }
+        infos = {agent: self.env._get_info(agent) for agent in self.env.agents}
 
         return observations, infos
 

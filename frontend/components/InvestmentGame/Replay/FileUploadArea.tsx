@@ -1,22 +1,19 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { Upload, FileText, X } from "lucide-react";
+import { Upload, FileText, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   playthroughDataSchema,
   type PlaythroughData,
 } from "@/lib/definitionsGameZ";
-import LayoutContainer from "@/components/LayoutContainer";
 
 interface FileUploadAreaProps {
   onPlaythroughLoaded: (data: PlaythroughData) => void;
-  onCancel: () => void;
 }
 
 export default function FileUploadArea({
   onPlaythroughLoaded,
-  onCancel,
 }: FileUploadAreaProps) {
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<{
@@ -75,114 +72,106 @@ export default function FileUploadArea({
     [processFile],
   );
 
-  return (
-    <div className="mt-4">
-      <LayoutContainer className="flex flex-col gap-6" maxWidth="600px">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold">Upload Replay</h2>
-          <Button variant="outline" size="sm" onClick={onCancel}>
-            <X className="mr-1 h-4 w-4" />
-            Cancel
-          </Button>
+  if (preview) {
+    return (
+      <div className="rounded bg-gradient-to-b from-secondary/50 to-secondary/10 p-5">
+        <div className="mb-4 flex items-center gap-3">
+          <FileText className="h-8 w-8 text-primary" />
+          <div>
+            <p className="text-sm font-bold">{preview.fileName}</p>
+            <p className="text-xs text-muted-foreground">
+              Captured{" "}
+              {new Date(preview.data.metadata.captured_at).toLocaleString()}
+            </p>
+          </div>
         </div>
 
-        {!preview ? (
-          <>
-            <div
-              className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-12 transition-colors ${
-                dragging
-                  ? "border-teal-500 bg-teal-50"
-                  : "border-gray-300 bg-gray-50 hover:border-gray-400"
-              }`}
-              onClick={() => inputRef.current?.click()}
-              onDragOver={(e) => {
-                e.preventDefault();
-                setDragging(true);
-              }}
-              onDragLeave={() => setDragging(false)}
-              onDrop={handleDrop}
-            >
-              <Upload className="mb-3 h-10 w-10 text-gray-400" />
-              <p className="text-sm font-medium text-gray-700">
-                Drop a playthrough JSON file here
-              </p>
-              <p className="mt-1 text-xs text-gray-500">or click to browse</p>
-              <input
-                ref={inputRef}
-                type="file"
-                accept=".json"
-                className="hidden"
-                onChange={handleFileInput}
-              />
-            </div>
-
-            {error && (
-              <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                {error}
-              </div>
-            )}
-          </>
-        ) : (
-          <div className="rounded-lg border border-gray-200 bg-white p-6">
-            <div className="mb-4 flex items-center gap-3">
-              <FileText className="h-8 w-8 text-teal-600" />
-              <div>
-                <p className="text-sm font-semibold">{preview.fileName}</p>
-                <p className="text-xs text-gray-500">
-                  Captured{" "}
-                  {new Date(preview.data.metadata.captured_at).toLocaleString()}
-                </p>
-              </div>
-            </div>
-
-            <div className="mb-4 grid grid-cols-2 gap-3 text-sm">
-              <div className="rounded bg-gray-50 p-3">
-                <span className="text-xs text-gray-500">Agents</span>
-                <p className="font-medium">
-                  {preview.data.metadata.num_agents}
-                </p>
-                <p className="mt-0.5 text-xs text-gray-500">
-                  {preview.data.metadata.agent_ids
-                    .map((id) => preview.data.metadata.agent_names?.[id] ?? id)
-                    .join(", ")}
-                </p>
-              </div>
-              <div className="rounded bg-gray-50 p-3">
-                <span className="text-xs text-gray-500">Horizon</span>
-                <p className="font-medium">
-                  {preview.data.metadata.horizon} steps
-                </p>
-              </div>
-              <div className="rounded bg-gray-50 p-3">
-                <span className="text-xs text-gray-500">Total Steps</span>
-                <p className="font-medium">{preview.data.steps.length}</p>
-              </div>
-              <div className="rounded bg-gray-50 p-3">
-                <span className="text-xs text-gray-500">Seed</span>
-                <p className="font-medium">{preview.data.metadata.seed}</p>
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <Button
-                onClick={() => onPlaythroughLoaded(preview.data)}
-                className="flex-1"
-              >
-                Load Replay
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setPreview(null);
-                  setError(null);
-                }}
-              >
-                Choose Different File
-              </Button>
-            </div>
+        <div className="mb-4 grid grid-cols-2 gap-3 text-sm">
+          <div className="rounded bg-card p-3 ring-1 ring-foreground/5">
+            <span className="text-xs text-muted-foreground">Agents</span>
+            <p className="font-bold">{preview.data.metadata.num_agents}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {preview.data.metadata.agent_ids
+                .map((id) => preview.data.metadata.agent_names?.[id] ?? id)
+                .join(", ")}
+            </p>
           </div>
-        )}
-      </LayoutContainer>
+          <div className="rounded bg-card p-3 ring-1 ring-foreground/5">
+            <span className="text-xs text-muted-foreground">Horizon</span>
+            <p className="font-bold">{preview.data.metadata.horizon} steps</p>
+          </div>
+          <div className="rounded bg-card p-3 ring-1 ring-foreground/5">
+            <span className="text-xs text-muted-foreground">Total Steps</span>
+            <p className="font-bold">{preview.data.steps.length}</p>
+          </div>
+          <div className="rounded bg-card p-3 ring-1 ring-foreground/5">
+            <span className="text-xs text-muted-foreground">Seed</span>
+            <p className="font-bold">{preview.data.metadata.seed}</p>
+          </div>
+        </div>
+
+        <div className="flex gap-3">
+          <Button
+            size="lg"
+            className="flex-1 rounded"
+            onClick={() => onPlaythroughLoaded(preview.data)}
+          >
+            Load Replay
+          </Button>
+          <Button
+            size="lg"
+            variant="outline"
+            className="rounded"
+            onClick={() => {
+              setPreview(null);
+              setError(null);
+            }}
+          >
+            Choose Different File
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div
+        className={`flex cursor-pointer flex-col items-center justify-center rounded border border-dashed p-12 transition-colors ${
+          dragging
+            ? "border-primary bg-[var(--accent-soft)]"
+            : "border-input bg-gradient-to-b from-secondary/50 to-secondary/10 hover:border-primary/50"
+        }`}
+        onClick={() => inputRef.current?.click()}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={handleDrop}
+      >
+        <div className="mb-4 flex size-12 items-center justify-center rounded-full bg-[var(--accent-soft)]">
+          <Upload className="size-5 text-primary" />
+        </div>
+        <p className="text-sm font-bold">Drop a playthrough JSON file here</p>
+        <p className="mt-1 text-sm text-muted-foreground">or click to browse</p>
+        <input
+          ref={inputRef}
+          type="file"
+          accept=".json"
+          className="hidden"
+          onChange={handleFileInput}
+        />
+      </div>
+
+      {error && (
+        <div className="rounded bg-destructive/5 px-3 py-1.5 text-sm text-destructive">
+          <div className="flex items-start gap-2">
+            <TriangleAlert className="mt-[3px] size-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -4,7 +4,6 @@ import hashlib
 import json
 import logging
 import pathlib
-import random
 import uuid
 from enum import Enum
 from typing import Literal, Optional, Self
@@ -19,24 +18,36 @@ from pydantic import (
 )
 from scipy.stats import norm
 
+from pyxis_portfolio_challenge.config import (
+    ApprovalPhaseConfig,
+    CapacityConfig,
+    ClinicalSitesConfig,
+    DistributionalPtrsConfig,
+    DropActionConfig,
+    InterimTrialObservationsConfig,
+    InvestmentLevelsConfig,
+    MarketingConfig,
+    PtrsReadingsConfig,
+    TAExperienceConfig,
+    UncertainPtrsConfig,
+    fibonacci_cost,
+)
 from pyxis_portfolio_challenge.game.asset import AssetState, DrugAsset
 from pyxis_portfolio_challenge.game.asset_generators import (
     AssetGeneratorBase,
     update_distributional_ptrs_for_experience,
     update_trial_chain_ptrs_for_experience,
 )
+from pyxis_portfolio_challenge.game.clinical_sites import resolve_site_grants
 from pyxis_portfolio_challenge.game.constants import MAX_NUM_ASSETS, InvestmentLevel
 from pyxis_portfolio_challenge.game.trial import TrialPhase
-from pyxis_portfolio_challenge.rng import get_game_rng
+from pyxis_portfolio_challenge.rng import get_game_rng, init_game_rng
 
 logger = logging.getLogger(__name__)
 
 
 def _compute_package_code_hash() -> str:
     """Hash all files in the package directory for version fingerprinting."""
-    # Equivalent to PROJECT_ROOT / "pyxis_portfolio_challenge", derived via __file__ to
-    # avoid a circular import (pyxis_portfolio_challenge/__init__.py imports game_state
-    # transitively, so we can't import PROJECT_ROOT from there).
     package_dir = pathlib.Path(__file__).parent.parent  # pyxis_portfolio_challenge/
     hasher = hashlib.sha256()
     for f in sorted(package_dir.rglob("*")):
@@ -53,6 +64,8 @@ class GameEndReason(str, Enum):
 
     ONGOING_INVESTMENTS = "Ran out of cash due to ongoing investments."
     NEW_INVESTMENTS = "Ran out of cash due to new investments."
+    RESEARCH_COSTS = "Ran out of cash due to research costs."
+    PTRS_READINGS_COSTS = "Ran out of cash due to ptrs readings costs."
     HORIZON_REACHED = "Game ended as horizon was reached."
 
 
@@ -110,6 +123,7 @@ class GameState(BaseModel):
     assets: dict[uuid.UUID, DrugAsset]
     failed_assets: dict[uuid.UUID, DrugAsset]
     expired_assets: dict[uuid.UUID, DrugAsset]
+    dropped_assets: dict[uuid.UUID, DrugAsset]
     realised_costs: list[float]
     realised_revenues: list[float]
     running_enpv: list[float]
@@ -124,6 +138,14 @@ class GameState(BaseModel):
     capacity_used: float = 0.0  # Current capacity usage
     capacity_base: float = 80.0  # Base capacity (from config)
 
+    # Clinical sites feature: per-agent concurrency capacity (Model B).
+    # operational_sites host trials now; sites_in_development are build-delay
+    # timers (steps remaining) for purchased-but-not-yet-usable sites. Occupied
+    # sites are derived from the live InDevelopment asset count, so free sites =
+    # operational_sites - (# InDevelopment assets).
+    operational_sites: int = 0
+    sites_in_development: list[int] = []
+
     # Distributional PTRS feature: TA quality estimates (observable posteriors)
     # These represent the agent's belief about TA quality based on trial outcomes
     ta_quality_estimates: dict[str, float] = {}  # Posterior mean estimate
@@ -136,14 +158,38 @@ class GameState(BaseModel):
     _interim_trial_observations_config: Optional[object] = PrivateAttr(default=None)
     _distributional_ptrs_config: Optional[object] = PrivateAttr(default=None)
     _rd_capacity_config: Optional[object] = PrivateAttr(default=None)
+    _drop_action_config: Optional[object] = PrivateAttr(default=None)
+    _ptrs_readings_config: Optional[object] = PrivateAttr(default=None)
+    _clinical_sites_config: Optional[object] = PrivateAttr(default=None)
     # Hidden TA quality modifiers (sampled at episode start, not observable)
     _ta_quality_modifiers: dict[str, float] = PrivateAttr(default_factory=dict)
+    # Marketing config (set once at game start)
+    _marketing_config: Optional[object] = PrivateAttr(default=None)
+    # Per-drug brand equity scores (asset_id -> score); accumulates with spend,
+    # decays toward floor
+    _brand_scores: dict[uuid.UUID, float] = PrivateAttr(default_factory=dict)
+    # Per-drug permanent floor scores based on drug quality; decay never goes below this
+    _brand_score_floors: dict[uuid.UUID, float] = PrivateAttr(default_factory=dict)
+    # Per-agent deep-copies of shared BD assets, keyed by str(asset.id).
+    # Each clone accumulates that agent's private PTRS readings.
+    _bd_asset_clones: dict[str, object] = PrivateAttr(default_factory=dict)
 
     def _post_init_update_enpv_eroi(self) -> Self:
         """Safely updates running totals after the instance is fully created."""
         self.running_enpv.append(self.enpv())
         self.running_eroi.append(self.eroi())
         return self
+
+    def rebase_time_to_zero(self) -> None:
+        """
+        Reset this game state's clock to 0 (warmup pre-roll boundary).
+
+        ``time`` is the only absolute-time-stamped field on a GameState —
+        assets carry relative durations only (``time_on_market``,
+        ``time_until_*``), so nothing else needs shifting. Keeping this next
+        to the field means any future absolute-time state is rebased here.
+        """
+        self.time = 0
 
     def _update_ptrs_for_experience(self) -> None:
         """
@@ -312,6 +358,144 @@ class GameState(BaseModel):
         return self._rd_capacity_config.calculate_cost_modifier(capacity_used)
 
     @property
+    def drop_action_enabled(self) -> bool:
+        """Whether the voluntary drop action feature is active."""
+        return (
+            self._drop_action_config is not None
+            and self._drop_action_config.enabled
+        )
+
+    # ------------------------------------------------------------------
+    # Clinical sites accounting (Model B)
+    # ------------------------------------------------------------------
+    @property
+    def clinical_sites_enabled(self) -> bool:
+        """Whether the clinical sites capacity feature is active."""
+        return (
+            self._clinical_sites_config is not None
+            and self._clinical_sites_config.enabled
+        )
+
+    @property
+    def sites_occupied(self) -> int:
+        """
+        Number of sites currently hosting a trial.
+
+        Derived from the live InDevelopment asset count (Model B): a site is
+        occupied for exactly as long as its asset is InDevelopment, and freed
+        the moment the asset leaves that state (including the gap between phases).
+        """
+        return sum(
+            1
+            for asset in self.assets.values()
+            if asset.state == AssetState.InDevelopment
+        )
+
+    @property
+    def free_sites(self) -> int:
+        """Operational sites not currently hosting a trial (never negative)."""
+        if not self.clinical_sites_enabled:
+            return 0
+        return max(0, self.operational_sites - self.sites_occupied)
+
+    @property
+    def total_sites_owned(self) -> int:
+        """
+        Sites the agent owns.
+
+        Operational + in-development (auction wins are operational, so already
+        counted). Drives the Fibonacci purchase price.
+        """
+        return self.operational_sites + len(self.sites_in_development)
+
+    def next_site_purchase_cost(self) -> float:
+        """Cash cost to buy the next site at the current ownership level."""
+        if not self.clinical_sites_enabled:
+            return 0.0
+        return self._clinical_sites_config.purchase_cost(self.total_sites_owned)
+
+    def can_afford_site_purchase(self) -> bool:
+        """Whether the agent can currently afford another site purchase."""
+        if not self.clinical_sites_enabled:
+            return False
+        return self.cash >= self.next_site_purchase_cost()
+
+    def advance_site_timers(self) -> int:
+        """
+        Decrement in-development site build timers; promote any that finish.
+
+        Called once at the start of each step. Returns the number of sites that
+        became operational this step.
+        """
+        if not self.clinical_sites_enabled or not self.sites_in_development:
+            return 0
+        remaining: list[int] = []
+        promoted = 0
+        for timer in self.sites_in_development:
+            new_timer = timer - 1
+            if new_timer <= 0:
+                promoted += 1
+            else:
+                remaining.append(new_timer)
+        if promoted:
+            self.operational_sites += promoted
+        self.sites_in_development = remaining
+        return promoted
+
+    def add_operational_site(self) -> None:
+        """Add one immediately-usable site (e.g. an auction win)."""
+        if not self.clinical_sites_enabled:
+            return
+        self.operational_sites += 1
+
+    def start_site_build(self) -> None:
+        """
+        Begin building one purchased site (adds a build-delay timer).
+
+        Cash is charged by the caller; this only mutates site state.
+        """
+        if not self.clinical_sites_enabled:
+            return
+        self.sites_in_development = self.sites_in_development + [
+            self._clinical_sites_config.site_development_steps
+        ]
+
+    def with_auction_site_win(self, price: float) -> "GameState":
+        """
+        Return a copy that has won an immediately-operational site at auction.
+
+        The won site is usable at once (no build delay), so ``operational_sites``
+        is incremented directly. ``price`` is charged to cash and booked as a
+        realised cost this step; bankruptcy is allowed (mirrors the BD auction,
+        which has no affordability mask). Private config attributes and the
+        original state are left untouched (the mutable site list is copied).
+        """
+        updated_costs = list(self.realised_costs)
+        if updated_costs:
+            updated_costs[-1] += price
+        else:
+            updated_costs.append(price)
+        new_cash = self.cash - price
+        return self.model_copy(
+            update={
+                "cash": new_cash,
+                "operational_sites": self.operational_sites + 1,
+                "sites_in_development": list(self.sites_in_development),
+                "realised_costs": updated_costs,
+                "game_ended": new_cash < 0 or self.time >= self.horizon,
+                "ended_reason": (
+                    self.ended_reason
+                    if self.ended_reason
+                    else (
+                        "horizon_reached"
+                        if self.time >= self.horizon
+                        else ("bankrupt" if new_cash < 0 else None)
+                    )
+                ),
+            }
+        )
+
+    @property
     def capacity_ratio(self) -> float:
         """Get capacity usage ratio (used / base)."""
         if self.capacity_base <= 0:
@@ -368,6 +552,11 @@ class GameState(BaseModel):
                     f"assets dict contains failed asset {asset.id},"
                     " which should be in failed_assets dict."
                 )
+            if asset.state == AssetState.Dropped:
+                raise ValueError(
+                    f"assets dict contains dropped asset {asset.id},"
+                    " which should be in dropped_assets dict."
+                )
 
         return v
 
@@ -408,17 +597,28 @@ class GameState(BaseModel):
         asset_arrival_sensitivity_below: float,
         asset_arrival_sensitivity_above: float,
         reinvestment_percentage: float,
-        global_seed: int = None,
+        seed: int | None,
+        *,
+        investment_levels_config: InvestmentLevelsConfig,
+        interim_trial_observations_config: InterimTrialObservationsConfig,
+        distributional_ptrs_config: DistributionalPtrsConfig,
+        rd_capacity_config: CapacityConfig,
+        drop_action_config: DropActionConfig,
+        marketing_config: MarketingConfig,
+        clinical_sites_config: ClinicalSitesConfig,
+        ptrs_readings_config: PtrsReadingsConfig,
+        ta_experience_config: TAExperienceConfig,
+        uncertain_ptrs_config: UncertainPtrsConfig,
+        approval_phase_config: ApprovalPhaseConfig,
         **asset_generator_kwargs,
     ) -> GameState:
         """
         Initialise the game state from the start of the simulation.
 
-        This function takes an AssetGeneratorBase subclass, the required input data for
-        GameState and optionally a global seed, and returns a GameState object at
-        time 0. The AssetGenerator subclass is instantiated with the global seed,
-        if provided, and is used to generate a list of DrugAsset objects that is also
-        passed to the GameState constructor.
+        If seed is provided, the game-wide RNG is re-initialized with that seed before
+        generating assets. If seed is None, the existing RNG (already initialized via
+        init_game_rng) is used — allowing multiple calls to share a single RNG stream
+        (e.g. multi-agent initialization).
 
         Parameters
         ----------
@@ -438,11 +638,32 @@ class GameState(BaseModel):
             Controls fluctuation width at/above equilibrium.
         reinvestment_percentage : float
             Fraction of revenues available as cash for reinvestment (0.0-1.0).
-        global_seed : int, optional
-            A global seed for reproducibility.
-            This will be used to seed the AssetGenerator,
-            which in turn uses this to seed the random number generator for each asset.
-            FUTURE: It will also be used to seed the random events in the News reel.
+        seed : int | None
+            Random seed. If not None, re-initializes the game-wide RNG with this seed.
+            Pass None to reuse the existing RNG (for multi-agent initialization where
+            all agents share a single RNG stream).
+        investment_levels_config : InvestmentLevelsConfig
+            Configuration for the investment levels feature.
+        interim_trial_observations_config : InterimTrialObservationsConfig
+            Configuration for the interim trial observations feature.
+        distributional_ptrs_config : DistributionalPtrsConfig
+            Configuration for the distributional PTRS feature.
+        rd_capacity_config : CapacityConfig
+            Configuration for the R&D capacity constraint feature.
+        drop_action_config : DropActionConfig
+            Configuration for the standalone drop action feature.
+        marketing_config : MarketingConfig
+            Configuration for the marketing feature.
+        clinical_sites_config : ClinicalSitesConfig
+            Configuration for the clinical sites feature.
+        ptrs_readings_config : PtrsReadingsConfig
+            Configuration for the PTRS readings feature.
+        ta_experience_config : TAExperienceConfig
+            Configuration for the TA experience feature.
+        uncertain_ptrs_config : UncertainPtrsConfig
+            Configuration for the uncertain PTRS feature.
+        approval_phase_config : ApprovalPhaseConfig
+            Configuration for the approval phase feature.
         **asset_generator_kwargs : dict
             Additional keyword arguments for the asset generator.
 
@@ -452,25 +673,10 @@ class GameState(BaseModel):
             A GameState object at time 0.
 
         """
-        if global_seed is None:
-            global_seed = random.SystemRandom().getrandbits(64)
+        if seed is not None:
+            init_game_rng(seed)
 
         logger.debug("Initialising new game state...")
-
-        # Extract configs before passing to asset generator
-        # (some configs are only for GameState, others are passed to asset generator)
-        investment_levels_config = asset_generator_kwargs.pop(
-            "investment_levels_config", None
-        )
-        interim_trial_observations_config = asset_generator_kwargs.pop(
-            "interim_trial_observations_config", None
-        )
-        distributional_ptrs_config = asset_generator_kwargs.pop(
-            "distributional_ptrs_config", None
-        )
-        rd_capacity_config = asset_generator_kwargs.pop("rd_capacity_config", None)
-        # ta_experience_config is needed by both GameState and asset generator
-        ta_experience_config = asset_generator_kwargs.get("ta_experience_config", None)
 
         # Sample TA quality modifiers if distributional PTRS is enabled
         ta_quality_modifiers = {}
@@ -479,8 +685,7 @@ class GameState(BaseModel):
         ta_rng = get_game_rng()
 
         if (
-            distributional_ptrs_config is not None
-            and distributional_ptrs_config.enabled
+            distributional_ptrs_config.enabled
         ):
             for ta, variance in distributional_ptrs_config.ta_quality_variance.items():
                 # Sample hidden TA quality modifier from Normal(0, sqrt(variance))
@@ -505,20 +710,25 @@ class GameState(BaseModel):
                 ta_quality_estimates[ta] = 0.0
                 ta_quality_confidences[ta] = 1.0  # Full confidence when no uncertainty
 
-        # Pass TA quality modifiers to asset generator for applying to true PTRS
-        asset_generator_kwargs["ta_quality_modifiers"] = ta_quality_modifiers
-        asset_generator_kwargs["distributional_ptrs_config"] = (
-            distributional_ptrs_config
+        # Pass the asset-generator-relevant configs plus the sampled TA quality
+        # modifiers. Remaining generator args (assets_dir / assets_data_list,
+        # indication_spread, indication_drift_speed, trial_cost_multiplier,
+        # indications_per_ta, generator_index) flow through asset_generator_kwargs.
+        asset_generator = asset_generator_cls(
+            uncertain_ptrs_config=uncertain_ptrs_config,
+            distributional_ptrs_config=distributional_ptrs_config,
+            ta_quality_modifiers=ta_quality_modifiers,
+            ta_experience_config=ta_experience_config,
+            approval_phase_config=approval_phase_config,
+            ptrs_readings_config=ptrs_readings_config,
+            **asset_generator_kwargs,
         )
-
-        asset_generator = asset_generator_cls(global_seed, **asset_generator_kwargs)
         assets = asset_generator(num_assets, "initial")
 
         # log the args for debugging
         logger.debug(
             f"GameState initialisation parameters: num_assets={num_assets}, "
             f"cash={cash}, horizon={horizon}, max_num_assets={max_num_assets}, "
-            f"global_seed={global_seed}, "
             f"asset_generator_kwargs={asset_generator_kwargs}"
         )
         # Initialize TA experience to zero for all TAs
@@ -530,6 +740,13 @@ class GameState(BaseModel):
 
         # Get capacity base from rd_capacity config
         capacity_base = rd_capacity_config.base_capacity
+
+        # Clinical sites: seed the starting operational-site endowment
+        initial_operational_sites = (
+            clinical_sites_config.starting_sites
+            if clinical_sites_config.enabled
+            else 0
+        )
 
         game_state = cls(
             id=uuid.uuid4(),
@@ -545,6 +762,7 @@ class GameState(BaseModel):
             assets=assets,
             failed_assets={},
             expired_assets={},
+            dropped_assets={},
             realised_costs=[],
             realised_revenues=[],
             running_enpv=[],
@@ -556,15 +774,15 @@ class GameState(BaseModel):
             capacity_base=capacity_base,
             ta_quality_estimates=ta_quality_estimates,
             ta_quality_confidences=ta_quality_confidences,
+            operational_sites=initial_operational_sites,
+            sites_in_development=[],
         )
         # Initialise asset generator after since it is private attribute
         game_state._asset_generator = asset_generator
         # Store TA experience config if provided
         game_state._ta_experience_config = ta_experience_config
-        # Store uncertain PTRS config if provided
-        game_state._uncertain_ptrs_config = asset_generator_kwargs.get(
-            "uncertain_ptrs_config", None
-        )
+        # Store uncertain PTRS config
+        game_state._uncertain_ptrs_config = uncertain_ptrs_config
         # Store investment levels config if provided
         game_state._investment_levels_config = investment_levels_config
         # Store interim trial observations config if provided
@@ -575,6 +793,13 @@ class GameState(BaseModel):
         game_state._distributional_ptrs_config = distributional_ptrs_config
         # Store R&D capacity config if provided
         game_state._rd_capacity_config = rd_capacity_config
+        game_state._drop_action_config = drop_action_config
+        game_state._ptrs_readings_config = ptrs_readings_config
+        game_state._marketing_config = marketing_config
+        game_state._brand_scores = {}
+        game_state._brand_score_floors = {}
+        game_state._clinical_sites_config = clinical_sites_config
+        game_state._bd_asset_clones = {}
         game_state._ta_quality_modifiers = ta_quality_modifiers
         logger.debug("Initialised new game state...")
         return game_state._post_init_update_enpv_eroi()
@@ -584,8 +809,7 @@ class GameState(BaseModel):
         Compute a deterministic fingerprint for this initial game state.
 
         Incorporates the serialized state (excluding the random id), the seed,
-        and a hash of the package source code. Two evaluations with the same seed,
-        same config, and same codebase will produce identical fingerprints.
+        and a hash of the package source code.
         """
         state_data = self.model_dump(mode="json")
         state_data.pop("id")  # exclude the random UUID4
@@ -820,13 +1044,17 @@ class GameState(BaseModel):
         active_assets = {
             aid: a
             for aid, a in assets.items()
-            if a.state not in (AssetState.Failed, AssetState.Expired)
+            if a.state
+            not in (AssetState.Failed, AssetState.Expired, AssetState.Dropped)
         }
         new_failed = {
             aid: a for aid, a in assets.items() if a.state == AssetState.Failed
         }
         new_expired = {
             aid: a for aid, a in assets.items() if a.state == AssetState.Expired
+        }
+        new_dropped = {
+            aid: a for aid, a in assets.items() if a.state == AssetState.Dropped
         }
         ended_state = GameState(
             id=self.id,
@@ -842,6 +1070,7 @@ class GameState(BaseModel):
             assets=active_assets,
             failed_assets={**self.failed_assets, **new_failed},
             expired_assets={**self.expired_assets, **new_expired},
+            dropped_assets={**self.dropped_assets, **new_dropped},
             realised_costs=self.realised_costs,
             realised_revenues=self.realised_revenues,
             running_enpv=self.running_enpv,
@@ -853,6 +1082,8 @@ class GameState(BaseModel):
             capacity_base=self.capacity_base,
             ta_quality_estimates=self.ta_quality_estimates.copy(),
             ta_quality_confidences=self.ta_quality_confidences.copy(),
+            operational_sites=self.operational_sites,
+            sites_in_development=list(self.sites_in_development),
         )
         ended_state._investment_levels_config = self._investment_levels_config
         ended_state._uncertain_ptrs_config = self._uncertain_ptrs_config
@@ -861,7 +1092,14 @@ class GameState(BaseModel):
         )
         ended_state._distributional_ptrs_config = self._distributional_ptrs_config
         ended_state._rd_capacity_config = self._rd_capacity_config
+        ended_state._drop_action_config = self._drop_action_config
+        ended_state._ptrs_readings_config = self._ptrs_readings_config
+        ended_state._marketing_config = self._marketing_config
+        ended_state._brand_scores = dict(self._brand_scores)
+        ended_state._brand_score_floors = dict(self._brand_score_floors)
+        ended_state._clinical_sites_config = self._clinical_sites_config
         ended_state._ta_quality_modifiers = self._ta_quality_modifiers.copy()
+        ended_state._bd_asset_clones = {}
         return ended_state
 
     def _get_level_config(self, level: InvestmentLevel) -> dict:
@@ -920,6 +1158,14 @@ class GameState(BaseModel):
         investor_actions: dict[uuid.UUID, InvestmentLevel | Literal["invest"] | None],
         market_shares: dict[uuid.UUID, float] | None = None,
         pricing_multipliers: dict[uuid.UUID, float] | None = None,
+        demand_multipliers: dict[uuid.UUID, float] | None = None,
+        brand_equity_actions: dict[uuid.UUID, int] | None = None,
+        demand_creation_actions: dict[str, int] | None = None,
+        demand_creation_cost_base: float = 0.0,
+        research_actions: dict[uuid.UUID, int] | None = None,
+        bd_current_assets: list | None = None,
+        site_priorities: dict[uuid.UUID, float] | None = None,
+        buy_site: bool = False,
     ) -> "GameState":
         """
         Advance the game state by one time step.
@@ -939,6 +1185,36 @@ class GameState(BaseModel):
              Optional per-drug pricing multipliers for on-market drugs.
              Applied to revenue before market share and reinvestment_percentage.
              If None, all drugs use 1.0x pricing (default).
+            demand_multipliers : dict[uuid.UUID, float] | None
+             Optional per-drug shared demand multipliers applied to revenue.
+             If None, no demand-creation boost is applied.
+            brand_equity_actions : dict[uuid.UUID, int] | None
+             Optional per-drug brand-equity spend decisions for this step.
+             If None, no brand-equity spend occurs.
+            demand_creation_actions : dict[str, int] | None
+             Optional per-indication demand-creation spend decisions for this step.
+             If None, no demand-creation spend occurs.
+            demand_creation_cost_base : float
+             Static per-action demand-creation cost (indication-wide market
+             potential); charged once per active demand-creation action.
+            research_actions : dict[uuid.UUID, int] | None
+             Optional per-asset PTRS reading counts to purchase this step.
+             If None, no readings are taken.
+            bd_current_assets : list | None
+             Optional list of BD assets currently on offer, so readings can be
+             taken on assets the agent does not yet own.
+            site_priorities : dict[uuid.UUID, float] | None
+             Optional per-asset priority scores for clinical-site arbitration
+             (agent_priority mode). When the agent requests more new trials than
+             it has free sites, sites go to the highest-priority assets; the rest
+             are costless no-ops. When None, arbitration falls back to ascending
+             asset order. Ignored unless the clinical sites feature is enabled.
+            buy_site : bool
+             Clinical sites "upgrade" action: when True, buy at most one new site
+             this step. Pays the current Fibonacci purchase cost and enters the
+             site into ``sites_in_development`` with the build-delay timer. Only
+             honoured when the feature is enabled and the agent can afford it;
+             otherwise a costless no-op.
 
         Returns:
             GameState: New game state.
@@ -946,11 +1222,19 @@ class GameState(BaseModel):
         """
         logger.debug(f"STARTING STEP: {self.time + 1} out of {self.horizon}")
 
-        # Convert legacy "invest" actions to InvestmentLevel.STANDARD
+        # Clinical sites: promote any sites whose build delay elapsed this step,
+        # before the new-trial gate runs (so a just-finished site can host a
+        # trial this step). Mutates self; the promoted counts are copied forward
+        # into the next state's constructors below.
+        self.advance_site_timers()
+
+        # Convert string actions to InvestmentLevel
         normalized_actions: dict[uuid.UUID, InvestmentLevel] = {}
         for asset_id, action in investor_actions.items():
             if action == "invest":
                 normalized_actions[asset_id] = InvestmentLevel.STANDARD
+            elif action == "drop":
+                normalized_actions[asset_id] = InvestmentLevel.DROP
             elif isinstance(action, InvestmentLevel):
                 normalized_actions[asset_id] = action
             # None or missing = no action
@@ -996,9 +1280,12 @@ class GameState(BaseModel):
             # Check if there's a level change for this asset
             new_level = normalized_actions.get(in_dev_asset.id)
 
-            # If STOP is requested, don't pay costs (asset will be stopped in Pt.2)
-            if new_level == InvestmentLevel.STOP:
-                logger.debug(f"Skipping cost for {in_dev_asset.name} (will be stopped)")
+            # If STOP or DROP is requested, don't pay costs
+            # (asset will be stopped/dropped in Pt.2)
+            if new_level in (InvestmentLevel.STOP, InvestmentLevel.DROP):
+                logger.debug(
+                    f"Skipping cost for {in_dev_asset.name} (will be stopped/dropped)"
+                )
                 continue
 
             if new_level is not None and new_level != InvestmentLevel.NONE:
@@ -1032,6 +1319,51 @@ class GameState(BaseModel):
 
         assets_for_step = self.assets.copy()
 
+        # Clinical sites upgrade: buy at most one new site this step. The site
+        # enters the build pipeline (2-year delay), so it does not change
+        # free_sites for the gate below; only the cash is spent now. Ignored if
+        # unaffordable (costless no-op), mirroring the env-level affordability
+        # mask on the upgrade action.
+        if buy_site and self.clinical_sites_enabled:
+            purchase_cost = self.next_site_purchase_cost()
+            if current_cash >= purchase_cost:
+                current_cash -= purchase_cost
+                current_realised_cost += purchase_cost
+                self.start_site_build()
+                logger.debug(
+                    f"Clinical sites: bought a site for {purchase_cost:.2f} "
+                    f"(now {self.total_sites_owned} owned, "
+                    f"{len(self.sites_in_development)} building)"
+                )
+            else:
+                logger.debug(
+                    f"Clinical sites: upgrade skipped, cannot afford "
+                    f"{purchase_cost:.2f} (cash={current_cash:.2f})"
+                )
+
+        # Clinical sites gate: if the agent requests more new trials than it has
+        # free sites, arbitrate which requests are granted (agent_priority order
+        # or ascending asset index). Denied requests become costless no-ops.
+        denied_site_requests: set[uuid.UUID] = set()
+        if self.clinical_sites_enabled:
+            requested = [
+                asset_id
+                for asset_id in self.assets  # ascending asset (arrival) order
+                if normalized_actions.get(asset_id)
+                not in (None, InvestmentLevel.NONE, InvestmentLevel.DROP,
+                        InvestmentLevel.STOP)
+                and self.assets[asset_id].state == AssetState.Idle
+            ]
+            granted = resolve_site_grants(
+                requested, self.free_sites, site_priorities
+            )
+            denied_site_requests = set(requested) - granted
+            if denied_site_requests:
+                logger.debug(
+                    f"Clinical sites: {len(denied_site_requests)} new-trial "
+                    f"request(s) denied (free_sites={self.free_sites})"
+                )
+
         # A (Pt.2): pay for new investments and update investment levels
         logger.debug("Step A (Pt.2): paying for new investments")
         for asset_id, level in normalized_actions.items():
@@ -1040,7 +1372,24 @@ class GameState(BaseModel):
 
             asset = assets_for_step[asset_id]
 
+            if level == InvestmentLevel.DROP:
+                if self._drop_action_config is not None and asset.trial is not None:
+                    current_cash -= self._drop_action_config.calculate_drop_fee(
+                        asset.trial.cost_remaining
+                    )
+                assets_for_step[asset_id] = asset.drop()
+                logger.debug(f"Dropped asset: {asset.name} (was {asset.state})")
+                continue
+
             if asset.state == AssetState.Idle:
+                # Clinical sites: this new trial lost the site arbitration this
+                # step — costless no-op (asset stays Idle, no cost charged).
+                if asset_id in denied_site_requests:
+                    logger.debug(
+                        f"Clinical sites: skipping {asset.name} (no free site)"
+                    )
+                    continue
+
                 # New investment
                 # Check if interim trial observations are enabled
                 enable_interim = (
@@ -1094,6 +1443,91 @@ class GameState(BaseModel):
                 current_cash, GameEndReason.NEW_INVESTMENTS, assets_for_step
             )
 
+        # A (Pt.4): pay for and immediately apply ptrs research readings (before
+        # evolution so positional sigma assignment matches the chain at the time
+        # of the request)
+        if (
+            self._ptrs_readings_config is not None
+            and self._ptrs_readings_config.enabled
+            and research_actions
+        ):
+            logger.debug("Step A (Pt.4): paying for and applying ptrs readings")
+            cfg = self._ptrs_readings_config
+            rng = get_game_rng()
+
+            def _reading_base_cost(target) -> float:
+                """Base cost of one reading: a fraction of the cost remaining."""
+                cost_rem = (
+                    target.trial.cost_remaining if target.trial is not None else 0.0
+                )
+                # Shared with the response layer so the displayed reading cost
+                # can never drift from what is charged here.
+                return cfg.reading_base_cost(cost_rem)
+
+            for asset_id, n in research_actions.items():
+                if n <= 0:
+                    continue
+                asset = assets_for_step.get(asset_id)
+                if asset is None:
+                    continue
+                cost = fibonacci_cost(n, _reading_base_cost(asset))
+                current_cash -= cost
+                current_realised_cost += cost
+                if asset.pending_trial_chain:
+                    asset.apply_pending_readings(
+                        n,
+                        cfg.sigma_logit_base,
+                        list(cfg.noise_multipliers),
+                        rng,
+                    )
+                    for trial in asset.pending_trial_chain:
+                        if trial.ptrs_sample_mean is not None:
+                            trial.ptrs = trial.ptrs_sample_mean
+                    # Invalidate enpv/eroi caches so the obs builder sees new ptrs
+                    asset.__dict__.pop("_projected_probs", None)
+                    asset.__dict__.pop("_projected_cash_flows", None)
+            # BD asset readings — apply to per-agent clone, not the shared market asset
+            if bd_current_assets:
+                bd_lookup = {str(a.id): a for a in bd_current_assets}
+                for asset_id, n in research_actions.items():
+                    if n <= 0:
+                        continue
+                    shared = bd_lookup.get(str(asset_id))
+                    if shared is None:
+                        continue
+                    if asset_id in assets_for_step:
+                        # Agent won it this step — handled as a portfolio asset above.
+                        continue
+                    clone = self._bd_asset_clones.get(str(asset_id))
+                    if clone is None:
+                        clone = shared.model_copy(deep=True)
+                        self._bd_asset_clones[str(asset_id)] = clone
+                    cost = fibonacci_cost(n, _reading_base_cost(shared))
+                    current_cash -= cost
+                    current_realised_cost += cost
+                    if clone.pending_trial_chain:
+                        clone.apply_pending_readings(
+                            n,
+                            cfg.sigma_logit_base,
+                            list(cfg.noise_multipliers),
+                            rng,
+                        )
+                        for trial in clone.pending_trial_chain:
+                            if trial.ptrs_sample_mean is not None:
+                                trial.ptrs = trial.ptrs_sample_mean
+                        # model_copy(deep=True) copies __dict__, so the clone
+                        # inherits any cached_property values already computed on
+                        # the shared asset (the BD action mask calls cash_enpv on
+                        # it every step). Invalidate so enpv/eroi reflect the
+                        # agent's private readings.
+                        clone.__dict__.pop("_projected_probs", None)
+                        clone.__dict__.pop("_projected_cash_flows", None)
+            if current_cash < 0.0:
+                logger.debug(f"GAME ENDED: {GameEndReason.PTRS_READINGS_COSTS.value}")
+                return self._create_ended_state(
+                    current_cash, GameEndReason.PTRS_READINGS_COSTS, assets_for_step
+                )
+
         logger.debug("Imaginary investment time period passing.")
         #######################################################
         # This is where the imaginary time period happens.    #
@@ -1111,22 +1545,69 @@ class GameState(BaseModel):
                     price_mult = pricing_multipliers.get(asset_id, 1.0)
                 priced_revenue = asset.revenue_this_step * price_mult
 
-                # Apply market share and reinvestment_percentage
+                # Apply market share and demand creation multiplier
                 if market_shares is not None:
                     share = market_shares.get(asset_id, 0.0)
                 else:
                     share = 1.0
-                effective_revenue = priced_revenue * share
+                demand_mult = (
+                    demand_multipliers.get(asset_id, 1.0)
+                    if demand_multipliers is not None
+                    else 1.0
+                )
+                effective_revenue = priced_revenue * share * demand_mult
                 cash_collected = effective_revenue * self.reinvestment_percentage
                 logger.debug(
                     f"Collecting revenue: {asset.name}, "
                     f"revenue={asset.revenue_this_step}, price_mult={price_mult:.2f}, "
-                    f"share={share:.2f}, collected={cash_collected}"
+                    f"share={share:.2f}, demand_mult={demand_mult:.3f}, "
+                    f"collected={cash_collected}"
                 )
                 current_cash += cash_collected
                 # Track price/share-adjusted revenue for metrics
                 current_realised_revenue += effective_revenue
         logger.debug(f"Current cash after collecting revenues: {current_cash}")
+
+        # B.5: pay marketing costs (demand creation + brand equity) and update scores
+        marketing_cfg = self._marketing_config
+        new_brand_scores: dict[uuid.UUID, float] = dict(self._brand_scores)
+        if marketing_cfg is not None and marketing_cfg.enabled:
+            # Demand creation: deduct an indication-wide cost for each indication
+            # the agent sizes. DC boosts the *whole* indication's shared demand
+            # multiplier, so the cost is anchored to the pool-wide market size
+            # (the static peak max_revenue passed in as demand_creation_cost_base)
+            # rather than to whichever drug the agent happens to hold there. This
+            # makes the spend unconditional -- an agent can size a market even
+            # before it has a drug on-market -- so DC is never free.
+            if demand_creation_actions is not None:
+                cost = marketing_cfg.dc_cost(demand_creation_cost_base)
+                for action in demand_creation_actions.values():
+                    if action == 1:
+                        current_cash -= cost
+                        current_realised_cost += cost
+            # Brand equity: update scores and deduct costs
+            if brand_equity_actions is not None:
+                for asset_id, asset in assets_for_step.items():
+                    if brand_equity_actions.get(asset_id, 0) == 1:
+                        cost = marketing_cfg.be_cost(asset.max_revenue)
+                        current_cash -= cost
+                        current_realised_cost += cost
+                        new_brand_scores[asset_id] = (
+                            new_brand_scores.get(asset_id, 0.0) + marketing_cfg.be_boost
+                        )
+            if current_cash < 0.0:
+                logger.debug("GAME ENDED: marketing costs exceeded cash")
+                return self._create_ended_state(
+                    current_cash, GameEndReason.ONGOING_INVESTMENTS, assets_for_step
+                )
+            # Decay all brand scores each step toward their floor (not toward zero)
+            new_brand_scores = {
+                aid: max(
+                    self._brand_score_floors.get(aid, 0.0),
+                    score * (1.0 - marketing_cfg.be_decay_rate),
+                )
+                for aid, score in new_brand_scores.items()
+            }
 
         # C evolve assets
         logger.debug("Step C: evolving assets")
@@ -1158,6 +1639,9 @@ class GameState(BaseModel):
         # Evolve assets with investment level modifiers
         evolved_assets = {}
         for asset_id, asset in assets_for_step.items():
+            if asset.state == AssetState.Dropped:
+                evolved_assets[asset_id] = asset
+                continue
             if asset.state == AssetState.InDevelopment and use_investment_levels:
                 level_config = self._get_level_config(asset.current_investment_level)
                 evolved_assets[asset_id] = asset.evolve_with_level(
@@ -1284,17 +1768,25 @@ class GameState(BaseModel):
             for asset_id, asset in evolved_assets.items()
             if asset.state == AssetState.Expired
         }
+        newly_dropped_assets = {
+            asset_id: asset
+            for asset_id, asset in evolved_assets.items()
+            if asset.state == AssetState.Dropped
+        }
         active_assets = {
             asset_id: asset
             for asset_id, asset in evolved_assets.items()
-            if asset.state not in (AssetState.Expired, AssetState.Failed)
+            if asset.state
+            not in (AssetState.Expired, AssetState.Failed, AssetState.Dropped)
         }
 
-        # Log failed/expired assets
+        # Log failed/expired/dropped assets
         for asset_id in newly_failed_assets:
             logger.debug(f"Asset failed: {asset_id}.")
         for asset_id in newly_expired_assets:
             logger.debug(f"Asset expired: {asset_id}.")
+        for asset_id in newly_dropped_assets:
+            logger.debug(f"Asset dropped: {asset_id}.")
 
         # Mean-reverting random walk for asset arrivals (Gaussian CDF-based)
         active_assets = self._add_new_assets_mean_reverting(active_assets)
@@ -1326,6 +1818,10 @@ class GameState(BaseModel):
                     **self.expired_assets,
                     **newly_expired_assets,
                 },
+                dropped_assets={
+                    **self.dropped_assets,
+                    **newly_dropped_assets,
+                },
                 realised_costs=self.realised_costs + [current_realised_cost],
                 realised_revenues=self.realised_revenues + [current_realised_revenue],
                 running_enpv=self.running_enpv,
@@ -1337,6 +1833,8 @@ class GameState(BaseModel):
                 capacity_base=self.capacity_base,
                 ta_quality_estimates=self.ta_quality_estimates.copy(),
                 ta_quality_confidences=self.ta_quality_confidences.copy(),
+                operational_sites=self.operational_sites,
+                sites_in_development=list(self.sites_in_development),
             )
             final_state._uncertain_ptrs_config = self._uncertain_ptrs_config
             final_state._investment_levels_config = self._investment_levels_config
@@ -1345,7 +1843,14 @@ class GameState(BaseModel):
             )
             final_state._distributional_ptrs_config = self._distributional_ptrs_config
             final_state._rd_capacity_config = self._rd_capacity_config
+            final_state._drop_action_config = self._drop_action_config
+            final_state._ptrs_readings_config = self._ptrs_readings_config
+            final_state._marketing_config = self._marketing_config
+            final_state._brand_scores = new_brand_scores
+            final_state._brand_score_floors = dict(self._brand_score_floors)
+            final_state._clinical_sites_config = self._clinical_sites_config
             final_state._ta_quality_modifiers = self._ta_quality_modifiers.copy()
+            final_state._bd_asset_clones = {}
             # Note: decay is applied at trial completion time (already done above)
             final_state._update_ptrs_for_experience()
             return final_state._post_init_update_enpv_eroi()
@@ -1372,6 +1877,10 @@ class GameState(BaseModel):
                 **self.expired_assets,
                 **newly_expired_assets,
             },
+            dropped_assets={
+                **self.dropped_assets,
+                **newly_dropped_assets,
+            },
             realised_costs=self.realised_costs + [current_realised_cost],
             realised_revenues=self.realised_revenues + [current_realised_revenue],
             running_enpv=self.running_enpv,
@@ -1383,6 +1892,8 @@ class GameState(BaseModel):
             capacity_base=self.capacity_base,
             ta_quality_estimates=self.ta_quality_estimates.copy(),
             ta_quality_confidences=self.ta_quality_confidences.copy(),
+            operational_sites=self.operational_sites,
+            sites_in_development=list(self.sites_in_development),
         )
         new_game_state._asset_generator = self._asset_generator
         new_game_state._ta_experience_config = self._ta_experience_config
@@ -1393,7 +1904,14 @@ class GameState(BaseModel):
         )
         new_game_state._distributional_ptrs_config = self._distributional_ptrs_config
         new_game_state._rd_capacity_config = self._rd_capacity_config
+        new_game_state._drop_action_config = self._drop_action_config
+        new_game_state._ptrs_readings_config = self._ptrs_readings_config
+        new_game_state._marketing_config = self._marketing_config
+        new_game_state._brand_scores = new_brand_scores
+        new_game_state._brand_score_floors = dict(self._brand_score_floors)
+        new_game_state._clinical_sites_config = self._clinical_sites_config
         new_game_state._ta_quality_modifiers = self._ta_quality_modifiers.copy()
+        new_game_state._bd_asset_clones = dict(self._bd_asset_clones)
 
         # Apply uncertain PTRS mechanics: update PTRS values based on experience
         # Note: decay is now applied at trial completion time, not every step

@@ -4,6 +4,10 @@ export const informationDictionary = {
     description:
       "eNPV stands for Expected Net Present Value and is a measure of the value of your portfolio today, taking into account all its expected future costs and revenue. You will be ranked on the leaderboard based on your portfolio's average eNPV during the whole game.",
   },
+  cashEnpv: {
+    title: "Cash eNPV",
+    description: "eNPV with sales scaled by the reinvestment rate (35%).",
+  },
   eROI: {
     title: "eROI",
     description:
@@ -17,7 +21,7 @@ export const informationDictionary = {
   revenueCurve: {
     title: "Budget",
     description:
-      "This plot shows the expected budget of your portfolio over the remaining time. Your budget is a percentage of the Sales you make from your drugs that are on the market. The highlighted point is the budget you will receive next year.",
+      "This plot shows the expected budget of your portfolio over the remaining time. Only the reinvestment rate (35%) of sales reaches your Capital. The highlighted point is the budget you will receive next year.",
   },
   capitalPlot: {
     title: "Capital",
@@ -28,16 +32,6 @@ export const informationDictionary = {
     title: "Knapsack Agent",
     description:
       "The Knapsack agent is a single-step optimiser. That means it optimises for the highest eNPV you can get based on your current capital. It doesn't consider future costs or revenue.",
-  },
-  pyxieAgent: {
-    title: "Pyxie Agent",
-    description:
-      "The Pyxie agent is a reinforcement learning, multi-step agent. It has learned an optimal strategy that plays out to maximise your eNPV this year and future years. Its suggestion on this step may only show you part of a larger strategy.",
-  },
-  alphainvestAgent: {
-    title: "Pyxie Agent",
-    description:
-      "The Pyxie agent is a reinforcement learning, multi-step agent. It has learned an optimal strategy that plays out to maximise your eNPV this year and future years. Its suggestion on this step may only show you part of a larger strategy.",
   },
   TA: {
     title: "TA",
@@ -79,7 +73,7 @@ export const informationDictionary = {
   budgetNextYear: {
     title: "Budget Next Year",
     description:
-      "The Budget Next Year is a percentage of your Sales next year and will be added to your Capital when you progress to the next step.",
+      "The cash this asset adds to your Capital next step: gross sales scaled by the reinvestment rate (35%).",
   },
   investmentLevels: {
     title: "Investment Levels",

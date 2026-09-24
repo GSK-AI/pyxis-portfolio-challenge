@@ -3,16 +3,12 @@ import type { Config } from "tailwindcss";
 const config: Config = {
   darkMode: ["class"],
   content: [
-    "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./lib/**/*.{js,ts,jsx,tsx,mdx}",
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
     extend: {
-      gridTemplateColumns: {
-        "13": "repeat(13, minmax(0, 1fr))",
-      },
       colors: {
         blue: {
           "400": "#2589FE",
@@ -20,8 +16,6 @@ const config: Config = {
           "600": "#2F6FEB",
         },
         background: "hsl(var(--background))",
-        highlight: "var(--highlight)",
-        "highlight-muted": "var(--highlight-muted)",
         foreground: "hsl(var(--foreground))",
         card: {
           DEFAULT: "hsl(var(--card))",
@@ -63,22 +57,16 @@ const config: Config = {
         },
       },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        // App rule: a single 8px radius everywhere (rounded-full excepted).
+        DEFAULT: "8px",
+        sm: "8px",
+        md: "8px",
+        lg: "8px",
+        xl: "8px",
+        "2xl": "8px",
+        "3xl": "8px",
       },
       keyframes: {
-        progress: {
-          "0%": {
-            transform: "translateX(0) scaleX(0)",
-          },
-          "40%": {
-            transform: "translateX(0) scaleX(0.4)",
-          },
-          "100%": {
-            transform: "translateX(100%) scaleX(0.5)",
-          },
-        },
         "accordion-down": {
           from: {
             height: "0",
@@ -95,29 +83,10 @@ const config: Config = {
             height: "0",
           },
         },
-        "slide-down": {
-          from: {
-            height: "0",
-          },
-          to: {
-            height: "var(--radix-collapsible-content-height)",
-          },
-        },
-        "slide-up": {
-          from: {
-            height: "var(--radix-collapsible-content-height)",
-          },
-          to: {
-            height: "0",
-          },
-        },
       },
       animation: {
-        progress: "progress 1s infinite linear",
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        "slide-down": "slide-down 0.2s ease-out",
-        "slide-up": "slide-up 0.2s ease-out",
       },
     },
   },

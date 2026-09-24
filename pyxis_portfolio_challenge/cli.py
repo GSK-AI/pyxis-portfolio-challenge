@@ -159,6 +159,13 @@ def main(agent, cfg_file, seed, agent_kwargs, log_level) -> None:
         distributional_ptrs_config=cfg.distributional_ptrs,
         ta_experience_config=cfg.ta_experience,
         rd_capacity_config=cfg.rd_capacity,
+        drop_action_config=cfg.drop_action,
+        marketing_config=cfg.marketing,
+        clinical_sites_config=cfg.clinical_sites,
+        ptrs_readings_config=cfg.ptrs_readings,
+        approval_phase_config=cfg.approval_phase,
+        metrics=[],
+        initial_game_state=None,
     )
 
     logger.info("Starting agent playthrough...")

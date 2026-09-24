@@ -27,16 +27,6 @@
   font-style: italic;
 }
 
-@font-face {
-  font-family: "Source Code Pro";
-  src: url("/fonts/SourceCodePro-Regular.ttf");
-}
-
-@font-face {
-  font-family: "Source Code Pro Light";
-  src: url("/fonts/SourceCodePro-Light.ttf");
-}
-
 html,
 body {
   font-family: "GSK Precision", "Lato", Arial, Helvetica, sans-serif;
@@ -48,68 +38,6 @@ body {
   overflow-x: hidden;
 }
 
-.dev {
-  border: 1px dotted red !important;
-}
-
-pre {
-  background: #f7f7f7;
-  padding: 16px;
-  font-size: 12px;
-  border-radius: 16px;
-  white-space: pre-wrap;
-  white-space: -moz-pre-wrap;
-  white-space: -pre-wrap;
-  white-space: -o-pre-wrap;
-  word-wrap: break-word;
-}
-
-.c-splash-screen {
-  position: relative;
-}
-.c-splash-screen:before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-image: url("/images/tech-helix.jpg");
-  background-repeat: no-repeat;
-  background-position: right;
-  background-size: cover;
-  opacity: 0.05;
-  pointer-events: none;
-}
-
-.c-table {
-  @apply !ring-1 !ring-gray-100;
-}
-.c-table tr th {
-  @apply whitespace-nowrap bg-gray-100 font-bold ring-1 ring-gray-300;
-}
-.c-table tr td {
-  @apply relative whitespace-nowrap border border-solid py-4 pr-4 font-light tracking-wide ring-1 ring-gray-100;
-}
-.c-number {
-  @apply flex justify-end pr-4 text-[15px] font-thin;
-  font-family:
-    "Source Code Pro Light", "Source Code Pro", "GSK Precision", "Lato", Arial,
-    Helvetica, sans-serif;
-}
-.c-number-no-font {
-  @apply flex justify-end pr-4;
-}
-.c-number-font {
-  @apply text-[15px] font-thin;
-  font-family:
-    "Source Code Pro Light", "Source Code Pro", "GSK Precision", "Lato", Arial,
-    Helvetica, sans-serif;
-}
-.visx-tooltip {
-  z-index: 50;
-}
-
 /* nextstepjs: ensure overlay covers the full page height, not just the viewport */
 [data-name="nextstep-overlay"] {
   min-height: 100% !important;
@@ -119,8 +47,6 @@ pre {
   :root {
     --background: 0 0% 100%;
     --foreground: 0 0% 3.9%;
-    --highlight: #1ca8c0;
-    --highlight-muted: #f1f5f9;
     --card: 0 0% 100%;
     --card-foreground: 0 0% 3.9%;
     --popover: 0 0% 100%;
@@ -191,43 +117,6 @@ pre {
   }
 
   html {
-    /* font-family: var(--gsk-font); */
     font-family: "GSK Precision", Arial, sans-serif;
   }
-
-  h1.mdown-h1 {
-    font-size: 1.476rem;
-    font-weight: 700;
-    font-family: "GSK Precision", sans-serif;
-
-    &:first-child {
-      margin-top: 8px;
-    }
-  }
-
-  h2.mdown-h2 {
-    font-size: 1.383rem;
-    font-weight: 400;
-    font-family: "GSK Precision", sans-serif;
-  }
-
-  h3.mdown-h3 {
-    font-size: 1.296rem;
-    font-weight: 600;
-    font-family: Arial, sans-serif;
-  }
-
-  h4.mdown-h4 {
-    font-size: 1.125rem;
-    font-weight: 400;
-    font-family: Arial, sans-serif;
-  }
-
-  p.mdown-p {
-    font-weight: 300;
-  }
-}
-
-.c-code {
-  @apply font-mono;
 }

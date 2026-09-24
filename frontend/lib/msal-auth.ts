@@ -131,12 +131,12 @@ export async function logout() {
   await getConfig();
   if (!isAuthConfigured()) {
     console.log("[LOG]: Logout skipped - Azure AD not configured");
-    window.location.href = window.location.origin + "/logged-out";
+    window.location.href = window.location.origin;
     return;
   }
   const msalInstance = await getMsalInstance();
   await msalInstance.logoutRedirect({
-    postLogoutRedirectUri: window.location.origin + "/logged-out",
+    postLogoutRedirectUri: window.location.origin,
   });
 }
 

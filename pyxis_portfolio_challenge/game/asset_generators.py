@@ -14,6 +14,7 @@ from scipy.stats import beta as beta_dist
 from pyxis_portfolio_challenge.config import (
     ApprovalPhaseConfig,
     DistributionalPtrsConfig,
+    PtrsReadingsConfig,
     TAExperienceConfig,
     UncertainPtrsConfig,
 )
@@ -253,6 +254,36 @@ def apply_uncertain_ptrs_to_trial_chain(
             f"[UncertainPTRS] Applied noise to {trials_modified} trials, "
             f"avg |noise|={avg_noise:.4f}"
         )
+
+
+def apply_ptrs_readings_to_trial_chain(
+    asset: "DrugAsset",
+    ptrs_readings_config: PtrsReadingsConfig,
+    rng: random.Random,
+) -> None:
+    """
+    Initialise the ptrs_readings feature for a newly arrived asset.
+
+    Sets _true_ptrs on each non-approval pending trial, draws one initial
+    logit-normal sample per trial (using phase-distance noise), and sets
+    trial.ptrs = ptrs_sample_mean so the agent's first observation is noisy.
+    """
+    chain = asset.pending_trial_chain  # excludes APPROVAL
+    cfg = ptrs_readings_config
+
+    # Store true PTRS on every pending trial in the chain
+    for trial in chain:
+        trial._true_ptrs = trial.ptrs
+
+    # Draw initial reading (count=1) for each trial at the appropriate noise level
+    asset.initialise_ptrs_readings(
+        cfg.sigma_logit_base, list(cfg.noise_multipliers), rng
+    )
+
+    # Update the observed PTRS to the noisy first reading
+    for trial in chain:
+        if trial.ptrs_sample_mean is not None:
+            trial.ptrs = trial.ptrs_sample_mean
 
 
 def sample_ta_by_experience(
@@ -621,42 +652,37 @@ DUMMY_LIST_DATA = [
 ]
 
 
-def generate_asset_id(global_seed: int, counter: int, generator_id: int = 0) -> uuid.UUID:
-    """Generate a UUID for a drug asset using the global seed, asset count, and generator identity."""
-    return uuid.uuid5(ASSET_NAMESPACE, f"{global_seed}_{generator_id}_{counter}")
+def generate_asset_id(counter: int, generator_id: int = 0) -> uuid.UUID:
+    """Generate a deterministic, episode-unique UUID from game seed and counter."""
+    from pyxis_portfolio_challenge.rng import get_game_seed
+
+    return uuid.uuid5(ASSET_NAMESPACE, f"{get_game_seed()}_{generator_id}_{counter}")
 
 
 class AssetGeneratorBase(ABC):
     """Abstract base class for drug asset generators."""
 
-    def __init__(self, global_seed: int, asset_count: int = 0, generator_index: int = 0):
+    def __init__(self, asset_count: int = 0, generator_index: int = 0):
         """
-        Initialise the asset generator with a global seed and asset count.
+        Initialise the asset generator with an asset count and generator index.
 
         Parameters
         ----------
-        global_seed : int
-            A global seed for reproducibility of random asset generation.
         asset_count : int, optional
             Number of assets generated, used to generate unique IDs. Defaults to 0.
         generator_index : int, optional
             Stable integer identifier for this generator instance. Combined with
-            global_seed and asset_count to produce unique, reproducible asset UUIDs
-            across all generators that share the same seed. Defaults to 0.
+            asset_count to produce unique, reproducible asset UUIDs across all
+            generators in a game. Defaults to 0.
 
         """
         super().__init__()
 
-        if not isinstance(global_seed, int):
-            raise TypeError(
-                f"global_seed must be an integer, received {type(global_seed).__name__}"
-            )
         if not isinstance(asset_count, int):
             raise TypeError(
                 f"asset_count must be an integer, received {type(asset_count).__name__}"
             )
 
-        self.global_seed = global_seed
         self.asset_count = asset_count
         self.generator_index = generator_index
 
@@ -721,7 +747,6 @@ class JSONAssetGenerator(AssetGeneratorBase):
 
     def __init__(
         self,
-        global_seed: int,
         assets_dir: upath.UPath,
         indication_spread: float,
         indication_drift_speed: float,
@@ -732,18 +757,17 @@ class JSONAssetGenerator(AssetGeneratorBase):
         ta_experience_config: Optional[TAExperienceConfig] = None,
         indications_per_ta: Optional[dict[str, int]] = None,
         approval_phase_config: Optional[ApprovalPhaseConfig] = None,
+        ptrs_readings_config: Optional[PtrsReadingsConfig] = None,
         generator_index: int = 0,
     ):
         """
-        Initialise the JSON asset generator with a global seed and assets directory.
+        Initialise the JSON asset generator with an assets directory.
 
         Inherits the `asset_count` attribute from AssetGeneratorBase, which tracks the
         number of assets generated and is used to generate unique IDs for each asset.
 
         Parameters
         ----------
-        global_seed : int
-            A global seed for reproducibility of random asset generation.
         assets_dir : str
             Directory containing pre-generated assets in JSON format, structured by
             stage.
@@ -781,9 +805,13 @@ class JSONAssetGenerator(AssetGeneratorBase):
         approval_phase_config : Optional[ApprovalPhaseConfig]
             Configuration for approval phase. If enabled, an Approval trial is
             injected after Phase 3 in the trial chain.
+        ptrs_readings_config : Optional[PtrsReadingsConfig]
+            Configuration for the PTRS readings feature. If None, feature disabled.
+        generator_index : int
+            Index used to disambiguate UUIDs when multiple generators run in parallel.
 
         """
-        super().__init__(global_seed, generator_index=generator_index)
+        super().__init__(generator_index=generator_index)
 
         if not isinstance(assets_dir, upath.UPath):
             raise TypeError(
@@ -801,6 +829,7 @@ class JSONAssetGenerator(AssetGeneratorBase):
         self.indication_drift_speed = indication_drift_speed
         self.trial_cost_multiplier = trial_cost_multiplier
         self.approval_phase_config = approval_phase_config
+        self.ptrs_readings_config = ptrs_readings_config
         # Random permutation per TA: maps drift-order → observed index.
         # Set via set_indication_permutation(); None = identity mapping.
         self._indication_permutation: Optional[dict[str, list[int]]] = None
@@ -930,7 +959,7 @@ class JSONAssetGenerator(AssetGeneratorBase):
         """Convert asset data dictionary to DrugAsset object with unique ID and RNG."""
         # Convert trials data from JSON schema to dict of Trial objects
         logger.debug(f"asset_data: {asset_data}")
-        asset_id = generate_asset_id(self.global_seed, self.asset_count, self.generator_index)
+        asset_id = generate_asset_id(self.asset_count, self.generator_index)
         therapeutic_area = asset_data["therapeutic_area"]
 
         if AssetState(asset_data["state"]) == AssetState.OnMarket:
@@ -1000,12 +1029,25 @@ class JSONAssetGenerator(AssetGeneratorBase):
             type=asset_data["type"],
             description=asset_data["description"],
             max_revenue=asset_data["max_revenue"],
+            raw_max_revenue=asset_data["max_revenue"],
             time_until_max_revenue=asset_data["time_until_max_revenue"],
             time_until_patent_expiry=asset_data["time_until_patent_expiry"],
             state=AssetState(asset_data["state"]),
             time_on_market=asset_data["time_on_market"],
             trial=trial,
         )
+
+        if (
+            self.ptrs_readings_config is not None
+            and self.ptrs_readings_config.enabled
+            and isinstance(self.ptrs_readings_config, PtrsReadingsConfig)
+        ):
+            apply_ptrs_readings_to_trial_chain(
+                asset=asset,
+                ptrs_readings_config=self.ptrs_readings_config,
+                rng=get_game_rng(),
+            )
+
         logger.debug(f"Created asset: {asset}")
         return asset
 
@@ -1119,7 +1161,7 @@ class JSONAssetGenerator(AssetGeneratorBase):
         asset_data["state"] = "Idle"
 
         self.asset_count += 1
-        asset_id = generate_asset_id(self.global_seed, self.asset_count, self.generator_index)
+        asset_id = generate_asset_id(self.asset_count, self.generator_index)
 
         trial = trials_json_to_trials_sequence(
             asset_data["trials"],
@@ -1137,12 +1179,21 @@ class JSONAssetGenerator(AssetGeneratorBase):
             type="BD",
             description=asset_data["description"],
             max_revenue=asset_data["max_revenue"],
+            raw_max_revenue=asset_data["max_revenue"],
             time_until_max_revenue=asset_data["time_until_max_revenue"],
             time_until_patent_expiry=asset_data["time_until_patent_expiry"],
             state=AssetState.Idle,
             time_on_market=0,
             trial=trial,
         )
+
+        if self.ptrs_readings_config is not None and self.ptrs_readings_config.enabled:
+            apply_ptrs_readings_to_trial_chain(
+                asset=asset,
+                ptrs_readings_config=self.ptrs_readings_config,
+                rng=get_game_rng(),
+            )
+
         return asset
 
 
@@ -1151,7 +1202,6 @@ class FixedListAssetGenerator(AssetGeneratorBase):
 
     def __init__(
         self,
-        global_seed: int,
         assets_data_list: Optional[list[dict]] = DUMMY_LIST_DATA,
         uncertain_ptrs_config: Optional[UncertainPtrsConfig] = None,
         distributional_ptrs_config: Optional[DistributionalPtrsConfig] = None,
@@ -1160,6 +1210,7 @@ class FixedListAssetGenerator(AssetGeneratorBase):
         indications_per_ta: Optional[dict[str, int]] = None,
         approval_phase_config: Optional[ApprovalPhaseConfig] = None,
         trial_cost_multiplier: float = 1.0,
+        ptrs_readings_config: Optional[PtrsReadingsConfig] = None,
         generator_index: int = 0,
     ):
         """
@@ -1170,8 +1221,6 @@ class FixedListAssetGenerator(AssetGeneratorBase):
 
         Parameters
         ----------
-        global_seed : int
-            The global seed for random number generation.
         assets_data_list : list[dict]
             A list of dictionaries containing asset data.
             Each dictionary should contain the fields required to create a DrugAsset.
@@ -1189,9 +1238,13 @@ class FixedListAssetGenerator(AssetGeneratorBase):
             Configuration for approval phase.
         trial_cost_multiplier : float
             Multiplier for trial phase costs.
+        ptrs_readings_config : PtrsReadingsConfig, optional
+            Configuration for the PTRS readings feature.
+        generator_index : int
+            Index used to disambiguate UUIDs when multiple generators run in parallel.
 
         """
-        super().__init__(global_seed, generator_index=generator_index)
+        super().__init__(generator_index=generator_index)
 
         if not isinstance(assets_data_list, list):
             raise TypeError(
@@ -1209,6 +1262,7 @@ class FixedListAssetGenerator(AssetGeneratorBase):
         self.indications_per_ta = indications_per_ta
         self.approval_phase_config = approval_phase_config
         self.trial_cost_multiplier = trial_cost_multiplier
+        self.ptrs_readings_config = ptrs_readings_config
         self._indication_permutation: Optional[dict[str, list[int]]] = None
 
     def set_indication_permutation(self, permutation: dict[str, list[int]]) -> None:
@@ -1272,20 +1326,16 @@ class FixedListAssetGenerator(AssetGeneratorBase):
                     if a.get("therapeutic_area") == target_ta
                 ]
                 if matching_assets:
-                    asset_data = copy.deepcopy(
-                        get_game_rng().choice(matching_assets)
-                    )
+                    asset_data = copy.deepcopy(get_game_rng().choice(matching_assets))
                 else:
                     asset_data = copy.deepcopy(
                         get_game_rng().choice(self.assets_data_list)
                     )
             else:
-                asset_data = copy.deepcopy(
-                    get_game_rng().choice(self.assets_data_list)
-                )
+                asset_data = copy.deepcopy(get_game_rng().choice(self.assets_data_list))
             # Add id and rng fields to asset_data
             self.asset_count += 1
-            asset_id = generate_asset_id(self.global_seed, self.asset_count, self.generator_index)
+            asset_id = generate_asset_id(self.asset_count, self.generator_index)
             if AssetState(asset_data["state"]) == AssetState.OnMarket:
                 final_phase = (
                     TrialPhase.APPROVAL
@@ -1359,12 +1409,24 @@ class FixedListAssetGenerator(AssetGeneratorBase):
                 type=asset_data["type"],
                 description=asset_data["description"],
                 max_revenue=asset_data["max_revenue"],
+                raw_max_revenue=asset_data["max_revenue"],
                 time_until_max_revenue=asset_data["time_until_max_revenue"],
                 time_until_patent_expiry=asset_data["time_until_patent_expiry"],
                 state=AssetState(asset_data["state"]),
                 time_on_market=asset_data["time_on_market"],
                 trial=trial,
             )
+
+            if (
+                self.ptrs_readings_config is not None
+                and self.ptrs_readings_config.enabled
+                and isinstance(self.ptrs_readings_config, PtrsReadingsConfig)
+            ):
+                apply_ptrs_readings_to_trial_chain(
+                    asset=asset,
+                    ptrs_readings_config=self.ptrs_readings_config,
+                    rng=get_game_rng(),
+                )
 
             assets[asset.id] = asset
         return assets

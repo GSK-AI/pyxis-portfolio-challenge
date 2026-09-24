@@ -1,0 +1,88 @@
+/*
+ * v2 skin — token overrides scoped to the `ui-v2` class on <html>.
+ * Layout language from the tempussignup "GSK theme" (near-square 2px
+ * radius, hairline borders, no shadows); brand colors are Pyxis chambray
+ * from aiml-portfolio-simulator design tokens. Values are HSL triplets to
+ * match the Tailwind v3 hsl(var(--token)) setup in global.css.
+ * The classic UI is untouched: without the ui-v2 class none of this applies.
+ */
+
+.ui-v2 {
+  /* light — tempus :root */
+  --background: 0 0% 100%; /* pure white */
+  --foreground: 240 4% 11%; /* #1a1a1c */
+  --card: 0 0% 100%;
+  --card-foreground: 240 4% 11%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 240 4% 11%;
+  --primary: 219 62% 53%; /* chambray #3e71d2 */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 240 3% 93%; /* #ededee */
+  --secondary-foreground: 240 4% 11%;
+  --muted: 240 3% 93%;
+  --muted-foreground: 231 4% 39%; /* #5f6066 */
+  --accent: 240 3% 93%;
+  --accent-foreground: 240 4% 11%;
+  --border: 240 3% 92%;
+  --input: 240 3% 90%;
+  --ring: 219 62% 53%;
+  --chart-1: 219 62% 53%; /* #3e71d2 */
+  --chart-2: 16 91% 58%; /* #f56633 */
+  --chart-3: 211 71% 68%; /* #73abe7 */
+  --chart-4: 187 71% 29%; /* #15717d */
+  --chart-5: 230 3% 46%; /* #737479 */
+  --radius: 0.5rem; /* 8px — app-wide radius */
+  --highlight: #3e71d2;
+  --destructive: 5 66% 47%; /* brand status-error #c83629 */
+  --destructive-foreground: 0 0% 100%;
+  /* soft chambray tint for gradient panels / avatar chips; not a Tailwind
+     token — use as bg-[var(--accent-soft)] or in gradients */
+  --accent-soft: rgba(62, 113, 210, 0.14);
+}
+
+.ui-v2.dark {
+  /* dark — tempus .dark (their default mode) */
+  --background: 240 4% 9%; /* #171719 */
+  --foreground: 240 6% 93%; /* #ececee */
+  --card: 240 5% 13%; /* #1f1f22 */
+  --card-foreground: 240 6% 93%;
+  --popover: 240 5% 13%;
+  --popover-foreground: 240 6% 93%;
+  --primary: 215 68% 60%; /* chambray-500 #538dde, brighter on dark */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 240 5% 17%; /* #29292d */
+  --secondary-foreground: 240 6% 93%;
+  --muted: 240 5% 17%;
+  --muted-foreground: 228 3% 69%; /* #adaeb2 */
+  --accent: 240 5% 17%;
+  --accent-foreground: 240 6% 93%;
+  --border: 240 4% 16%;
+  --input: 240 4% 20%;
+  --ring: 219 62% 53%;
+  --accent-soft: rgba(83, 141, 222, 0.16);
+}
+
+/* Subtle pop for values that change on turn advance (remount via key). */
+@keyframes v2-pop {
+  from {
+    opacity: 0.2;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.v2-pop {
+  animation: v2-pop 400ms ease-out;
+}
+
+/* iPad-style scrolling: no visible scrollbars, native momentum kept. */
+.v2-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
+}
+.v2-scroll::-webkit-scrollbar {
+  display: none;
+}

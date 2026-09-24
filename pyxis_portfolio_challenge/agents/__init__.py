@@ -17,9 +17,11 @@ from pyxis_portfolio_challenge.agents.pyxie import PyxieAgent
 
 _SAVED_MULTI_AGENT_MODEL_DIR = Path(__file__).parent / "saved_multi_agent_model"
 
+# Pyxie is disabled as a selectable in-game opponent. The PyxieAgent /
+# MultiAgentPyxieAgent classes and get_agent() branches remain for internal
+# use (e.g. training eval), but Pyxie is no longer offered in the game.
 AGENTS_LIST = [
     {"name": "Knapsack", "cost": 500_000.0},
-    {"name": "Pyxie", "cost": 5_000_000.0},
 ]
 AGENTS = {agent["name"]: agent for agent in AGENTS_LIST}
 

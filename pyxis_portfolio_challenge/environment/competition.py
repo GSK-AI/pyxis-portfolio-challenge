@@ -17,14 +17,14 @@ Example usage::
     obs, rewards, terms, truncs, infos = env.step(actions)
 
     # Or get a gym-like trainer (like env.train())
-    trainer = env.train([None, "knapsack(c12)"])
+    trainer = env.train([None, "knapsack"])
     obs, info = trainer.reset()
     obs, reward, term, trunc, info = trainer.step(action)
     masks = trainer.action_masks()
 
     # Evaluate agents
     results = evaluate(
-        agents=[my_agent, "knapsack(c12)"],
+        agents=[my_agent, "knapsack"],
         num_episodes=100,
         flat_obs={0: True},  # my_agent at index 0 expects flat obs
     )
@@ -33,7 +33,6 @@ Example usage::
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable
 
 if TYPE_CHECKING:
@@ -53,42 +52,36 @@ logger = logging.getLogger(__name__)
 # Named agent registry
 # ---------------------------------------------------------------------------
 
-_SAVED_MULTI_AGENT_MODEL_DIR = (
-    Path(__file__).parent.parent / "agents" / "saved_multi_agent_model"
-)
-
 # Whether each named agent expects flat (True) or dict (False) observations.
 NAMED_AGENT_FLAT_OBS: dict[str, bool] = {
-    "knapsack(c12)": False,
-    "pyxie": True,
+    "knapsack": False,
     "random": False,
     "do_nothing": False,
 }
 
 
 def _make_knapsack_agent(agent_name: str):
-    """Create a MultiAgentKnapsackAgent for competition use."""
+    """
+    Create a MultiAgentKnapsackAgent for competition use.
+
+    ``capacity=None``: the agent takes its concurrency limit from the
+    clinical-sites feature, capping concurrent trials at its operational-site
+    count and advancing only its highest-value assets within that limit.
+
+    BD bidding is disabled (``enable_bd_bidding=False``): the fixed
+    fraction-of-eNPV bid was calibrated for the retired discrete BD levels
+    and systematically overpays under the current continuous first-price
+    auction, bankrupting the agent. With BD off the knapsack is a strong,
+    positive-NCF reference driven purely by its portfolio investment policy.
+    """
     from pyxis_portfolio_challenge.agents.multi_agent_knapsack import (
         MultiAgentKnapsackAgent,
     )
 
     return MultiAgentKnapsackAgent(
         agent_name=agent_name,
-        capacity=12,
-        enable_bd_bidding=True,
-    )
-
-
-def _make_pyxie_agent(agent_name: str):
-    """Create a MultiAgentPyxieAgent for competition use."""
-    from pyxis_portfolio_challenge.agents.multi_agent_pyxie import (
-        MultiAgentPyxieAgent,
-    )
-
-    return MultiAgentPyxieAgent(
-        agent_name=agent_name,
-        model_path=_SAVED_MULTI_AGENT_MODEL_DIR / "best_model.zip",
-        vecnorm_path=_SAVED_MULTI_AGENT_MODEL_DIR / "vecnormalize.pkl",
+        capacity=None,
+        enable_bd_bidding=False,
     )
 
 
@@ -112,8 +105,7 @@ def _make_do_nothing_agent(agent_name: str):
 
 # Map of named agent strings to factory functions
 NAMED_AGENTS: dict[str, Callable[[str], Any]] = {
-    "knapsack(c12)": _make_knapsack_agent,
-    "pyxie": _make_pyxie_agent,
+    "knapsack": _make_knapsack_agent,
     "random": _make_random_agent,
     "do_nothing": _make_do_nothing_agent,
 }
@@ -267,11 +259,14 @@ class Trainer(gym.Env):
     Single-agent Gymnasium wrapper around the multi-agent PettingZoo env.
 
     Handles opponent actions automatically so the trainee sees a standard
-    ``reset() → step() → action_masks()`` loop.  SB3's ``MaskablePPO``
-    works out of the box.
+    ``reset() → step() → action_masks()`` loop. Used for evaluation/competition
+    with dict-action agents; RL self-play training uses
+    :class:`~pyxis_portfolio_challenge.environment.self_play.SelfPlayWrapper`.
 
     The action space is a ``Dict`` matching the multi-agent env:
-    ``{"investments": MultiDiscrete/MultiBinary, "bd_bids": MultiDiscrete}``.
+    ``{"investments": MultiDiscrete/MultiBinary, "bd_bids": Box}``, where BD
+    bids are continuous raw-cash amounts (GBP millions) rather than discrete
+    levels.
     """
 
     metadata = {"render_modes": ["human"]}
@@ -385,7 +380,7 @@ def train(env, agents: list, flat_obs: dict[int, bool] | None = None) -> Trainer
         for the trainee and strings or callables for opponents.
         Exactly one ``None`` is required.
 
-        Named agents: ``"knapsack(c12)"``, ``"pyxie"``, ``"random"``,
+        Named agents: ``"knapsack"``, ``"random"``,
         ``"do_nothing"``.
     flat_obs : dict[int, bool] | None
         Mapping of agent index to whether it needs flat observations.
@@ -497,13 +492,13 @@ def evaluate(
         where per_agent_reports maps agent key to metric dicts.
 
     """
-    from pyxis_portfolio_challenge.environment.multi_agent_evaluate import (
-        _parallel_evaluate_raw,
-        parallel_evaluate_multi_agent,
-    )
     from pyxis_portfolio_challenge.environment.metrics import (
         merge_all_metrics,
         report_all_metrics,
+    )
+    from pyxis_portfolio_challenge.environment.multi_agent_evaluate import (
+        _parallel_evaluate_raw,
+        parallel_evaluate_multi_agent,
     )
 
     # Build env kwargs to determine possible_agents

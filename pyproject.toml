@@ -20,15 +20,18 @@ dependencies = [
     "scipy>=1.11.0",
     "pettingzoo>=1.26.1",
     "omegaconf>=2.3.0",
+    "protobuf>=6.33.5",
 ]
 [project.optional-dependencies]
 app = [
-    "fastapi==0.115.11",
-    "uvicorn[standard]==0.26.0",
+    "fastapi>=0.115.12",
+    "uvicorn[standard]>=0.26.0",
     "redis==6.2.0",
-    "python-dotenv",
+    "python-dotenv>=1.2.2",
     "pydantic-settings>=2.12.0",
     "omegaconf==2.3.0",
+    "starlette>=0.49.1",
+    "httpx2>=0.28.1",
 ]
 experiment = [
     "omegaconf==2.3.0",
@@ -37,7 +40,7 @@ experiment = [
 ]
 dev = [
     "pytest-cov==4.0.0",
-    "pytest==7.3.1",
+    "pytest>=9.0.3",
     "pytest-asyncio>=0.23.8",
     "ruff>=0.14.5",
     "httpx>=0.28.1",
@@ -62,12 +65,15 @@ asyncio_mode = "auto"
 [tool.ruff]
 exclude = [
     "tests/",
+    "kaggle_*/",  # per-feature investigation dirs: analysis scripts + docs
     ".venv/",
     "train_pyxie/experiments*/",
     "test_*.py",
     "analyze_*.py",
+    "analyse_*.py",  # en-GB spelling; same intent as analyze_*.py above
     "debug_*.py",
     "rl-environment-assets/",
+    "deident_review/",  # one-off IP de-identification audit tooling, not package code
 ]
 line-length = 88  # match black line length
 fix = true  # auto-fix issues where possible
@@ -87,3 +93,18 @@ docstring-code-format= true
 indent-style = "space"
 line-ending = "auto"
 preview = true  # enables the latest formatting, including import sort improvements
+
+[dependency-groups]
+dev = [
+    "pip-audit>=2.10.0",
+]
+
+[tool.uv]
+constraint-dependencies = [
+    "filelock>=3.20.3",
+    "fonttools>=4.60.2",
+    "idna>=3.15",
+    "pillow>=12.2.0",
+    "protobuf>=6.33.5",
+    "virtualenv>=20.36.1",
+]

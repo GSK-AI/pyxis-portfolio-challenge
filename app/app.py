@@ -12,20 +12,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from pyxis_portfolio_challenge import config
-from pyxis_portfolio_challenge.agents import AGENTS, AGENTS_LIST, get_agent
-from pyxis_portfolio_challenge.agents.utils import get_agent_investment_decisions
-from pyxis_portfolio_challenge.game.asset_generators import (
-    JSONAssetGenerator,
-)
-from pyxis_portfolio_challenge.game.constants import (
-    LEVELS,
-    InvestmentLevel,
-)
-from pyxis_portfolio_challenge.game.game_state import GameState
-from pyxis_portfolio_challenge.game.multi_agent_game import MultiAgentGame
-from pyxis_portfolio_challenge.logging_utils import setup_logging
-from pyxis_portfolio_challenge.rng import get_game_rng, init_game_rng
 from app.endpoint_datamodels import (
     ActionType,
     AgentResponse,
@@ -52,6 +38,20 @@ from app.opponent_runner import (
 )
 from app.redis_cache import get_redis_cache
 from app.settings import settings
+from pyxis_portfolio_challenge import config
+from pyxis_portfolio_challenge.agents import AGENTS, AGENTS_LIST, get_agent
+from pyxis_portfolio_challenge.agents.utils import get_agent_investment_decisions
+from pyxis_portfolio_challenge.game.asset_generators import (
+    JSONAssetGenerator,
+)
+from pyxis_portfolio_challenge.game.constants import (
+    LEVELS,
+    InvestmentLevel,
+)
+from pyxis_portfolio_challenge.game.game_state import GameState
+from pyxis_portfolio_challenge.game.multi_agent_game import MultiAgentGame
+from pyxis_portfolio_challenge.logging_utils import setup_logging
+from pyxis_portfolio_challenge.rng import get_game_rng, init_game_rng
 
 setup_logging(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -231,7 +231,7 @@ async def start_game(request: Request, payload: StartGameRequest) -> GameStateRe
         max_num_assets=payload.max_num_assets,
         cash=payload.starting_cash,
         horizon=payload.horizon,
-        global_seed=payload.global_seed,
+        seed=payload.global_seed,
         asset_arrival_sensitivity_below=game_config.asset_arrival_sensitivity_below,
         asset_arrival_sensitivity_above=game_config.asset_arrival_sensitivity_above,
         reinvestment_percentage=game_config.reinvestment_percentage,
@@ -242,6 +242,10 @@ async def start_game(request: Request, payload: StartGameRequest) -> GameStateRe
         distributional_ptrs_config=game_config.distributional_ptrs,
         rd_capacity_config=game_config.rd_capacity,
         approval_phase_config=game_config.approval_phase,
+        drop_action_config=game_config.drop_action,
+        marketing_config=game_config.marketing,
+        clinical_sites_config=game_config.clinical_sites,
+        ptrs_readings_config=game_config.ptrs_readings,
         indication_spread=game_config.multi_agent.indication_spread,
         indication_drift_speed=game_config.multi_agent.indication_drift_speed,
         trial_cost_multiplier=game_config.trial_cost_multiplier,
@@ -282,6 +286,7 @@ def convert_action_to_investment_level(
         "standard": InvestmentLevel.STANDARD,
         "accelerated": InvestmentLevel.ACCELERATED,
         "stop": InvestmentLevel.STOP,
+        "drop": InvestmentLevel.DROP,
     }
     return action_map.get(action)
 
@@ -404,10 +409,6 @@ def get_agent_by_name(name: str, level_idx: int):
         InvestmentAgent: The investment agent instance.
 
     """
-    if name == "Pyxie":
-        model_path = game_config.get_pyxie_model_model_path(level_idx)
-        vecnorm_path = game_config.get_pyxie_model_vecnorm_path(level_idx)
-        return get_agent("Pyxie", model_path=model_path, vecnorm_path=vecnorm_path)
     if name == "Knapsack":
         return get_agent("Knapsack")
 
@@ -522,8 +523,10 @@ async def get_multi_agent_config():
         "global_seed": random.randint(1, 1000000),
         "bd_enabled": ma.bd_enabled,
         "bd_base_lambda": ma.bd_base_lambda,
-        "bd_num_bid_levels": ma.bd_num_bid_levels,
-        "bd_break_even_bid_level": ma.bd_break_even_bid_level,
+        "bd_max_bid": ma.bd_max_bid,
+        # Clinical-site PvP auction bid cap (units match bd_max_bid, GBP
+        # millions); drives the site-bid input ceiling in the UI.
+        "site_max_bid": game_config.clinical_sites.site_max_bid,
         "exclusivity_period": ma.exclusivity_period,
         "first_mover_bonus": ma.first_mover_bonus,
         "disable_market_share_competition": ma.disable_market_share_competition,
@@ -613,10 +616,17 @@ async def start_multi_agent_game(
         congestion_ramp_steps=ma.congestion_ramp_steps,
         congestion_incumbent_penalty=ma.congestion_incumbent_penalty,
         rd_capacity_config=game_config.rd_capacity,
-        bd_num_bid_levels=ma.bd_num_bid_levels,
-        bd_break_even_bid_level=ma.bd_break_even_bid_level,
+        drop_action_config=game_config.drop_action,
+        ptrs_readings_config=game_config.ptrs_readings,
+        clinical_sites_config=game_config.clinical_sites,
+        marketing_config=game_config.marketing,
+        bd_max_bid=ma.bd_max_bid,
         bd_max_slots=ma.bd_max_slots,
         pricing_elasticity=game_config.pricing.elasticity,
+        be_leak_probability=ma.be_leak_probability,
+        dc_leak_probability=ma.dc_leak_probability,
+        bd_persist_steps=ma.bd_persist_steps,
+        dc_leak_min_agents=ma.dc_leak_min_agents,
     )
 
     game_id = multi_game.agent_states["pharma_0"].id
@@ -704,42 +714,87 @@ async def step_multi_agent_game(
     num_bd_slots = len(multi_game.shared_market.current_bd_assets)
     if player_state.game_ended:
         player_inv_actions: dict[uuid.UUID, InvestmentLevel | None] = {}
-        player_bd_bids = [0] * num_bd_slots
+        player_bd_bids = [0.0] * num_bd_slots
+        player_upgrade = False
+        player_site_bid = 0.0
+        player_demand_creation: dict[str, int] = {}
+        player_brand_equity: dict[uuid.UUID, int] = {}
+        player_ptrs_research: dict[uuid.UUID, int] = {}
     else:
         # Build human player investment actions
         player_inv_actions = {
             asset_id: convert_action_to_investment_level(action)
             for asset_id, action in payload.investment_actions.items()
         }
-        # Pad/truncate bids to match number of BD slots
-        player_bd_bids = list(payload.bd_bids)
+        # Pad/truncate cash bids (GBP) to match number of BD slots
+        player_bd_bids = [float(b) for b in payload.bd_bids]
         while len(player_bd_bids) < num_bd_slots:
-            player_bd_bids.append(0)
+            player_bd_bids.append(0.0)
         player_bd_bids = player_bd_bids[:num_bd_slots]
+        # Clinical-site heads (no-op server-side when the feature is off).
+        player_upgrade = bool(payload.upgrade)
+        player_site_bid = float(payload.site_bid)
+        # Marketing heads (no-op server-side when the feature is off). Only spent
+        # slots (value == 1) matter; keep the payload as-is.
+        player_demand_creation = {k: int(v) for k, v in payload.demand_creation.items()}
+        player_brand_equity = {k: int(v) for k, v in payload.brand_equity.items()}
+        # PTRS readings head (no-op server-side when the feature is off). Keyed by
+        # asset UUID (portfolio or BD candidate); only positive counts matter, but
+        # keep the payload as-is — the engine skips non-positive counts.
+        player_ptrs_research = {
+            k: int(v) for k, v in payload.ptrs_research.items()
+        }
 
     # Collect all agent actions
     all_investor_actions = {"pharma_0": player_inv_actions}
-    all_bd_bids: dict[str, list[int]] = {"pharma_0": player_bd_bids}
+    all_bd_bids: dict[str, list[float]] = {"pharma_0": player_bd_bids}
+    # Opponents do not contest clinical sites (no site actions from the
+    # heuristic opponents); the human is the only site actor this PR.
+    all_buy_site_actions: dict[str, bool] = {"pharma_0": player_upgrade}
+    all_site_bids: dict[str, float] = {"pharma_0": player_site_bid}
+    # Marketing: only the human drives spend (the heuristic opponents do not
+    # market, matching how the benchmark bots leave the marketing heads zeroed).
+    all_marketing_actions: dict[str, dict] = {
+        "pharma_0": {
+            "demand_creation": player_demand_creation,
+            "brand_equity": player_brand_equity,
+        }
+    }
+    # PTRS readings: only the human commissions diligence (the heuristic opponents
+    # leave the readings head zeroed, matching the benchmark bots).
+    all_research_actions: dict[str, dict[uuid.UUID, int]] = {
+        "pharma_0": player_ptrs_research
+    }
 
     for i, agent_type in enumerate(opponent_types):
         agent_name = f"pharma_{i + 1}"
         if agent_name not in multi_game.agent_states:
             continue
+        all_buy_site_actions[agent_name] = False
+        all_site_bids[agent_name] = 0.0
         if multi_game.agent_states[agent_name].game_ended:
             all_investor_actions[agent_name] = {}
-            all_bd_bids[agent_name] = [0] * num_bd_slots
+            all_bd_bids[agent_name] = [0.0] * num_bd_slots
             continue
 
-        inv_actions, bd_bid = get_opponent_actions(
+        inv_actions, bd_bids = get_opponent_actions(
             agent_type, agent_name, multi_game, asset_id_orders
         )
         all_investor_actions[agent_name] = inv_actions
-        all_bd_bids[agent_name] = [bd_bid] * num_bd_slots
+        # Pad/truncate the opponent's per-slot cash bids to the slot count.
+        opp_bids = [float(b) for b in bd_bids]
+        while len(opp_bids) < num_bd_slots:
+            opp_bids.append(0.0)
+        all_bd_bids[agent_name] = opp_bids[:num_bd_slots]
 
     # Step the game
     new_game = multi_game.step(
         investor_actions=all_investor_actions,
         bd_bids=all_bd_bids,
+        buy_site_actions=all_buy_site_actions,
+        site_bids=all_site_bids,
+        marketing_actions=all_marketing_actions,
+        research_actions=all_research_actions,
     )
 
     # Update asset orderings for new/removed assets

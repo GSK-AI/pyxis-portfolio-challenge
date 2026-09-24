@@ -12,6 +12,8 @@ from pydantic import (
     PrivateAttr,
     field_validator,
 )
+from scipy.special import expit
+from scipy.special import logit as logit_fn
 from scipy.stats import beta as beta_dist
 
 from pyxis_portfolio_challenge.rng import get_game_rng
@@ -87,6 +89,11 @@ class Trial(BaseModel):
     state: TrialState
     next_trial_on_success: Trial | None
     progress_accumulated: float = 0.0  # For investment level speed tracking
+
+    # PTRS readings feature: precision-weighted accumulator (weight = 1/σ²)
+    _ptrs_sample_count: int = PrivateAttr(default=0)
+    _ptrs_weighted_sum: float = PrivateAttr(default=0.0)
+    _ptrs_total_precision: float = PrivateAttr(default=0.0)
 
     # Uncertain PTRS attributes (used when uncertain_ptrs feature is enabled)
     _true_ptrs: float | None = PrivateAttr(default=None)  # Hidden true PTRS
@@ -264,6 +271,40 @@ class Trial(BaseModel):
             return min(1.0, self.ptrs + remaining_uncertainty)
 
         return self.ptrs
+
+    @property
+    def ptrs_sample_mean(self) -> float | None:
+        """Precision-weighted mean of the PTRS readings, or None if none taken."""
+        if self._ptrs_total_precision == 0.0:
+            return None
+        return self._ptrs_weighted_sum / self._ptrs_total_precision
+
+    @property
+    def ptrs_sample_count(self) -> int:
+        """Number of PTRS readings accumulated for this trial."""
+        return self._ptrs_sample_count
+
+    @property
+    def ptrs_total_precision(self) -> float:
+        """Sum of 1/σ² weights across all accumulated PTRS readings."""
+        return self._ptrs_total_precision
+
+    def draw_and_accumulate(self, sigma: float, n: int, rng: random.Random) -> None:
+        """
+        Draw n logit-normal samples and update the precision-weighted running mean.
+
+        Each sample is weighted by 1/σ² so readings taken at closer phase distances
+        (lower σ) contribute proportionally more to the estimate.
+        """
+        true_p = self._true_ptrs if self._true_ptrs is not None else self.ptrs
+        eff_sigma = sigma if sigma > 0.0 else 1e-15
+        precision = 1.0 / (eff_sigma * eff_sigma)
+        for _ in range(n):
+            eps = rng.gauss(0.0, sigma)
+            sample = float(expit(logit_fn(true_p) + eps))
+            self._ptrs_weighted_sum += sample * precision
+            self._ptrs_total_precision += precision
+            self._ptrs_sample_count += 1
 
     def initialize_latent_quality(self, rng: random.Random | None = None) -> None:
         """
@@ -459,6 +500,10 @@ class Trial(BaseModel):
         new_trial._ptrs_range_low_cached = self._ptrs_range_low_cached
         new_trial._ptrs_range_high_cached = self._ptrs_range_high_cached
         new_trial._last_exp_fraction = self._last_exp_fraction
+        # Copy ptrs_readings precision-weighted accumulator
+        new_trial._ptrs_weighted_sum = self._ptrs_weighted_sum
+        new_trial._ptrs_total_precision = self._ptrs_total_precision
+        new_trial._ptrs_sample_count = self._ptrs_sample_count
 
     def _determine_success(self) -> bool:
         """

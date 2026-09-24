@@ -92,7 +92,9 @@ export function useCustomNextStep() {
 
   const resetTourCompletionStatus = useCallback((tourName: string) => {
     const data = readCookie();
-    const completed = data.completedTours as Record<string, unknown> | undefined;
+    const completed = data.completedTours as
+      | Record<string, unknown>
+      | undefined;
     if (completed?.[tourName]) {
       delete completed[tourName];
       writeCookie(data);

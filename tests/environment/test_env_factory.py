@@ -6,7 +6,6 @@ import upath
 
 from pyxis_portfolio_challenge.environment.env_factory import (  # noqa: E501
     _prepare_envs,
-    _prepare_level_envs,
     make_train_env,
 )
 
@@ -168,75 +167,6 @@ class TestPrepareEnvs:
 
         assert train_env == mock_normalized_train_env
         assert eval_env == mock_normalized_eval_env
-
-
-class TestPrepareLevelEnvs:
-    """Test suite for _prepare_level_envs function."""
-
-    @patch("pyxis_portfolio_challenge.environment.env_factory.VecNormalize")
-    @patch("pyxis_portfolio_challenge.environment.env_factory.SubprocVecEnv")
-    @patch("pyxis_portfolio_challenge.environment.env_factory.LevelsInvestmentGameEnv")
-    def test__prepare_level_envs_basic_functionality(
-        self,
-        mock_levels_env,
-        mock_subproc_vec_env,
-        mock_vec_normalize,
-    ):
-        """Test basic functionality of _prepare_level_envs function."""
-        mock_env_instance = Mock()
-        mock_levels_env.return_value = mock_env_instance
-
-        mock_train_vec_env = Mock()
-        mock_subproc_vec_env.return_value = mock_train_vec_env
-
-        mock_normalized_train_env = Mock()
-        mock_vec_normalize.return_value = mock_normalized_train_env
-
-        level_idx = 2
-        reward_fn = Mock()
-        n_envs = 3
-        norm_obs = True
-        norm_reward = True
-        shuffle_order = False
-
-        train_env = _prepare_level_envs(
-            level_idx=level_idx,
-            assets_dir=upath.UPath("dummy/path"),
-            reward_fn=reward_fn,
-            n_envs=n_envs,
-            norm_obs=norm_obs,
-            norm_reward=norm_reward,
-            shuffle_order=shuffle_order,
-            flatten_obs=False,
-            warmup_on_reset_steps=0,
-            warmup_on_reset_policy="do_nothing",
-        )
-
-        assert mock_subproc_vec_env.call_count == 1
-        train_env_fns = mock_subproc_vec_env.call_args_list[0][0][0]
-        assert len(train_env_fns) == n_envs
-
-        assert mock_vec_normalize.call_count == 1
-        mock_vec_normalize.assert_called_once_with(
-            mock_train_vec_env, norm_obs=norm_obs, norm_reward=norm_reward
-        )
-
-        assert train_env == mock_normalized_train_env
-
-        # Check LevelsInvestmentGameEnv calls for train envs
-        for fn in train_env_fns:
-            fn()
-        mock_levels_env.assert_any_call(
-            level_idx=level_idx,
-            assets_dir=upath.UPath("dummy/path"),
-            reward_fn=reward_fn,
-            shuffle_order=shuffle_order,
-            flatten_obs=False,
-            uncertain_ptrs_config=None,
-            investment_levels_config=None,
-            interim_trial_observations_config=None,
-            distributional_ptrs_config=None,
-        )
 
 
 def test_make_train_env():

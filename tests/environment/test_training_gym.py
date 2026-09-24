@@ -9,11 +9,16 @@ import pytest
 from gymnasium.wrappers import FlattenObservation
 
 from pyxis_portfolio_challenge.config import (
+    ApprovalPhaseConfig,
     CapacityConfig,
+    ClinicalSitesConfig,
     DistributionalPtrsConfig,
+    DropActionConfig,
     InterimTrialObservationsConfig,
     InvestmentLevelParams,
     InvestmentLevelsConfig,
+    MarketingConfig,
+    PtrsReadingsConfig,
     TAExperienceConfig,
     UncertainPtrsConfig,
 )
@@ -25,13 +30,13 @@ from pyxis_portfolio_challenge.environment.obs_layout import (
 from pyxis_portfolio_challenge.environment.reward import LegacyStaticNPVReward
 from pyxis_portfolio_challenge.environment.training_gym import (
     InvestmentGameEnv,
-    LevelsInvestmentGameEnv,
 )
+from pyxis_portfolio_challenge.environment.warmup_wrapper import WarmupOnResetWrapper
 from pyxis_portfolio_challenge.game.asset import AssetState
 from pyxis_portfolio_challenge.game.constants import (
-    LEVELS,
     MAX_NUM_ASSETS,
     TRIAL_PHASES,
+    InvestmentLevel,
 )
 from pyxis_portfolio_challenge.game.trial import Trial, TrialPhase, TrialState
 from pyxis_portfolio_challenge import PROJECT_ROOT
@@ -80,6 +85,27 @@ _DISABLED_RD_CAPACITY = CapacityConfig(
     overage_cost_max_penalty=0.5,
     overage_scaling="linear",
 )
+_DISABLED_MARKETING = MarketingConfig(
+    enabled=False, dc_cost_fraction=0.035, dc_step_boost=0.10, dc_decay_rate=0.206,
+    be_cost_fraction=0.0175, be_boost=0.25, be_decay_rate=0.206, be_effectiveness=3.5,
+)
+_DISABLED_CLINICAL_SITES = ClinicalSitesConfig(
+    enabled=False, starting_sites=4, purchase_base_cost=500_000_000,
+    purchase_cost_rounding=1_000_000, site_development_steps=2, agent_priority=False,
+    priority_entropy_weight=1.0, auction_enabled=True, auction_interval_steps=20,
+    auction_min_step=10, site_max_bid=100_000,
+)
+_DISABLED_PTRS_READINGS = PtrsReadingsConfig(
+    enabled=False, cost_fraction=0.05, cost_rounding=1_000_000, action_space_max_readings=10,
+    sigma_logit_base=1.5, sigma_ep=None, noise_multipliers=[1.0, 1.5, 2.0], max_sample_obs=20,
+)
+_DISABLED_APPROVAL_PHASE = ApprovalPhaseConfig(
+    enabled=False, duration_min=1, duration_max=3, success_rate_min=0.85,
+    success_rate_max=0.95, cost=50_000_000,
+)
+_DISABLED_DROP_ACTION = DropActionConfig(
+    enabled=False, drop_price_fraction=0.0, drop_price_rounding=1_000_000,
+)
 
 
 def _make_env(valid_json_assets_path, **kwargs):
@@ -104,6 +130,13 @@ def _make_env(valid_json_assets_path, **kwargs):
         investment_levels_config=_DISABLED_INVESTMENT_LEVELS,
         interim_trial_observations_config=_DISABLED_INTERIM_TRIAL_OBS,
         rd_capacity_config=_DISABLED_RD_CAPACITY,
+        drop_action_config=_DISABLED_DROP_ACTION,
+        marketing_config=_DISABLED_MARKETING,
+        clinical_sites_config=_DISABLED_CLINICAL_SITES,
+        ptrs_readings_config=_DISABLED_PTRS_READINGS,
+        approval_phase_config=_DISABLED_APPROVAL_PHASE,
+        metrics=[],
+        initial_game_state=None,
     )
     defaults.update(kwargs)
     return InvestmentGameEnv(**defaults)
@@ -852,59 +885,6 @@ def test_trial_observation_values(test_env):
         assert 0 <= trial_obs["ptrs"] <= 1
 
 
-# LevelsInvestmentGameEnv tests
-
-
-@pytest.mark.parametrize("level_idx", list(range(len(LEVELS))))
-def test_levels_env_initialization(level_idx):
-    """Test LevelsInvestmentGameEnv initializes with correct parameters per level."""
-    env = LevelsInvestmentGameEnv(level_idx, assets_dir=_TEST_ASSETS_DIR, reward_fn=LegacyStaticNPVReward(), shuffle_order=True, max_num_assets=MAX_NUM_ASSETS, flatten_obs=False, distributional_ptrs_config=_DISABLED_DISTRIBUTIONAL_PTRS, ta_experience_config=_DISABLED_TA_EXPERIENCE, uncertain_ptrs_config=_DISABLED_UNCERTAIN_PTRS, investment_levels_config=_DISABLED_INVESTMENT_LEVELS, interim_trial_observations_config=_DISABLED_INTERIM_TRIAL_OBS, rd_capacity_config=_DISABLED_RD_CAPACITY)
-    level_info = LEVELS[level_idx]
-    assert env.equilibrium_num_assets == level_info["num_assets"]
-    assert env.starting_cash == level_info["starting_cash"]
-    assert env.horizon == level_info["horizon"]
-    assert env.global_seed == level_info["global_seed"]
-    assert isinstance(env.action_space, env.action_space.__class__)
-    assert isinstance(env.observation_space, env.observation_space.__class__)
-
-
-@pytest.mark.parametrize("level_idx", list(range(len(LEVELS))))
-def test_levels_env_reset_consistency(level_idx):
-    """Test reset produces consistent initial state for a given level."""
-    env = LevelsInvestmentGameEnv(level_idx, assets_dir=_TEST_ASSETS_DIR, reward_fn=LegacyStaticNPVReward(), shuffle_order=True, max_num_assets=MAX_NUM_ASSETS, flatten_obs=False, distributional_ptrs_config=_DISABLED_DISTRIBUTIONAL_PTRS, ta_experience_config=_DISABLED_TA_EXPERIENCE, uncertain_ptrs_config=_DISABLED_UNCERTAIN_PTRS, investment_levels_config=_DISABLED_INVESTMENT_LEVELS, interim_trial_observations_config=_DISABLED_INTERIM_TRIAL_OBS, rd_capacity_config=_DISABLED_RD_CAPACITY)
-    obs1, info1 = env.reset()
-    obs2, info2 = env.reset()
-    # Should produce different states unless seeded, but both should be valid
-    assert isinstance(obs1, dict)
-    assert isinstance(obs2, dict)
-    assert "cash" in obs1 and "assets" in obs1
-    assert "cash" in obs2 and "assets" in obs2
-
-
-def test_levels_env_spaces():
-    """Test observation and action spaces are correctly set up."""
-    env = LevelsInvestmentGameEnv(0, assets_dir=_TEST_ASSETS_DIR, reward_fn=LegacyStaticNPVReward(), shuffle_order=True, max_num_assets=MAX_NUM_ASSETS, flatten_obs=False, distributional_ptrs_config=_DISABLED_DISTRIBUTIONAL_PTRS, ta_experience_config=_DISABLED_TA_EXPERIENCE, uncertain_ptrs_config=_DISABLED_UNCERTAIN_PTRS, investment_levels_config=_DISABLED_INVESTMENT_LEVELS, interim_trial_observations_config=_DISABLED_INTERIM_TRIAL_OBS, rd_capacity_config=_DISABLED_RD_CAPACITY)
-    obs, info = env.reset()
-    assert env.action_space.n == MAX_NUM_ASSETS
-    assert env.observation_space.contains(obs)
-
-
-def test_levels_env_step_output_types():
-    """Test environment step returns expected output types."""
-    env = LevelsInvestmentGameEnv(0, assets_dir=_TEST_ASSETS_DIR, reward_fn=LegacyStaticNPVReward(), shuffle_order=True, max_num_assets=MAX_NUM_ASSETS, flatten_obs=False, distributional_ptrs_config=_DISABLED_DISTRIBUTIONAL_PTRS, ta_experience_config=_DISABLED_TA_EXPERIENCE, uncertain_ptrs_config=_DISABLED_UNCERTAIN_PTRS, investment_levels_config=_DISABLED_INVESTMENT_LEVELS, interim_trial_observations_config=_DISABLED_INTERIM_TRIAL_OBS, rd_capacity_config=_DISABLED_RD_CAPACITY)
-    obs, info = env.reset()
-    action = np.where(np.array(env.action_masks_binary()) == 1, 1, 0)  # Invert masks for action
-    result = env.step(action)
-    assert isinstance(result, tuple)
-    assert len(result) == 5
-    obs2, reward, terminated, truncated, info2 = result
-    assert isinstance(obs2, dict)
-    assert isinstance(reward, (int, float, np.floating))
-    assert isinstance(terminated, bool)
-    assert isinstance(truncated, bool)
-    assert isinstance(info2, dict)
-
-
 # Unshuffled/shuffled tests
 
 
@@ -994,39 +974,6 @@ def test_investment_game_env_custom_max_num_assets(
     actual_assets = list(env.game_state.assets.keys())
     padded_ids = env._asset_id_order
     # Real assets should be first, padding (0) at end
-    assert padded_ids[: len(actual_assets)] == actual_assets
-    assert all(aid == 0 for aid in padded_ids[len(actual_assets) :])
-    # Padding obs should match _padding_asset_obs
-    for i in range(len(actual_assets), max_num_assets):
-        assert obs["assets"][i] == env._padding_asset_obs
-
-
-@pytest.mark.parametrize("max_num_assets", [5, 10, 15])
-def test_levels_investment_game_env_custom_max_num_assets(max_num_assets):
-    """Test LevelsInvestmentGameEnv with custom max_num_assets values."""
-    env = LevelsInvestmentGameEnv(
-        level_idx=0,
-        assets_dir=_TEST_ASSETS_DIR,
-        reward_fn=LegacyStaticNPVReward(),
-        shuffle_order=False,
-        max_num_assets=max_num_assets,
-        flatten_obs=False,
-        distributional_ptrs_config=_DISABLED_DISTRIBUTIONAL_PTRS,
-        ta_experience_config=_DISABLED_TA_EXPERIENCE,
-        uncertain_ptrs_config=_DISABLED_UNCERTAIN_PTRS,
-        investment_levels_config=_DISABLED_INVESTMENT_LEVELS,
-        interim_trial_observations_config=_DISABLED_INTERIM_TRIAL_OBS,
-        rd_capacity_config=_DISABLED_RD_CAPACITY,
-    )
-    obs, info = env.reset(seed=42)
-    # Action space size
-    assert env.action_space.n == max_num_assets
-    # Observation space assets tuple length
-    assert isinstance(obs["assets"], tuple)
-    assert len(obs["assets"]) == max_num_assets
-    # Asset order and padding
-    actual_assets = list(env.game_state.assets.keys())
-    padded_ids = env._asset_id_order
     assert padded_ids[: len(actual_assets)] == actual_assets
     assert all(aid == 0 for aid in padded_ids[len(actual_assets) :])
     # Padding obs should match _padding_asset_obs
@@ -1129,45 +1076,6 @@ def env_pair(valid_json_assets_path):
 
 
 @pytest.fixture
-def levels_env_pair():
-    """Create pair of level environments."""
-    env_dict = LevelsInvestmentGameEnv(
-        level_idx=0,
-        assets_dir=_TEST_ASSETS_DIR,
-        reward_fn=LegacyStaticNPVReward(),
-        shuffle_order=False,
-        max_num_assets=MAX_NUM_ASSETS,
-        flatten_obs=False,
-        distributional_ptrs_config=_DISABLED_DISTRIBUTIONAL_PTRS,
-        ta_experience_config=_DISABLED_TA_EXPERIENCE,
-        uncertain_ptrs_config=_DISABLED_UNCERTAIN_PTRS,
-        investment_levels_config=_DISABLED_INVESTMENT_LEVELS,
-        interim_trial_observations_config=_DISABLED_INTERIM_TRIAL_OBS,
-        rd_capacity_config=_DISABLED_RD_CAPACITY,
-    )
-
-    env_flat = LevelsInvestmentGameEnv(
-        level_idx=0,
-        assets_dir=_TEST_ASSETS_DIR,
-        reward_fn=LegacyStaticNPVReward(),
-        shuffle_order=False,
-        max_num_assets=MAX_NUM_ASSETS,
-        flatten_obs=True,
-        distributional_ptrs_config=_DISABLED_DISTRIBUTIONAL_PTRS,
-        ta_experience_config=_DISABLED_TA_EXPERIENCE,
-        uncertain_ptrs_config=_DISABLED_UNCERTAIN_PTRS,
-        investment_levels_config=_DISABLED_INVESTMENT_LEVELS,
-        interim_trial_observations_config=_DISABLED_INTERIM_TRIAL_OBS,
-        rd_capacity_config=_DISABLED_RD_CAPACITY,
-    )
-
-    yield env_dict, env_flat
-
-    env_dict.close()
-    env_flat.close()
-
-
-@pytest.fixture
 def benchmark_env_pair(valid_json_assets_path):
     """Create environments for benchmarking."""
     env_dict = _make_env(
@@ -1221,32 +1129,46 @@ def test_observation_equivalence_on_reset(env_pair):
 
 
 def test_observation_equivalence_during_episode(env_pair):
-    """Test that observations remain equivalent throughout an episode."""
+    """
+    Test that observations remain equivalent throughout an episode.
+
+    Both envs share a single global RNG ContextVar. To avoid one env's step
+    advancing the RNG before the other env's step, we run them sequentially:
+    env_dict completes its episode first (recording actions and results), then
+    env_flat replays the same actions from the same seed, which restores the
+    RNG to the same starting position via init_game_rng inside reset(seed=...).
+    """
     env_dict, env_flat = env_pair
     seed = 42
-
-    dict_obs, _ = env_dict.reset(seed=seed)
-    flat_obs, _ = env_flat.reset(seed=seed)
-
-    rng = np.random.default_rng(seed)
     max_steps = 5
 
+    # Run env_dict episode, recording actions and outcomes
+    action_rng = np.random.default_rng(seed)
+    dict_obs, _ = env_dict.reset(seed=seed)
+
+    recorded = []
     for step in range(max_steps):
         dict_masks = env_dict.action_masks_binary()
-        flat_masks = env_flat.action_masks_binary()
+        action = np.zeros(env_dict.max_num_assets, dtype=int)
+        valid_indices = np.where(dict_masks == 1)[0]
+        if len(valid_indices) > 0:
+            num_invest = action_rng.integers(0, min(3, len(valid_indices)) + 1)
+            invest_indices = action_rng.choice(valid_indices, size=num_invest, replace=False)
+            action[invest_indices] = 1
+        dict_obs, dict_reward, dict_term, _, _ = env_dict.step(action)
+        recorded.append((action, dict_masks, dict_obs, dict_reward, dict_term))
+        if dict_term:
+            break
 
+    # Replay with env_flat using same seed: reset(seed=seed) calls init_game_rng(seed),
+    # restoring the global RNG to the same state env_dict started from.
+    env_flat.reset(seed=seed)
+    for step, (action, dict_masks, dict_obs, dict_reward, dict_term) in enumerate(recorded):
+        flat_masks = env_flat.action_masks_binary()
         np.testing.assert_array_equal(
             dict_masks, flat_masks, err_msg=f"Action masks differ at step {step}"
         )
 
-        action = np.zeros(env_dict.max_num_assets, dtype=int)
-        valid_indices = np.where(dict_masks == 1)[0]
-        if len(valid_indices) > 0:
-            num_invest = rng.integers(0, min(3, len(valid_indices)) + 1)
-            invest_indices = rng.choice(valid_indices, size=num_invest, replace=False)
-            action[invest_indices] = 1
-
-        dict_obs, dict_reward, dict_term, _, _ = env_dict.step(action)
         flat_obs, flat_reward, flat_term, _, _ = env_flat.step(action)
 
         assert dict_reward == flat_reward, f"Rewards differ at step {step}"
@@ -1256,7 +1178,6 @@ def test_observation_equivalence_during_episode(env_pair):
             break
 
         dict_as_flat = env_dict.flatten_dict_obs(dict_obs)
-
         np.testing.assert_allclose(
             flat_obs,
             dict_as_flat,
@@ -1423,29 +1344,6 @@ def test_layout_all_disabled():
 
 
 # =============================================================================
-# Levels Environment Tests
-# =============================================================================
-
-
-def test_levels_observation_equivalence(levels_env_pair):
-    """Test observations match for LevelsInvestmentGameEnv."""
-    env_dict, env_flat = levels_env_pair
-
-    dict_obs, _ = env_dict.reset()
-    flat_obs, _ = env_flat.reset()
-
-    dict_as_flat = env_dict.flatten_dict_obs(dict_obs)
-
-    np.testing.assert_allclose(
-        flat_obs,
-        dict_as_flat,
-        rtol=1e-5,
-        atol=1e-8,
-        err_msg="Level env observations do not match",
-    )
-
-
-# =============================================================================
 # Performance Benchmark Tests
 # =============================================================================
 
@@ -1487,29 +1385,19 @@ def test_flattened_is_faster(benchmark_env_pair):
 
 def test_empty_assets_observation(valid_json_assets_path):
     """Test observation with minimal assets."""
-    env_dict = _make_env(
-        valid_json_assets_path,
+    kwargs = dict(
         equilibrium_num_assets=1,
         max_num_assets=5,
         starting_cash=1_000_000,
         horizon=10,
         shuffle_order=False,
-        flatten_obs=False,
     )
-
-    env_flat = _make_env(
-        valid_json_assets_path,
-        equilibrium_num_assets=1,
-        max_num_assets=5,
-        starting_cash=1_000_000,
-        horizon=10,
-        shuffle_order=False,
-        flatten_obs=True,
-    )
+    env_dict = _make_env(valid_json_assets_path, flatten_obs=False, **kwargs)
+    env_flat = _make_env(valid_json_assets_path, flatten_obs=True, **kwargs)
 
     try:
         dict_obs, _ = env_dict.reset(seed=42)
-        flat_obs, _ = env_flat. reset(seed=42)
+        flat_obs, _ = env_flat.reset(seed=42)
 
         dict_as_flat = env_dict.flatten_dict_obs(dict_obs)
 
@@ -1527,29 +1415,19 @@ def test_empty_assets_observation(valid_json_assets_path):
 
 def test_max_assets_observation(valid_json_assets_path):
     """Test observation when num_assets equals max_num_assets."""
-    env_dict = _make_env(
-        valid_json_assets_path,
+    kwargs = dict(
         equilibrium_num_assets=10,
         max_num_assets=10,
         starting_cash=1_000_000,
         horizon=10,
         shuffle_order=False,
-        flatten_obs=False,
     )
-
-    env_flat = _make_env(
-        valid_json_assets_path,
-        equilibrium_num_assets=10,
-        max_num_assets=10,
-        starting_cash=1_000_000,
-        horizon=10,
-        shuffle_order=False,
-        flatten_obs=True,
-    )
+    env_dict = _make_env(valid_json_assets_path, flatten_obs=False, **kwargs)
+    env_flat = _make_env(valid_json_assets_path, flatten_obs=True, **kwargs)
 
     try:
         dict_obs, _ = env_dict.reset(seed=42)
-        flat_obs, _ = env_flat. reset(seed=42)
+        flat_obs, _ = env_flat.reset(seed=42)
 
         dict_as_flat = env_dict.flatten_dict_obs(dict_obs)
 
@@ -1561,7 +1439,7 @@ def test_max_assets_observation(valid_json_assets_path):
             err_msg="Observations differ when assets at max capacity",
         )
     finally:
-        env_dict. close()
+        env_dict.close()
         env_flat.close()
 
 
@@ -1777,3 +1655,353 @@ def test_observations_with_initial_game_state(
 
     # Verify cash matches
     assert dict_obs["cash"][0] == game_state.cash
+
+# --- Drop action (ternary action space) tests ---
+
+_ENABLED_DROP_ACTION = DropActionConfig(
+    enabled=True, drop_price_fraction=0.25, drop_price_rounding=1_000_000
+)
+_DISABLED_DROP_ACTION = DropActionConfig(
+    enabled=False, drop_price_fraction=0.0, drop_price_rounding=1_000_000
+)
+
+_ENABLED_INVESTMENT_LEVELS = InvestmentLevelsConfig(
+    enabled=True,
+    levels={
+        "none": InvestmentLevelParams(cost_modifier=0.0, speed_modifier=0.0, success_modifier=1.0, capacity_cost=0, experience_modifier=0.0),
+        "standard": InvestmentLevelParams(cost_modifier=1.0, speed_modifier=1.0, success_modifier=1.0, capacity_cost=2, experience_modifier=1.0),
+    },
+)
+
+
+def _make_drop_env(valid_json_assets_path, **kwargs):
+    """InvestmentGameEnv with the drop action enabled."""
+    return _make_env(
+        valid_json_assets_path,
+        drop_action_config=_ENABLED_DROP_ACTION,
+        **kwargs,
+    )
+
+
+def test_drop_action_space_is_ternary(valid_json_assets_path):
+    """Enabling drop_action makes the action space MultiDiscrete([3]*N)."""
+    env = _make_drop_env(valid_json_assets_path)
+    assert isinstance(env.action_space, gym.spaces.MultiDiscrete)
+    assert list(env.action_space.nvec) == [3] * MAX_NUM_ASSETS
+
+
+def test_action_space_binary_without_drop_action(valid_json_assets_path):
+    """With drop_action disabled the action space stays MultiBinary."""
+    env = _make_env(
+        valid_json_assets_path, drop_action_config=_DISABLED_DROP_ACTION
+    )
+    assert isinstance(env.action_space, gym.spaces.MultiBinary)
+    assert env.action_space.n == MAX_NUM_ASSETS
+
+
+def test_drop_action_masks_shape_and_padding(valid_json_assets_path):
+    """Masks are (N, 3); padding slots allow only 'do nothing'."""
+    env = _make_drop_env(valid_json_assets_path)
+    env.reset(seed=42)
+    masks = env.action_masks()
+
+    assert len(masks) == MAX_NUM_ASSETS
+    assert all(len(m) == 3 for m in masks)
+
+    for asset_id, mask in zip(env._asset_id_order, masks):
+        if asset_id == 0:
+            assert mask == [True, False, False]
+
+
+def test_drop_action_masks_reflect_asset_state(valid_json_assets_path):
+    """Idle assets are investable and droppable; non-Idle assets only droppable."""
+    env = _make_drop_env(valid_json_assets_path)
+    env.reset(seed=42)
+    masks = env.action_masks()
+
+    checked_idle = False
+    for asset_id, mask in zip(env._asset_id_order, masks):
+        if asset_id == 0:
+            continue
+        asset = env.game_state.assets[asset_id]
+        # "Do nothing" and "drop" are always available for a real asset
+        assert mask[0] is True
+        assert mask[2] is True
+        if asset.state == AssetState.Idle:
+            assert mask[1] is True
+            checked_idle = True
+        else:
+            assert mask[1] is False
+
+    assert checked_idle, "Expected at least one Idle asset in the reset state"
+
+
+def test_drop_action_masks_respect_first_order_cash_masking(valid_json_assets_path):
+    """mask_first_order_assets blocks both invest and drop when cash cannot cover them."""
+    env = _make_drop_env(valid_json_assets_path, mask_first_order_assets=True)
+    env.reset(seed=42)
+    # Force everything to be unaffordable, including the drop fee
+    env.game_state = env.game_state.model_copy(update={"cash": 0.0})
+    masks = env.action_masks()
+
+    checked = False
+    for asset_id, mask in zip(env._asset_id_order, masks):
+        if asset_id == 0:
+            continue
+        assert mask[1] is False  # cannot afford to invest
+        # Drop is masked out too whenever it carries a non-zero fee
+        if env._drop_fee(env.game_state.assets[asset_id]) > 0:
+            assert mask[2] is False
+            checked = True
+        assert mask[0] is True  # doing nothing is always available
+
+    assert checked, "Expected at least one asset with a non-zero drop fee"
+
+
+def test_drop_masked_when_fee_unaffordable(valid_json_assets_path):
+    """Drop is masked out exactly when the fee exceeds available cash."""
+    env = _make_drop_env(valid_json_assets_path, mask_first_order_assets=True)
+    env.reset(seed=42)
+
+    target_id = next(
+        aid
+        for aid in env._asset_id_order
+        if aid != 0 and env._drop_fee(env.game_state.assets[aid]) > 0
+    )
+    fee = env._drop_fee(env.game_state.assets[target_id])
+    position = list(env._asset_id_order).index(target_id)
+
+    # Exactly enough cash to cover the fee -> drop allowed
+    env.game_state = env.game_state.model_copy(update={"cash": fee})
+    assert env.action_masks()[position][2] is True
+
+    # A pound short -> drop masked out
+    env.game_state = env.game_state.model_copy(update={"cash": fee - 1.0})
+    assert env.action_masks()[position][2] is False
+
+
+def test_drop_affordable_when_masking_disabled(valid_json_assets_path):
+    """Without mask_first_order_assets, drop stays available regardless of cash."""
+    env = _make_drop_env(valid_json_assets_path, mask_first_order_assets=False)
+    env.reset(seed=42)
+    env.game_state = env.game_state.model_copy(update={"cash": 0.0})
+
+    for asset_id, mask in zip(env._asset_id_order, env.action_masks()):
+        if asset_id == 0:
+            continue
+        assert mask[2] is True
+
+
+def test_drop_always_affordable_with_zero_fee(valid_json_assets_path):
+    """A zero drop fee means drop is never masked out, even with no cash."""
+    env = _make_env(
+        valid_json_assets_path,
+        drop_action_config=DropActionConfig(enabled=True, drop_price_fraction=0.0, drop_price_rounding=1_000_000),
+        mask_first_order_assets=True,
+    )
+    env.reset(seed=42)
+    env.game_state = env.game_state.model_copy(update={"cash": 0.0})
+
+    for asset_id, mask in zip(env._asset_id_order, env.action_masks()):
+        if asset_id == 0:
+            continue
+        assert mask[2] is True
+
+
+def test_drop_action_masks_respect_negative_enpv_masking(valid_json_assets_path):
+    """mask_negative_enpv_assets blocks invest on negative-eNPV assets, not drop."""
+    env = _make_drop_env(valid_json_assets_path, mask_negative_enpv_assets=True)
+    env.reset(seed=42)
+    masks = env.action_masks()
+
+    for asset_id, mask in zip(env._asset_id_order, masks):
+        if asset_id == 0:
+            continue
+        asset = env.game_state.assets[asset_id]
+        if asset.state == AssetState.Idle and asset.enpv < 0:
+            assert mask[1] is False
+        assert mask[2] is True
+
+
+def test_drop_action_decoding(valid_json_assets_path):
+    """Actions 0/1/2 decode to nothing / "invest" / "drop"."""
+    env = _make_drop_env(valid_json_assets_path)
+    env.reset(seed=42)
+
+    real_ids = [aid for aid in env._asset_id_order if aid != 0]
+    assert len(real_ids) >= 3, "Need at least 3 assets for this test"
+
+    action = np.zeros(MAX_NUM_ASSETS, dtype=np.int64)
+    positions = {aid: i for i, aid in enumerate(env._asset_id_order)}
+    do_nothing_id, invest_id, drop_id = real_ids[0], real_ids[1], real_ids[2]
+    action[positions[do_nothing_id]] = 0
+    action[positions[invest_id]] = 1
+    action[positions[drop_id]] = 2
+
+    decisions = env._action_to_investment_decision(action)
+
+    assert do_nothing_id not in decisions
+    assert decisions[invest_id] == "invest"
+    assert decisions[drop_id] == "drop"
+
+
+def test_drop_action_step_removes_asset(valid_json_assets_path):
+    """Stepping with action=2 moves the asset into dropped_assets."""
+    env = _make_drop_env(valid_json_assets_path)
+    env.reset(seed=42)
+
+    target_id = next(aid for aid in env._asset_id_order if aid != 0)
+    position = list(env._asset_id_order).index(target_id)
+    action = np.zeros(MAX_NUM_ASSETS, dtype=np.int64)
+    action[position] = 2
+
+    env.step(action)
+
+    assert target_id in env.game_state.dropped_assets
+    assert target_id not in env.game_state.assets
+
+
+def test_drop_action_and_investment_levels_mutually_exclusive(valid_json_assets_path):
+    """Enabling both investment_levels and drop_action raises."""
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        _make_env(
+            valid_json_assets_path,
+            investment_levels_config=_ENABLED_INVESTMENT_LEVELS,
+            drop_action_config=_ENABLED_DROP_ACTION,
+        )
+
+
+@pytest.mark.parametrize(
+    "levels_config,drop_config",
+    [
+        (_ENABLED_INVESTMENT_LEVELS, _DISABLED_DROP_ACTION),
+        (_DISABLED_INVESTMENT_LEVELS, _ENABLED_DROP_ACTION),
+        (_DISABLED_INVESTMENT_LEVELS, _DISABLED_DROP_ACTION),
+    ],
+    ids=["levels_only", "drop_only", "neither"],
+)
+def test_one_of_levels_or_drop_action_is_allowed(
+    valid_json_assets_path, levels_config, drop_config
+):
+    """At most one of the two features enabled is fine."""
+    env = _make_env(
+        valid_json_assets_path,
+        investment_levels_config=levels_config,
+        drop_action_config=drop_config,
+    )
+    assert env is not None
+
+
+class TestSingleAgentWarmupAdditive:
+    """
+    Single-agent warmup is a pre-roll: the clock rebases to 0 and the agent
+    plays a full horizon, so warmup_steps and horizon are additive.
+    """
+
+    def test_warmup_exceeding_horizon_does_not_error(self, valid_json_assets_path):
+        """warmup_steps >= horizon must not raise and must rebase to time 0."""
+        base = _make_env(valid_json_assets_path, horizon=10)
+        env = WarmupOnResetWrapper(
+            base, warmup_steps=25, policy="do_nothing", verbose=False
+        )
+        env.reset(seed=42)
+
+        # Clock rebased to 0 and the configured horizon restored.
+        assert base.game_state.time == 0
+        assert base.game_state.horizon == 10
+
+    def test_agent_plays_full_horizon_after_warmup(self, valid_json_assets_path):
+        """After a warmup larger than the horizon the agent still plays it in full."""
+        base = _make_env(valid_json_assets_path, horizon=10)
+        env = WarmupOnResetWrapper(
+            base, warmup_steps=25, policy="do_nothing", verbose=False
+        )
+        env.reset(seed=42)
+
+        steps = 0
+        done = False
+        while not done and steps <= 15:
+            _, _, terminated, truncated, _ = env.step(np.zeros(MAX_NUM_ASSETS))
+            steps += 1
+            done = terminated or truncated
+
+        assert steps == 10
+        assert base.game_state.time == 10
+
+    def test_extend_and_rebase_helpers_roundtrip(self, valid_json_assets_path):
+        """extend_horizon_for_warmup / rebase_clock_after_warmup restore state."""
+        env = _make_env(valid_json_assets_path, horizon=10)
+        env.reset(seed=42)
+
+        env.extend_horizon_for_warmup(25)
+        assert env.game_state.horizon == 35
+
+        env.rebase_clock_after_warmup()
+        assert env.game_state.time == 0
+        assert env.game_state.horizon == 10
+
+
+class TestVecWarmupAdditive:
+    """
+    Vectorized warmup is additive per env: each clock rebases to 0 and each
+    agent plays a full horizon regardless of warmup length.
+    """
+
+    def test_warmup_exceeding_horizon_rebases_each_env(self, valid_json_assets_path):
+        """warmup_steps >= horizon must not raise; every env rebases to time 0."""
+        from stable_baselines3.common.vec_env import DummyVecEnv
+
+        from pyxis_portfolio_challenge.environment.warmup_wrapper import (
+            VecWarmupOnResetWrapper,
+        )
+
+        def _factory():
+            return _make_env(valid_json_assets_path, horizon=10, flatten_obs=True)
+
+        venv = DummyVecEnv([_factory, _factory])
+        wrapped = VecWarmupOnResetWrapper(
+            venv, warmup_steps=25, policy="do_nothing", verbose=False
+        )
+        wrapped.reset()
+
+        for gs in wrapped.get_attr("game_state"):
+            assert gs.time == 0
+            assert gs.horizon == 10
+
+
+def test_investment_levels_action_space_is_multidiscrete(valid_json_assets_path):
+    """Enabling investment_levels makes the action space MultiDiscrete over levels."""
+    env = _make_env(
+        valid_json_assets_path,
+        investment_levels_config=_ENABLED_INVESTMENT_LEVELS,
+        drop_action_config=_DISABLED_DROP_ACTION,
+    )
+    assert isinstance(env.action_space, gym.spaces.MultiDiscrete)
+    assert list(env.action_space.nvec) == [len(InvestmentLevel)] * env.max_num_assets
+
+
+@pytest.mark.parametrize(
+    "config_kwarg,enabled_cfg",
+    [
+        ("marketing_config", _DISABLED_MARKETING.model_copy(update={"enabled": True})),
+        (
+            "clinical_sites_config",
+            _DISABLED_CLINICAL_SITES.model_copy(update={"enabled": True}),
+        ),
+        (
+            "ptrs_readings_config",
+            _DISABLED_PTRS_READINGS.model_copy(update={"enabled": True}),
+        ),
+        (
+            "approval_phase_config",
+            _DISABLED_APPROVAL_PHASE.model_copy(update={"enabled": True}),
+        ),
+    ],
+    ids=["marketing", "clinical_sites", "ptrs_readings", "approval_phase"],
+)
+def test_single_agent_rejects_multi_only_features(
+    valid_json_assets_path, config_kwarg, enabled_cfg
+):
+    """The single-agent env raises if a multi-agent-only feature is enabled."""
+    with pytest.raises(ValueError, match="does not support"):
+        _make_env(valid_json_assets_path, **{config_kwarg: enabled_cfg})
