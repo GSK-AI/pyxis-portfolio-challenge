@@ -375,10 +375,6 @@ wrapped = SelfPlayWrapper(env, policy_kwargs=policy_kwargs)
 
 See [`self_play.py`](pyxis_portfolio_challenge/environment/self_play.py) for full details.
 
-### How We Trained Pyxie
-
-The [`notebooks/train_pyxie.ipynb`](notebooks/train_pyxie.ipynb) notebook walks through the full training setup we used to produce the shipped Pyxie agent, including hyperparameters, weighted entropy across action dimensions, opponent sync callbacks, and VecNormalize persistence.
-
 ## Development
 
 See [README_FOR_DEVS.md](README_FOR_DEVS.md) for developer setup, API server instructions, and contributing guidelines.
