@@ -3519,11 +3519,22 @@ class TestClinicalSiteEnvStep:
         # under test.
         gs = env.multi_agent_game.agent_states[a]
         gs.operational_sites = gs.sites_occupied + 1
+        order = env._asset_id_orders[a]
         mask = np.asarray(env.action_masks(a)["investments"])
-        idle = list(np.where(mask == 1)[0])
+        # Among the idle (investable) assets, pick two whose first trial phase
+        # lasts more than one step. A phase that resolves in a single step would
+        # send the granted asset back to Idle (the between-phase gap on success)
+        # or out of the live set (on failure) within this same step, making the
+        # post-step state a function of trial length / stochastic outcome rather
+        # than of the site routing under test.
+        idle = [
+            i
+            for i in np.where(mask == 1)[0]
+            if order[i] in gs.assets
+            and gs.assets[order[i]].to_develop().trial.time_remaining > 1
+        ]
         assert len(idle) >= 2  # need an over-request to exercise the gate
         i0, i1 = idle[0], idle[1]
-        order = env._asset_id_orders[a]
         favoured_id, other_id = order[i1], order[i0]
 
         inv = np.zeros(env.max_num_assets, dtype=np.int8)
