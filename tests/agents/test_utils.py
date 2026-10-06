@@ -261,9 +261,14 @@ def test_get_agent_investment_decisions_empty_game_state(valid_json_assets_path)
         **_EXTRA_DISABLED_CONFIGS,
     )
 
-    # Put all assets in development
+    # Put every idle asset in development so none are investable. Assets that
+    # already arrived on-market (or in any non-idle state) cannot be developed
+    # and are not investable anyway, so leave them as-is.
+    from pyxis_portfolio_challenge.game.asset import AssetState
     for asset_id in list(game_state.assets.keys()):
-        game_state.assets[asset_id] = game_state.assets[asset_id].to_develop()
+        asset = game_state.assets[asset_id]
+        if asset.state == AssetState.Idle:
+            game_state.assets[asset_id] = asset.to_develop()
 
     agent = get_agent("Knapsack")
 

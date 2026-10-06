@@ -3512,6 +3512,13 @@ class TestClinicalSiteEnvStep:
         )
         env.reset(seed=0)
         a, b = env.agents
+        # Guarantee exactly one free site so the two idle requests genuinely
+        # contend. Warmup can leave an asset already InDevelopment (occupying
+        # the single starting site), which would otherwise make free_sites=0 and
+        # deny both requests — a platform-dependent flake, not the behaviour
+        # under test.
+        gs = env.multi_agent_game.agent_states[a]
+        gs.operational_sites = gs.sites_occupied + 1
         mask = np.asarray(env.action_masks(a)["investments"])
         idle = list(np.where(mask == 1)[0])
         assert len(idle) >= 2  # need an over-request to exercise the gate
