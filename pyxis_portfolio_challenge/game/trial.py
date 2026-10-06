@@ -460,7 +460,8 @@ class Trial(BaseModel):
         Priority:
         1. Distributional PTRS: Sample from true Beta, compare to random
         2. Uncertain PTRS: Use effective_true_ptrs point value
-        3. Default: Use observed ptrs
+        3. PTRS readings: Use hidden per-episode realised _true_ptrs
+        4. Default (point-based): Use observed ptrs
         """
         rng = get_game_rng()
 
@@ -478,7 +479,13 @@ class Trial(BaseModel):
         if self._effective_true_ptrs is not None:
             return rng.random() < self._effective_true_ptrs
 
-        # Default: use observed PTRS
+        # PTRS readings: outcome governed by the hidden per-episode realised
+        # truth, not the agent's noisy observed estimate (self.ptrs). Readings
+        # are purely informational — they let the agent estimate _true_ptrs.
+        if self._true_ptrs is not None:
+            return rng.random() < self._true_ptrs
+
+        # Default: use observed PTRS (point-based, no PTRS features enabled)
         return rng.random() < self.ptrs
 
     def _copy_private_attrs(self, new_trial: "Trial") -> None:

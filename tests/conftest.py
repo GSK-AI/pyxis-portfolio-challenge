@@ -131,7 +131,7 @@ _DISABLED_PTRS_READINGS = PtrsReadingsConfig(
     cost_rounding=1_000_000,
     action_space_max_readings=10,
     sigma_logit_base=1.5,
-    sigma_ep=None,
+    sigma_ep=1.5,
     noise_multipliers=[1.0, 1.5, 2.0],
     max_sample_obs=20,
 )
