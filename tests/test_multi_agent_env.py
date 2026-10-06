@@ -207,7 +207,7 @@ def _make_env(
             cost_rounding=1_000_000,
             action_space_max_readings=10,
             sigma_logit_base=1.5,
-            sigma_ep=None,
+            sigma_ep=1.5,
             noise_multipliers=[1.0, 1.5, 2.0],
             max_sample_obs=20,
         ),
@@ -925,7 +925,7 @@ class TestDictObservation:
             cost_rounding=1,
             action_space_max_readings=3,
             sigma_logit_base=1.5,
-            sigma_ep=None,
+            sigma_ep=1.5,
             noise_multipliers=[1.0, 1.5, 2.0],
             max_sample_obs=20,
         )
@@ -2011,7 +2011,7 @@ _BD_READINGS_CFG = PtrsReadingsConfig(
     cost_rounding=1,
     action_space_max_readings=3,
     sigma_logit_base=1.5,
-    sigma_ep=None,
+    sigma_ep=1.5,
     noise_multipliers=[1.0, 1.5, 2.0],
     max_sample_obs=20,
 )
@@ -3512,11 +3512,29 @@ class TestClinicalSiteEnvStep:
         )
         env.reset(seed=0)
         a, b = env.agents
+        # Guarantee exactly one free site so the two idle requests genuinely
+        # contend. Warmup can leave an asset already InDevelopment (occupying
+        # the single starting site), which would otherwise make free_sites=0 and
+        # deny both requests — a platform-dependent flake, not the behaviour
+        # under test.
+        gs = env.multi_agent_game.agent_states[a]
+        gs.operational_sites = gs.sites_occupied + 1
+        order = env._asset_id_orders[a]
         mask = np.asarray(env.action_masks(a)["investments"])
-        idle = list(np.where(mask == 1)[0])
+        # Among the idle (investable) assets, pick two whose first trial phase
+        # lasts more than one step. A phase that resolves in a single step would
+        # send the granted asset back to Idle (the between-phase gap on success)
+        # or out of the live set (on failure) within this same step, making the
+        # post-step state a function of trial length / stochastic outcome rather
+        # than of the site routing under test.
+        idle = [
+            i
+            for i in np.where(mask == 1)[0]
+            if order[i] in gs.assets
+            and gs.assets[order[i]].to_develop().trial.time_remaining > 1
+        ]
         assert len(idle) >= 2  # need an over-request to exercise the gate
         i0, i1 = idle[0], idle[1]
-        order = env._asset_id_orders[a]
         favoured_id, other_id = order[i1], order[i0]
 
         inv = np.zeros(env.max_num_assets, dtype=np.int8)
