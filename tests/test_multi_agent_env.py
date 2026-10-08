@@ -9,18 +9,10 @@ import upath
 
 from pyxis_portfolio_challenge.config import (
     ApprovalPhaseConfig,
-    CapacityConfig,
     ClinicalSitesConfig,
-    DistributionalPtrsConfig,
     DropActionConfig,
-    InterimTrialObservationsConfig,
-    InvestmentLevelParams,
-    InvestmentLevelsConfig,
     MarketingConfig,
-    PricingConfig,
     PtrsReadingsConfig,
-    TAExperienceConfig,
-    UncertainPtrsConfig,
 )
 from pyxis_portfolio_challenge.environment.market_mechanics import (
     calculate_agent_market_shares,
@@ -42,7 +34,6 @@ from pyxis_portfolio_challenge.environment.warmup_wrapper import (
     MultiAgentWarmupOnResetWrapper,
 )
 from pyxis_portfolio_challenge.game.asset import AssetState
-from pyxis_portfolio_challenge.game.constants import InvestmentLevel
 from pyxis_portfolio_challenge.game.shared_market_state import (
     THERAPEUTIC_AREAS,
     Alert,
@@ -102,77 +93,6 @@ def _make_env(
         mask_first_order_assets=False,
         mask_negative_enpv_assets=False,
         flatten_obs=True,
-        distributional_ptrs_config=DistributionalPtrsConfig(
-            enabled=False,
-            ta_quality_variance={
-                "oncology": 0.08,
-                "respiratory and immunology": 0.05,
-                "vaccines and infectious disease": 0.03,
-            },
-            asset_noise_std=0.03,
-            prior_concentration=5.0,
-            observation_noise=0.1,
-        ),
-        ta_experience_config=TAExperienceConfig(
-            enabled=False,
-            experience_to_full_knowledge=30.0,
-            max_expertise_boost=0.05,
-            experience_to_max_boost=40.0,
-            experience_decay_rate=0.98,
-            max_total_experience=60.0,
-            phase_experience_weights={
-                "phase_1": 0.5,
-                "phase_2": 1.0,
-                "phase_3": 1.5,
-                "approval": 0.5,
-            },
-            asset_arrival_temperature=0.1,
-        ),
-        uncertain_ptrs_config=UncertainPtrsConfig(
-            enabled=False,
-            ta_noise_config={
-                "oncology": 0.12,
-                "respiratory and immunology": 0.10,
-                "vaccines and infectious disease": 0.08,
-            },
-            phase_noise_multipliers={
-                "phase_1": 1.5,
-                "phase_2": 1.0,
-                "phase_3": 0.75,
-                "approval": 0.5,
-            },
-        ),
-        investment_levels_config=InvestmentLevelsConfig(
-            enabled=False,
-            levels={
-                "none": InvestmentLevelParams(
-                    cost_modifier=0.0,
-                    speed_modifier=0.0,
-                    success_modifier=1.0,
-                    capacity_cost=0,
-                    experience_modifier=0.0,
-                ),
-                "standard": InvestmentLevelParams(
-                    cost_modifier=1.0,
-                    speed_modifier=1.0,
-                    success_modifier=1.0,
-                    capacity_cost=2,
-                    experience_modifier=1.0,
-                ),
-            },
-        ),
-        interim_trial_observations_config=InterimTrialObservationsConfig(
-            enabled=False,
-            latent_quality_concentration=10.0,
-            initial_noise_scale=0.3,
-        ),
-        rd_capacity_config=CapacityConfig(
-            enabled=False,
-            base_capacity=80.0,
-            overage_max_penalty=0.5,
-            overage_cost_max_penalty=0.5,
-            overage_scaling="linear",
-        ),
         approval_phase_config=ApprovalPhaseConfig(
             enabled=False,
             duration_min=1,
@@ -190,12 +110,6 @@ def _make_env(
         congestion_exponent=1.0,
         congestion_ramp_steps=3,
         congestion_incumbent_penalty=0.0,
-        pricing_config=PricingConfig(
-            enabled=False,
-            levels=[0.60, 0.75, 1.00, 1.20, 1.40, 1.60],
-            default_level=2,
-            elasticity=2.0,
-        ),
         drop_action_config=DropActionConfig(
             enabled=False,
             drop_price_fraction=0.0,
@@ -2115,7 +2029,6 @@ def test_capture_actions_stores_decoded_gbp_bid_amount():
     records = capture_actions(
         raw_actions,
         {"pharma_0": []},
-        use_investment_levels=False,
         bd_bid_decoder=env._decode_bd_bids,
     )
     assert records["pharma_0"].bd_bids == [25_000_000, 0]
@@ -2124,7 +2037,6 @@ def test_capture_actions_stores_decoded_gbp_bid_amount():
     legacy = capture_actions(
         raw_actions,
         {"pharma_0": []},
-        use_investment_levels=False,
     )
     assert legacy["pharma_0"].bd_bids == [25, 0]
 
@@ -3012,32 +2924,6 @@ class TestDropAction:
         assert target_id in portfolio.dropped_assets
         assert target_id not in portfolio.assets
 
-    def test_mutually_exclusive_with_investment_levels(self):
-        enabled_levels = InvestmentLevelsConfig(
-            enabled=True,
-            levels={
-                "none": InvestmentLevelParams(
-                    cost_modifier=0.0,
-                    speed_modifier=0.0,
-                    success_modifier=1.0,
-                    capacity_cost=0,
-                    experience_modifier=0.0,
-                ),
-                "standard": InvestmentLevelParams(
-                    cost_modifier=1.0,
-                    speed_modifier=1.0,
-                    success_modifier=1.0,
-                    capacity_cost=2,
-                    experience_modifier=1.0,
-                ),
-            },
-        )
-        with pytest.raises(ValueError, match="mutually exclusive"):
-            _make_env(
-                investment_levels_config=enabled_levels,
-                drop_action_config=_ENABLED_DROP_ACTION,
-            )
-
 
 class TestWarmupClockRebase:
     """
@@ -3557,39 +3443,6 @@ class TestClinicalSiteEnvStep:
         assert assets[other_id].state == AssetState.Idle
 
 
-_ENABLED_PRICING = PricingConfig(
-    enabled=True,
-    levels=[0.60, 0.75, 1.00, 1.20, 1.40, 1.60],
-    default_level=2,
-    elasticity=2.0,
-)
-_ENABLED_INVESTMENT_LEVELS = InvestmentLevelsConfig(
-    enabled=True,
-    levels={
-        "none": InvestmentLevelParams(
-            cost_modifier=0.0, speed_modifier=0.0, success_modifier=1.0,
-            capacity_cost=0, experience_modifier=0.0,
-        ),
-        "standard": InvestmentLevelParams(
-            cost_modifier=1.0, speed_modifier=1.0, success_modifier=1.0,
-            capacity_cost=2, experience_modifier=1.0,
-        ),
-    },
-)
-_ENABLED_TA_EXPERIENCE = TAExperienceConfig(
-    enabled=True,
-    experience_to_full_knowledge=30.0,
-    max_expertise_boost=0.05,
-    experience_to_max_boost=40.0,
-    experience_decay_rate=0.98,
-    max_total_experience=60.0,
-    phase_experience_weights={
-        "phase_1": 0.5, "phase_2": 1.0, "phase_3": 1.5, "approval": 0.5,
-    },
-    asset_arrival_temperature=0.1,
-)
-
-
 class TestActionSpaceFeatureVariants:
     """
     Each feature's action head appears in action_space() exactly when its
@@ -3616,28 +3469,6 @@ class TestActionSpaceFeatureVariants:
         assert "ptrs_research" not in space.spaces
         assert "ptrs_research" not in env.enabled_action_heads()
 
-    def test_pricing_head_present_when_enabled(self):
-        env = _make_env(pricing_config=_ENABLED_PRICING)
-        space = env.action_space(self._agent(env))
-        assert "pricing" in space.spaces
-        assert "pricing" in env.enabled_action_heads()
-        assert list(space.spaces["pricing"].nvec) == (
-            [len(_ENABLED_PRICING.levels)] * env.max_num_assets
-        )
-
-    def test_pricing_head_absent_when_disabled(self):
-        env = _make_env()  # pricing disabled by default
-        space = env.action_space(self._agent(env))
-        assert "pricing" not in space.spaces
-        assert "pricing" not in env.enabled_action_heads()
-
-    def test_investment_levels_action_space_when_enabled(self):
-        env = _make_env(investment_levels_config=_ENABLED_INVESTMENT_LEVELS)
-        space = env.action_space(self._agent(env))
-        inv = space.spaces["investments"]
-        assert isinstance(inv, gym.spaces.MultiDiscrete)
-        assert list(inv.nvec) == [len(InvestmentLevel)] * env.max_num_assets
-
     def test_investments_binary_when_no_levels_or_drop(self):
         env = _make_env()
         space = env.action_space(self._agent(env))
@@ -3651,7 +3482,6 @@ class TestActionSpaceFeatureVariants:
     def test_enabled_heads_match_action_space_keys_all_on(self):
         env = _make_env(
             ptrs_readings_config=_BD_READINGS_CFG,
-            pricing_config=_ENABLED_PRICING,
             marketing_config=_MARKETING_CFG,
         )
         space = env.action_space(self._agent(env))
@@ -3663,16 +3493,6 @@ class TestObsSpaceFeatureVariants:
 
     def _agent(self, env):
         return env.possible_agents[0]
-
-    def test_ta_experience_obs_present_when_enabled(self):
-        env = _make_env(flatten_obs=False, ta_experience_config=_ENABLED_TA_EXPERIENCE)
-        space = env.observation_space(self._agent(env))
-        assert "ta_experience" in space.spaces
-
-    def test_ta_experience_obs_absent_when_disabled(self):
-        env = _make_env(flatten_obs=False)  # ta_experience disabled by default
-        space = env.observation_space(self._agent(env))
-        assert "ta_experience" not in space.spaces
 
     def test_clinical_sites_obs_present_when_enabled(self):
         env = _sites_env(flatten_obs=False)

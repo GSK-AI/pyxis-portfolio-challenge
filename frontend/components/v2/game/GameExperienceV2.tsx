@@ -36,8 +36,6 @@ import {
 } from "@/lib/investment-game-calculations";
 import { calculateTrialCost } from "@/lib/game";
 import type { ActionType, TrialPhaseName } from "@/lib/definitionsGameZ";
-import TAExperience from "@/components/InvestmentGame/TAExperience";
-import RDCapacity from "@/components/InvestmentGame/RDCapacity";
 import UnlockHint from "@/components/InvestmentGame/UnlockHint";
 import {
   AssetTable,
@@ -71,8 +69,6 @@ import {
   Sparkles,
   PanelRightOpen,
   PanelRightClose,
-  GraduationCap,
-  Gauge,
   Lightbulb,
 } from "lucide-react";
 import { EmptyState } from "./ui/EmptyState";
@@ -101,9 +97,8 @@ import { Handshake } from "lucide-react";
 /** One-shot actions collected in the UI and submitted with Next Year. */
 export interface TurnIntents {
   /**
-   * Classic-shaped selection: `true` = invest (legacy mode); strings are
-   * investment levels ("minimal" | "standard" | "accelerated") or "stop"
-   * when investment levels are enabled.
+   * Classic-shaped selection: `true` = invest; strings carry other action
+   * types (e.g. "stop").
    */
   invest: Record<string, ActionType | boolean>;
   readings: Record<string, number>;
@@ -171,7 +166,7 @@ export function toAssetRow(
     // Classic: Idle assets show what investing would cost
     // (cost_to_invest_this_step), others their committed cost.
     costThisYear: calculateTrialCost(asset),
-    ptrs: (phase?.ptrs_expected ?? phase?.ptrs ?? 0) * 100,
+    ptrs: (phase?.ptrs ?? 0) * 100,
     ptrsEff: phase?.ptrs_effective_readings ?? 0,
     readings,
     readingsFree: readings === 0,
@@ -183,32 +178,11 @@ export function toAssetRow(
     eroi: asset.eroi,
     pys: asset.max_revenue,
     timeToExpiry: asset.time_until_patent_expiry,
-    // Distributional PTRS extras (classic AssetsTable display).
-    ptrsRangeLow: phase?.ptrs_range_low,
-    ptrsRangeHigh: phase?.ptrs_range_high,
-    ptrsConfidence: phase?.ptrs_confidence,
-    // Interim trial signal (classic Interim Signal column).
-    interim:
-      asset.state === "In Development"
-        ? phase?.has_interim_observation
-          ? phase.interim_result === "positive"
-            ? "positive"
-            : "negative"
-          : "pending"
-        : "na",
     // On Market extras (classic market table columns).
     revenueThisStep: asset.revenue_this_step,
     timeToPys: asset.time_until_max_revenue,
     timeOnMarket: asset.time_on_market,
     invest,
-    level:
-      typeof selectionValue === "string"
-        ? selectionValue
-        : selectionValue
-          ? "standard"
-          : "none",
-    stopping: selectionValue === "stop",
-    currentLevel: asset.current_investment_level ?? null,
     dropAvailable: asset.available_actions?.includes("drop") ?? false,
     // Drop fee: 25% of the remaining trial cost in the current phase
     // (backend drop_action rule); free once on market.
@@ -317,7 +291,6 @@ export default function GameExperienceV2({
   const playerState =
     state && "player_state" in state ? state.player_state : state;
   const allAssets = Object.values(playerState?.assets ?? {});
-  const levelsEnabled = playerState?.investment_levels_enabled ?? false;
 
   const cash = playerState?.cash;
   const enpv = playerState?.enpv_over_time.at(-1);
@@ -539,15 +512,13 @@ export default function GameExperienceV2({
     setAdvancing(true);
     setError("");
     try {
-      // Classic parity: in levels mode any level/stop choice is submitted;
-      // in legacy mode only Idle assets take an explicit invest action —
-      // In Development continues automatically and rejects "invest".
+      // Only Idle assets take an explicit invest action — In Development
+      // continues automatically and rejects "invest".
       const invest = Object.fromEntries(
         Object.entries(invests).filter(([id, val]) => {
           const active =
             val === true || (typeof val === "string" && val !== "none");
           if (!active) return false;
-          if (levelsEnabled) return true;
           return playerState?.assets?.[id]?.state === "Idle";
         }),
       );
@@ -722,7 +693,6 @@ export default function GameExperienceV2({
     // progression; otherwise carry the previous turn's selection forward.
     const prevPhases = last && last.time < snapshot.time ? last.phases : {};
     const isStartOfGame = last === null;
-    const seedLevels = playerState.investment_levels_enabled ?? false;
     setInvests((current) => {
       const next = { ...current };
       let changedAny = false;
@@ -749,13 +719,7 @@ export default function GameExperienceV2({
         } else {
           shouldSelect = isSelectionActive(prevSel) || prevSel === undefined;
         }
-        next[asset.id] = shouldSelect
-          ? seedLevels
-            ? ("standard" as ActionType)
-            : true
-          : seedLevels
-            ? ("none" as ActionType)
-            : false;
+        next[asset.id] = shouldSelect;
         changedAny = true;
       }
       return changedAny ? next : current;
@@ -852,18 +816,14 @@ export default function GameExperienceV2({
     .map((asset) => ({
       ...toAssetRow(
         asset,
-        asset.state === "In Development" && levelsEnabled
-          ? // Levels mode: In Development rows carry a live stop toggle;
-            // the selection value drives it ("stop" = abandoning).
-            (invests[asset.id] ?? true)
-          : (invests[asset.id] ?? false),
+        invests[asset.id] ?? false,
         readings[asset.id] ?? 0,
         drops[asset.id] ?? false,
         hasAnyChange(asset),
         arrivalHighlight(asset),
-        // Classic parity (legacy mode): In Development continues
-        // automatically — the switch is locked on, only drop is valid.
-        asset.state === "In Development" && !levelsEnabled,
+        // In Development continues automatically — the switch is locked on,
+        // only drop is valid.
+        asset.state === "In Development",
       ),
       readingAffordableUpTo: readingAffordableUpTo(asset),
       changedKind: changedKind(asset),
@@ -909,48 +869,7 @@ export default function GameExperienceV2({
       }).length
     : 0;
 
-  // Classic-gated feature panels shared by both modes: TA experience and
-  // R&D capacity (classic components reused, like SiteCubes).
-  const featureSections: BoardSection[] = [
-    ...(playerState?.ta_experience_enabled &&
-    playerState.ta_experience &&
-    Object.keys(playerState.ta_experience).length > 0
-      ? [
-          {
-            key: "ta",
-            title: "TA Experience",
-            icon: GraduationCap,
-            content: (
-              <TAExperience
-                taExperience={playerState.ta_experience}
-                maxExperience={playerState.experience_to_full_knowledge}
-                maxTotalExperience={playerState.max_total_experience}
-              />
-            ),
-          } satisfies BoardSection,
-        ]
-      : []),
-    ...(levelsEnabled &&
-    playerState?.capacity_used !== undefined &&
-    playerState?.capacity_base !== undefined
-      ? [
-          {
-            key: "capacity",
-            title: "R&D Capacity",
-            icon: Gauge,
-            info: informationDictionary.investmentLevels,
-            content: (
-              <RDCapacity
-                capacityUsed={playerState.capacity_used}
-                capacityBase={playerState.capacity_base}
-                successModifier={playerState.success_modifier}
-                costModifier={playerState.cost_modifier}
-              />
-            ),
-          } satisfies BoardSection,
-        ]
-      : []),
-  ];
+  const featureSections: BoardSection[] = [];
 
   const multiBoardSections: BoardSection[] = [
     {
@@ -1512,20 +1431,15 @@ export default function GameExperienceV2({
       onToggleInvest={(id, invest) =>
         setInvests((prev) => ({
           ...prev,
-          // Levels mode: the switch maps to standard/none (classic
-          // handleAssetSelection); legacy mode stays boolean.
-          [id]: levelsEnabled ? (invest ? "standard" : "none") : invest,
+          [id]: invest,
         }))
-      }
-      onLevelChange={(id, level) =>
-        setInvests((prev) => ({ ...prev, [id]: level }))
       }
       onDrop={(id) => {
         // Toggle drop; dropping clears any invest selection.
         setDrops((prev) => ({ ...prev, [id]: !prev[id] }));
         setInvests((prev) => ({
           ...prev,
-          [id]: levelsEnabled ? "none" : false,
+          [id]: false,
         }));
       }}
       // Classic single-player shows PTRS "eff" but has no reading
@@ -1538,13 +1452,6 @@ export default function GameExperienceV2({
       hints={hints}
       hintColumnVisible={hintColumnVisible}
       selectedAgentName={selectedAgentName}
-      investmentLevelsEnabled={levelsEnabled}
-      distributionalPtrsEnabled={
-        playerState?.distributional_ptrs_enabled ?? false
-      }
-      interimObservationsEnabled={
-        playerState?.interim_observations_enabled ?? false
-      }
       emphasizeCashValue={mode === "multi"}
       ptrsReadingsEnabled={playerState?.ptrs_readings_enabled ?? false}
       reinvestmentPercentage={playerState?.reinvestment_percentage}

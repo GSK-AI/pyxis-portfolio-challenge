@@ -40,12 +40,12 @@ export const informationDictionary = {
   phasePTRS: {
     title: "PTRS Estimate (%)",
     description:
-      "Estimated Probability of Technical and Regulatory Success for the Current Phase. When distributional PTRS is enabled, shows the expected value with uncertainty bounds (p10-p90) and confidence level that improves as you gain experience in the therapeutic area.",
+      "Estimated Probability of Technical and Regulatory Success for the Current Phase.",
   },
   abandonAction: {
     title: "Abandon Development",
     description:
-      "Permanently stops development of this asset. The asset will move to Failed state and cannot be restarted. Use this to cut losses when interim trial signals suggest the trial is likely to fail.",
+      "Permanently stops development of this asset. The asset will move to Failed state and cannot be restarted. Use this to cut losses when a trial is likely to fail.",
   },
   remainingPhaseCost: {
     title: "Remaining Phase Cost",
@@ -74,15 +74,5 @@ export const informationDictionary = {
     title: "Budget Next Year",
     description:
       "The cash this asset adds to your Capital next step: gross sales scaled by the reinvestment rate (35%).",
-  },
-  investmentLevels: {
-    title: "Investment Levels",
-    description:
-      "Investment levels allow you to control the intensity of R&D investment for each asset. Higher investment levels increase costs but also speed up development and may improve success rates. Each level also uses R&D capacity - exceeding capacity will incur penalties.",
-  },
-  interimSignal: {
-    title: "Interim Signal",
-    description:
-      "An early readout from the ongoing clinical trial. A positive signal (green) suggests the trial is trending towards success, while a negative signal (amber) indicates the trial may be struggling. Use this information to decide whether to continue investing or abandon the asset early to cut losses.",
   },
 } as const;
