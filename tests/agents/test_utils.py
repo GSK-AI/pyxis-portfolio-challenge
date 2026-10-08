@@ -9,48 +9,16 @@ from pyxis_portfolio_challenge.agents.utils import (
 )
 from pyxis_portfolio_challenge.config import (
     ApprovalPhaseConfig,
-    CapacityConfig,
     ClinicalSitesConfig,
-    DistributionalPtrsConfig,
     DropActionConfig,
-    InterimTrialObservationsConfig,
-    InvestmentLevelParams,
-    InvestmentLevelsConfig,
     MarketingConfig,
     PtrsReadingsConfig,
-    TAExperienceConfig,
-    UncertainPtrsConfig,
     config,
 )
 
 # Disabled feature configs now required as keyword-only args by
-# GameState.initialise_new_game (rd_capacity passed explicitly at the call site).
+# GameState.initialise_new_game.
 _EXTRA_DISABLED_CONFIGS = dict(
-    investment_levels_config=InvestmentLevelsConfig(
-        enabled=False,
-        levels={
-            "none": InvestmentLevelParams(
-                cost_modifier=0.0, speed_modifier=0.0, success_modifier=1.0,
-                capacity_cost=0, experience_modifier=0.0,
-            ),
-            "standard": InvestmentLevelParams(
-                cost_modifier=1.0, speed_modifier=1.0, success_modifier=1.0,
-                capacity_cost=2, experience_modifier=1.0,
-            ),
-        },
-    ),
-    interim_trial_observations_config=InterimTrialObservationsConfig(
-        enabled=False, latent_quality_concentration=10.0, initial_noise_scale=0.3,
-    ),
-    distributional_ptrs_config=DistributionalPtrsConfig(
-        enabled=False,
-        ta_quality_variance={
-            "oncology": 0.08,
-            "respiratory and immunology": 0.05,
-            "vaccines and infectious disease": 0.03,
-        },
-        asset_noise_std=0.03, prior_concentration=5.0, observation_noise=0.1,
-    ),
     drop_action_config=DropActionConfig(
         enabled=False, drop_price_fraction=0.0, drop_price_rounding=1_000_000,
     ),
@@ -68,26 +36,6 @@ _EXTRA_DISABLED_CONFIGS = dict(
         enabled=False, cost_fraction=0.05, cost_rounding=1_000_000,
         action_space_max_readings=10, sigma_logit_base=1.5, sigma_ep=1.5,
         noise_multipliers=[1.0, 1.5, 2.0], max_sample_obs=20,
-    ),
-    ta_experience_config=TAExperienceConfig(
-        enabled=False, experience_to_full_knowledge=30.0, max_expertise_boost=0.05,
-        experience_to_max_boost=40.0, experience_decay_rate=0.98,
-        max_total_experience=60.0,
-        phase_experience_weights={
-            "phase_1": 0.5, "phase_2": 1.0, "phase_3": 1.5, "approval": 0.5,
-        },
-        asset_arrival_temperature=0.1,
-    ),
-    uncertain_ptrs_config=UncertainPtrsConfig(
-        enabled=False,
-        ta_noise_config={
-            "oncology": 0.12,
-            "respiratory and immunology": 0.10,
-            "vaccines and infectious disease": 0.08,
-        },
-        phase_noise_multipliers={
-            "phase_1": 1.5, "phase_2": 1.0, "phase_3": 0.75, "approval": 0.5,
-        },
     ),
     approval_phase_config=ApprovalPhaseConfig(
         enabled=False, duration_min=1, duration_max=3,
@@ -254,10 +202,6 @@ def test_get_agent_investment_decisions_empty_game_state(valid_json_assets_path)
         indication_spread=1.5,
         indication_drift_speed=1.0,
         trial_cost_multiplier=1.0,
-        rd_capacity_config=CapacityConfig(
-            enabled=False, base_capacity=80.0, overage_max_penalty=0.5,
-            overage_cost_max_penalty=0.5, overage_scaling="linear",
-        ),
         **_EXTRA_DISABLED_CONFIGS,
     )
 

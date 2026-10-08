@@ -462,9 +462,9 @@ def test_asset_transitions_preserve_raw_max_revenue():
     raw_max_revenue must survive every DrugAsset-rebuilding transition.
 
     It drives the brand-equity floor, which is read only once a drug is
-    OnMarket. Drugs reach the market via evolve()/evolve_with_level(), and the
-    field has no default, so an omission in any explicit constructor would raise
-    rather than silently zero the value.
+    OnMarket. Drugs reach the market via evolve(), and the field has no
+    default, so an omission in any explicit constructor would raise rather
+    than silently zero the value.
     """
     trial = Trial(
         cost_remaining=100.0,
@@ -485,7 +485,6 @@ def test_asset_transitions_preserve_raw_max_revenue():
     # Survives subsequent evolves once on-market.
     assert on_market.evolve().raw_max_revenue == 42.0
 
-    assert base.evolve_with_level(1.0, 1.0).raw_max_revenue == 42.0
     assert base.stop_development().raw_max_revenue == 42.0
     assert base.drop().raw_max_revenue == 42.0
 

@@ -23,10 +23,9 @@ import {
 import AssetDetailDialog from "./AssetDetailDialog";
 import { InfoHint } from "./InfoHint";
 import { informationDictionary } from "@/lib/information-dictionary-game";
-import { CircleCheck, StopCircle, TriangleAlert } from "lucide-react";
 import AssetHintYes from "@/components/InvestmentGame/AssetHintYes";
 import AssetHintNo from "@/components/InvestmentGame/AssetHintNo";
-import type { ActionType, AssetSchemaType } from "@/lib/definitionsGameZ";
+import type { AssetSchemaType } from "@/lib/definitionsGameZ";
 
 /**
  * v2 asset table — the main surface of the game screen. Hairline grid,
@@ -57,12 +56,6 @@ export interface AssetRow {
   eroi: number;
   pys: number;
   timeToExpiry: number;
-  /** Distributional PTRS extras (fractions, formatted in the cell). */
-  ptrsRangeLow?: number;
-  ptrsRangeHigh?: number;
-  ptrsConfidence?: number;
-  /** Interim trial signal (In Development only; "na" for other states). */
-  interim?: "positive" | "negative" | "pending" | "na";
   /** Highest reading count still affordable given the rest of the portfolio. */
   readingAffordableUpTo?: number;
   /** On Market extras. */
@@ -72,12 +65,6 @@ export interface AssetRow {
   /** Full (business) eNPV — shown instead of Cash eNPV in single-player. */
   businessEnpv?: number;
   invest: boolean;
-  /** Selection value as an investment level (levels mode). */
-  level?: string;
-  /** "stop" selected this turn (levels mode: asset will be abandoned). */
-  stopping?: boolean;
-  /** The asset's live investment level (levels mode, In Development). */
-  currentLevel?: string | null;
   /** Backend marks this asset droppable (drop_action feature). */
   dropAvailable?: boolean;
   /** Cash fee for dropping (25% of remaining phase cost; 0 on market). */
@@ -348,12 +335,8 @@ export function AssetTable({
   onTabChange,
   rows,
   onToggleInvest,
-  onLevelChange,
   onDrop,
   onReadingsChange,
-  investmentLevelsEnabled = false,
-  distributionalPtrsEnabled = false,
-  interimObservationsEnabled = false,
   emphasizeCashValue = true,
   hints = {},
   hintColumnVisible = false,
@@ -373,16 +356,8 @@ export function AssetTable({
   onTabChange: (key: AssetTabKey) => void;
   rows: AssetRow[];
   onToggleInvest?: (id: string, invest: boolean) => void;
-  /** Levels mode: pick an investment level ("minimal" | "standard" | "accelerated" | "stop" | "none"). */
-  onLevelChange?: (id: string, level: ActionType) => void;
   onDrop?: (id: string) => void;
   onReadingsChange?: (id: string, readings: number) => void;
-  /** Investment-levels feature flag: level dropdowns + live stop toggle. */
-  investmentLevelsEnabled?: boolean;
-  /** Distributional PTRS: expected value + p10–p90 range + confidence. */
-  distributionalPtrsEnabled?: boolean;
-  /** Interim trial observations: adds the Interim Signal column. */
-  interimObservationsEnabled?: boolean;
   /** Cash eNPV as the value column (multi); false shows full eNPV (single). */
   emphasizeCashValue?: boolean;
   /** Purchased AI hints, keyed by asset id (single-player feature). */
@@ -424,8 +399,7 @@ export function AssetTable({
 }) {
   const interactive = activeTab === "development";
   const isMarket = activeTab === "market";
-  // Levels mode needs room for the per-row level dropdown.
-  const controlsWidth = investmentLevelsEnabled ? 200 : CONTROLS_WIDTH;
+  const controlsWidth = CONTROLS_WIDTH;
 
   // Value column: Cash eNPV in multi (score-relevant), full eNPV in single.
   const valueLabel = emphasizeCashValue ? "Cash eNPV" : "eNPV";
@@ -674,16 +648,7 @@ export function AssetTable({
                         width: controlsWidth,
                         minWidth: controlsWidth,
                       }}
-                    >
-                      {investmentLevelsEnabled && (
-                        <span className="flex items-center gap-1">
-                          Level
-                          <InfoHint
-                            {...informationDictionary.investmentLevels}
-                          />
-                        </span>
-                      )}
-                    </th>
+                    />
                   )}
                   <th
                     className={cn(th, "z-30 min-w-[140px]")}
@@ -741,14 +706,6 @@ export function AssetTable({
                         PTRS Est. (%)
                         <HeadHint info={informationDictionary.phasePTRS} />
                       </th>
-                      {interimObservationsEnabled && (
-                        <th className={th}>
-                          Interim Signal
-                          <HeadHint
-                            info={informationDictionary.interimSignal}
-                          />
-                        </th>
-                      )}
                       <th className={thNum}>
                         Remaining Cost
                         <HeadHint
@@ -795,139 +752,58 @@ export function AssetTable({
                           minWidth: controlsWidth,
                         }}
                       >
-                        {investmentLevelsEnabled && !readOnly ? (
-                          row.inDevelopment ? (
-                            // Levels mode, In Development: live stop toggle
-                            // (classic "Abandoning") + current level.
-                            <div className="flex items-center gap-2">
-                              <Switch
-                                checked={!row.stopping}
-                                onCheckedChange={(checked) =>
-                                  onLevelChange?.(
-                                    row.id,
-                                    checked ? "standard" : "stop",
-                                  )
-                                }
-                                aria-label={
-                                  row.stopping
-                                    ? `Resume ${row.name}`
-                                    : `Stop ${row.name}`
-                                }
-                              />
-                              {row.stopping ? (
-                                <span
-                                  title="This asset will be abandoned on the next step and cannot be restarted"
-                                  className="flex items-center gap-1 text-xs font-bold text-destructive"
-                                >
-                                  <StopCircle className="size-3" />
-                                  Abandoning
-                                </span>
-                              ) : (
-                                <span className="text-xs capitalize text-muted-foreground">
-                                  {row.currentLevel || "standard"}
-                                </span>
-                              )}
-                            </div>
-                          ) : (
-                            // Levels mode, Idle: invest toggle + level pick.
-                            <div className="flex items-center gap-2">
-                              <Switch
-                                checked={row.invest}
-                                onCheckedChange={(checked) =>
-                                  onLevelChange?.(
-                                    row.id,
-                                    checked ? "standard" : "none",
-                                  )
-                                }
-                                aria-label={`Invest in ${row.name}`}
-                              />
-                              <Select
-                                value={
-                                  !row.level || row.level === "none"
-                                    ? "standard"
-                                    : row.level
-                                }
-                                onValueChange={(value) =>
-                                  onLevelChange?.(row.id, value as ActionType)
-                                }
-                                disabled={!row.invest}
-                              >
-                                <SelectTrigger
-                                  className={cn(
-                                    "h-7 w-[110px] border-none bg-secondary/60 text-xs shadow-none",
-                                    !row.invest && "opacity-50",
-                                  )}
-                                >
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="minimal">
-                                    Minimal
-                                  </SelectItem>
-                                  <SelectItem value="standard">
-                                    Standard
-                                  </SelectItem>
-                                  <SelectItem value="accelerated">
-                                    Accelerated
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          )
-                        ) : (
-                          <div>
-                            <div className="flex items-center gap-1.5">
-                              <Switch
-                                checked={row.locked || row.invest}
-                                disabled={readOnly || row.dropped || row.locked}
-                                onCheckedChange={(checked) =>
-                                  onToggleInvest?.(row.id, checked)
-                                }
-                                aria-label={
-                                  row.locked
-                                    ? `${row.name} is in development`
-                                    : `Invest in ${row.name}`
-                                }
-                              />
-                              {/* Voluntary drop: only when the backend marks
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <Switch
+                              checked={row.locked || row.invest}
+                              disabled={readOnly || row.dropped || row.locked}
+                              onCheckedChange={(checked) =>
+                                onToggleInvest?.(row.id, checked)
+                              }
+                              aria-label={
+                                row.locked
+                                  ? `${row.name} is in development`
+                                  : `Invest in ${row.name}`
+                              }
+                            />
+                            {/* Voluntary drop: only when the backend marks
                                   the asset droppable (drop_action feature). */}
-                              {!readOnly && row.dropAvailable && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className={cn(
-                                    "size-8",
-                                    row.dropped
-                                      ? "bg-destructive/10 text-destructive hover:text-destructive"
-                                      : "text-muted-foreground hover:text-destructive",
-                                  )}
-                                  onClick={() => onDrop?.(row.id)}
-                                  title={
-                                    row.dropped
-                                      ? "Undo drop — keep this asset"
-                                      : row.dropFee
-                                        ? `Drop this asset — fee ${money(row.dropFee)} (25% of remaining phase cost)`
-                                        : "Drop this asset"
-                                  }
-                                  aria-label={
-                                    row.dropped
-                                      ? `Undo drop of ${row.name}`
-                                      : `Drop ${row.name}`
-                                  }
-                                >
-                                  <Trash2 className="size-4" />
-                                </Button>
-                              )}
-                            </div>
-                            {/* Fee callout while marked for drop — the cash
-                                cost of abandoning this asset next step. */}
-                            {row.dropped && (row.dropFee ?? 0) > 0 && (
-                              <div className="mt-0.5 whitespace-nowrap text-[10px] font-bold text-destructive">
-                                fee {money(row.dropFee ?? 0)}
-                              </div>
+                            {!readOnly && row.dropAvailable && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className={cn(
+                                  "size-8",
+                                  row.dropped
+                                    ? "bg-destructive/10 text-destructive hover:text-destructive"
+                                    : "text-muted-foreground hover:text-destructive",
+                                )}
+                                onClick={() => onDrop?.(row.id)}
+                                title={
+                                  row.dropped
+                                    ? "Undo drop — keep this asset"
+                                    : row.dropFee
+                                      ? `Drop this asset — fee ${money(row.dropFee)} (25% of remaining phase cost)`
+                                      : "Drop this asset"
+                                }
+                                aria-label={
+                                  row.dropped
+                                    ? `Undo drop of ${row.name}`
+                                    : `Drop ${row.name}`
+                                }
+                              >
+                                <Trash2 className="size-4" />
+                              </Button>
                             )}
                           </div>
-                        )}
+                          {/* Fee callout while marked for drop — the cash
+                                cost of abandoning this asset next step. */}
+                          {row.dropped && (row.dropFee ?? 0) > 0 && (
+                            <div className="mt-0.5 whitespace-nowrap text-[10px] font-bold text-destructive">
+                              fee {money(row.dropFee ?? 0)}
+                            </div>
+                          )}
+                        </div>
                       </td>
                     )}
                     <td
@@ -1019,37 +895,7 @@ export function AssetTable({
                         </td>
                         <td className={tdNum}>{money(row.costThisYear)}</td>
                         <td className={tdNum}>
-                          {distributionalPtrsEnabled ? (
-                            // Classic distributional display: expected value
-                            // + p10–p90 range + color-coded confidence.
-                            <div className="whitespace-nowrap">
-                              <span className="font-bold">
-                                {row.ptrs.toFixed(1)}
-                              </span>
-                              {row.ptrsRangeLow !== undefined &&
-                                row.ptrsRangeHigh !== undefined && (
-                                  <div className="text-xs text-muted-foreground">
-                                    p10–p90:{" "}
-                                    {(row.ptrsRangeLow * 100).toFixed(0)}–
-                                    {(row.ptrsRangeHigh * 100).toFixed(0)}%
-                                  </div>
-                                )}
-                              {row.ptrsConfidence !== undefined && (
-                                <div
-                                  className={cn(
-                                    "text-xs font-bold",
-                                    row.ptrsConfidence >= 0.5
-                                      ? "text-[#2f7d3f]"
-                                      : row.ptrsConfidence >= 0.2
-                                        ? "text-[#8a6d00]"
-                                        : "text-destructive",
-                                  )}
-                                >
-                                  conf {(row.ptrsConfidence * 100).toFixed(0)}%
-                                </div>
-                              )}
-                            </div>
-                          ) : ptrsReadingsEnabled ? (
+                          {ptrsReadingsEnabled ? (
                             <>
                               <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
                                 <span className="font-bold">
@@ -1112,29 +958,6 @@ export function AssetTable({
                             </span>
                           )}
                         </td>
-                        {interimObservationsEnabled && (
-                          <td className={td}>
-                            {row.interim === "positive" ? (
-                              <span className="flex items-center gap-1 text-xs font-bold text-[#2f7d3f]">
-                                <CircleCheck className="size-3.5" />
-                                Positive
-                              </span>
-                            ) : row.interim === "negative" ? (
-                              <span className="flex items-center gap-1 text-xs font-bold text-[#8a6d00]">
-                                <TriangleAlert className="size-3.5" />
-                                Negative
-                              </span>
-                            ) : row.interim === "pending" ? (
-                              <span className="text-xs text-muted-foreground">
-                                Pending
-                              </span>
-                            ) : (
-                              <span className="text-xs text-muted-foreground/40">
-                                –
-                              </span>
-                            )}
-                          </td>
-                        )}
                         <td className={tdNum}>
                           {money(row.remainingPhaseCost)}
                         </td>

@@ -178,11 +178,6 @@ class MultiAgentKnapsackAgent:
         """Max simultaneous in-development assets. Override for dynamic strategies."""
         if self.capacity is not None:
             return self.capacity
-        if (
-            getattr(self.env, "rd_capacity_config", None) is not None
-            and self.env.rd_capacity_config.enabled
-        ):
-            return portfolio.capacity_base
         # Respect the clinical-sites concurrency limit: an agent can host at most
         # one in-development asset per operational site, so cap concurrent trials
         # at the operational-site count. Combined with the value-sorted truncation

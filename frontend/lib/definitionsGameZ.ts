@@ -36,37 +36,18 @@ export const actionTypeSchema = z.enum([
   "invest",
   "stop",
   "none",
-  "minimal",
-  "standard",
-  "accelerated",
-  // Voluntary abandonment (drop_action feature, mutually exclusive with levels).
+  // Voluntary abandonment (drop_action feature).
   "drop",
 ]);
 export type ActionType = z.infer<typeof actionTypeSchema>;
 
-export const investmentLevelSchema = z.enum([
-  "none",
-  "minimal",
-  "standard",
-  "accelerated",
-]);
-
 export const trialPhaseNameSchema = z.string();
 export type TrialPhaseName = z.infer<typeof trialPhaseNameSchema>;
-
-export const interimResultSchema = z.enum(["positive", "negative"]);
 
 export const trialPhaseSchema = z.object({
   cost_remaining: z.number(),
   time_remaining: z.number(),
   ptrs: z.number(),
-  interim_result: interimResultSchema.nullable().optional(),
-  has_interim_observation: z.boolean().optional(),
-  // Distributional PTRS fields
-  ptrs_expected: z.number().optional(),
-  ptrs_confidence: z.number().optional(),
-  ptrs_range_low: z.number().optional(),
-  ptrs_range_high: z.number().optional(),
   // PTRS readings (ptrs_readings feature): paid readings commissioned on this
   // trial so far, and the precision-weighted "effective readings" the observation
   // exposes. Optional: absent on pre-readings replay data.
@@ -97,7 +78,6 @@ export const assetSchema = z.object({
   expected_costs: z.array(z.number()),
   expected_revenues: z.array(z.number()),
   eroi: z.number(),
-  current_investment_level: investmentLevelSchema.optional(),
   available_actions: z.array(actionTypeSchema).optional(),
   // Brand-equity marketing score and its decayed floor. Attached only to
   // live (on-market / in-dev) assets, so optional on expired/dropped buckets.
@@ -120,22 +100,6 @@ export const assetSchema = z.object({
 });
 export type AssetSchemaType = z.infer<typeof assetSchema>;
 
-// Investment levels configuration schemas
-export const investmentLevelConfigSchema = z.object({
-  cost_modifier: z.number(),
-  speed_modifier: z.number(),
-  success_modifier: z.number(),
-  capacity_cost: z.number(),
-  experience_modifier: z.number(),
-});
-
-export const investmentLevelsConfigSchema = z.object({
-  levels: z.record(z.string(), investmentLevelConfigSchema),
-  base_capacity: z.number(),
-  overage_max_penalty: z.number(),
-  overage_cost_max_penalty: z.number(),
-});
-
 export const gameStepSchema = z.object({
   id: z.string(),
   cash: z.number(),
@@ -155,14 +119,6 @@ export const gameStepSchema = z.object({
   // Fraction of gross sales retained as cash (the rest covers other business
   // costs). Used to show budget/capital figures as the cash you actually receive.
   reinvestment_percentage: z.number(),
-  ta_experience: z.record(z.string(), z.number()),
-  experience_to_full_knowledge: z.number(),
-  max_total_experience: z.number().nullable(),
-  // R&D Capacity
-  capacity_used: z.number(),
-  capacity_base: z.number(),
-  success_modifier: z.number(),
-  cost_modifier: z.number(),
   // Clinical sites: operational_sites host trials; sites_in_development is the
   // list of remaining build delays for sites still under construction.
   clinical_sites_enabled: z.boolean(),
@@ -172,26 +128,11 @@ export const gameStepSchema = z.object({
   sites_occupied: z.number(),
   // Cash cost of the next site (Fibonacci curve); 0 when the feature is off.
   next_site_purchase_cost: z.number(),
-  // Feature flags
-  ta_experience_enabled: z.boolean(),
-  investment_levels_enabled: z.boolean(),
-  interim_observations_enabled: z.boolean(),
-  distributional_ptrs_enabled: z.boolean(),
   // Marketing feature: gates the demand-creation and brand-equity panels.
   marketing_enabled: z.boolean(),
   // PTRS readings feature: gates the per-asset readings panel and BD diligence
   // stepper. Per-asset cost curves live on each asset (ptrs_reading_costs).
   ptrs_readings_enabled: z.boolean(),
-  // TA quality estimates (distributional PTRS feature)
-  ta_quality: z.record(
-    z.string(),
-    z.object({
-      estimate: z.number(),
-      confidence: z.number(),
-    }),
-  ),
-  // Investment levels configuration
-  investment_levels_config: investmentLevelsConfigSchema.nullable(),
 });
 export type GameStepSchemaType = z.infer<typeof gameStepSchema>;
 
@@ -200,7 +141,7 @@ export const gameStepResponseSchema = gameStepSchema;
 export type GameStepResponse = z.infer<typeof gameStepResponseSchema>;
 
 export const hintResponseSchema = z.union([
-  z.record(z.record(actionTypeSchema.nullable())), // { "AgentName": { "assetid1": "invest", "asset3": "standard" } }
+  z.record(z.record(actionTypeSchema.nullable())), // { "AgentName": { "assetid1": "invest", "asset3": "stop" } }
   z.object({}), // Empty object case
 ]);
 
@@ -417,15 +358,9 @@ export const playthroughConfigSchema = z.object({
   bd_enabled: z.boolean(),
   bd_max_bid: z.number(),
   reinvestment_percentage: z.number(),
-  investment_levels_enabled: z.boolean(),
-  interim_observations_enabled: z.boolean(),
-  distributional_ptrs_enabled: z.boolean(),
-  ta_experience_enabled: z.boolean(),
   congestion_exponent: z.number(),
   congestion_ramp_steps: z.number(),
   congestion_incumbent_penalty: z.number(),
-  rd_capacity_enabled: z.boolean(),
-  rd_capacity_base: z.number(),
   // Feature flags for the marketing, clinical-site and PTRS-reading systems.
   marketing_enabled: z.boolean(),
   clinical_sites_enabled: z.boolean(),

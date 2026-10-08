@@ -1,8 +1,8 @@
 """
 Phase 1 tests for the clinical sites capacity feature.
 
-Covers the config (Fibonacci purchase curve, validators, mutual exclusivity)
-and the per-agent site accounting on ``GameState`` (Model B): starting
+Covers the config (Fibonacci purchase curve, validators) and the per-agent
+site accounting on ``GameState`` (Model B): starting
 endowment, derived occupancy, free-site clamping, build-timer promotion, and
 copy-forward of site state through a step.
 """
@@ -12,20 +12,11 @@ from pydantic import ValidationError
 
 from pyxis_portfolio_challenge.config import (
     ApprovalPhaseConfig,
-    CapacityConfig,
     ClinicalSitesConfig,
-    Config,
-    DistributionalPtrsConfig,
     DropActionConfig,
-    InterimTrialObservationsConfig,
-    InvestmentLevelParams,
-    InvestmentLevelsConfig,
     MarketingConfig,
     PtrsReadingsConfig,
-    TAExperienceConfig,
-    UncertainPtrsConfig,
     fibonacci_number,
-    from_yaml,
 )
 from pyxis_portfolio_challenge.environment.market_mechanics import resolve_site_bid
 from pyxis_portfolio_challenge.game.asset import AssetState
@@ -87,49 +78,7 @@ def _make_state(sites_cfg, cash=10_000_000_000, num_assets=3) -> GameState:
         reinvestment_percentage=1.0,
         seed=None,
         assets_data_list=DUMMY_LIST_DATA,
-        rd_capacity_config=CapacityConfig(
-            enabled=False,
-            base_capacity=80.0,
-            overage_max_penalty=0.5,
-            overage_cost_max_penalty=0.5,
-            overage_scaling="linear",
-        ),
         clinical_sites_config=sites_cfg,
-        investment_levels_config=InvestmentLevelsConfig(
-            enabled=False,
-            levels={
-                "none": InvestmentLevelParams(
-                    cost_modifier=0.0,
-                    speed_modifier=0.0,
-                    success_modifier=1.0,
-                    capacity_cost=0,
-                    experience_modifier=0.0,
-                ),
-                "standard": InvestmentLevelParams(
-                    cost_modifier=1.0,
-                    speed_modifier=1.0,
-                    success_modifier=1.0,
-                    capacity_cost=2,
-                    experience_modifier=1.0,
-                ),
-            },
-        ),
-        interim_trial_observations_config=InterimTrialObservationsConfig(
-            enabled=False,
-            latent_quality_concentration=10.0,
-            initial_noise_scale=0.3,
-        ),
-        distributional_ptrs_config=DistributionalPtrsConfig(
-            enabled=False,
-            ta_quality_variance={
-                "oncology": 0.08,
-                "respiratory and immunology": 0.05,
-                "vaccines and infectious disease": 0.03,
-            },
-            asset_noise_std=0.03,
-            prior_concentration=5.0,
-            observation_noise=0.1,
-        ),
         drop_action_config=DropActionConfig(
             enabled=False,
             drop_price_fraction=0.0,
@@ -154,35 +103,6 @@ def _make_state(sites_cfg, cash=10_000_000_000, num_assets=3) -> GameState:
             sigma_ep=1.5,
             noise_multipliers=[1.0, 1.5, 2.0],
             max_sample_obs=20,
-        ),
-        ta_experience_config=TAExperienceConfig(
-            enabled=False,
-            experience_to_full_knowledge=30.0,
-            max_expertise_boost=0.05,
-            experience_to_max_boost=40.0,
-            experience_decay_rate=0.98,
-            max_total_experience=60.0,
-            phase_experience_weights={
-                "phase_1": 0.5,
-                "phase_2": 1.0,
-                "phase_3": 1.5,
-                "approval": 0.5,
-            },
-            asset_arrival_temperature=0.1,
-        ),
-        uncertain_ptrs_config=UncertainPtrsConfig(
-            enabled=False,
-            ta_noise_config={
-                "oncology": 0.12,
-                "respiratory and immunology": 0.10,
-                "vaccines and infectious disease": 0.08,
-            },
-            phase_noise_multipliers={
-                "phase_1": 1.5,
-                "phase_2": 1.0,
-                "phase_3": 0.75,
-                "approval": 0.5,
-            },
         ),
         approval_phase_config=ApprovalPhaseConfig(
             enabled=False,
@@ -243,7 +163,7 @@ def test_purchase_cost_floors_below_starting():
 
 
 # ---------------------------------------------------------------------------
-# Config: validators + mutual exclusivity
+# Config: validators
 # ---------------------------------------------------------------------------
 
 
@@ -257,22 +177,6 @@ def test_zero_step_counts_rejected():
         _sites_cfg(site_development_steps=0)
     with pytest.raises(ValidationError):
         _sites_cfg(auction_interval_steps=0)
-
-
-def test_clinical_sites_and_rd_capacity_mutually_exclusive():
-    data = from_yaml().model_dump()
-    data["clinical_sites"]["enabled"] = True
-    data["rd_capacity"]["enabled"] = True
-    with pytest.raises(ValidationError, match="mutually exclusive"):
-        Config.model_validate(data)
-
-
-def test_clinical_sites_disabled_with_rd_capacity_ok():
-    data = from_yaml().model_dump()
-    data["clinical_sites"]["enabled"] = False
-    data["rd_capacity"]["enabled"] = True
-    # Should not raise
-    Config.model_validate(data)
 
 
 # ---------------------------------------------------------------------------

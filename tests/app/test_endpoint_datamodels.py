@@ -261,11 +261,6 @@ def test_game_state_to_response(game_state_factory_fixed_list_asset_gen):
     assert response["capital_over_time"] == game_state.capital_over_time
     assert response["enpv_over_time"] == game_state.enpv_over_time
     assert response["eroi_over_time"] == game_state.eroi_over_time
-    assert response["ta_experience"] == dict(game_state.ta_experience)
-    # Feature flags should be present
-    assert "investment_levels_enabled" in response
-    assert "interim_observations_enabled" in response
-    assert "distributional_ptrs_enabled" in response
 
 
 def test_game_state_response_model_preserves_player_state_fields(

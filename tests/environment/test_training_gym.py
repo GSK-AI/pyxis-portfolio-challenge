@@ -10,17 +10,10 @@ from gymnasium.wrappers import FlattenObservation
 
 from pyxis_portfolio_challenge.config import (
     ApprovalPhaseConfig,
-    CapacityConfig,
     ClinicalSitesConfig,
-    DistributionalPtrsConfig,
     DropActionConfig,
-    InterimTrialObservationsConfig,
-    InvestmentLevelParams,
-    InvestmentLevelsConfig,
     MarketingConfig,
     PtrsReadingsConfig,
-    TAExperienceConfig,
-    UncertainPtrsConfig,
 )
 from pyxis_portfolio_challenge.environment.metrics import legacy_static_npv
 from pyxis_portfolio_challenge.environment.obs_layout import (
@@ -36,7 +29,6 @@ from pyxis_portfolio_challenge.game.asset import AssetState
 from pyxis_portfolio_challenge.game.constants import (
     MAX_NUM_ASSETS,
     TRIAL_PHASES,
-    InvestmentLevel,
 )
 from pyxis_portfolio_challenge.game.trial import Trial, TrialPhase, TrialState
 from pyxis_portfolio_challenge import PROJECT_ROOT
@@ -44,47 +36,6 @@ from tests.game.test_asset import drug_asset_factory
 
 _TEST_ASSETS_DIR = PROJECT_ROOT / "tests" / "data" / "generated_assets"
 
-_DISABLED_DISTRIBUTIONAL_PTRS = DistributionalPtrsConfig(
-    enabled=False,
-    ta_quality_variance={"oncology": 0.08, "respiratory and immunology": 0.05, "vaccines and infectious disease": 0.03},
-    asset_noise_std=0.03,
-    prior_concentration=5.0,
-    observation_noise=0.1,
-)
-_DISABLED_TA_EXPERIENCE = TAExperienceConfig(
-    enabled=False,
-    experience_to_full_knowledge=30.0,
-    max_expertise_boost=0.05,
-    experience_to_max_boost=40.0,
-    experience_decay_rate=0.98,
-    max_total_experience=60.0,
-    phase_experience_weights={"phase_1": 0.5, "phase_2": 1.0, "phase_3": 1.5, "approval": 0.5},
-    asset_arrival_temperature=0.1,
-)
-_DISABLED_UNCERTAIN_PTRS = UncertainPtrsConfig(
-    enabled=False,
-    ta_noise_config={"oncology": 0.12, "respiratory and immunology": 0.10, "vaccines and infectious disease": 0.08},
-    phase_noise_multipliers={"phase_1": 1.5, "phase_2": 1.0, "phase_3": 0.75, "approval": 0.5},
-)
-_DISABLED_INVESTMENT_LEVELS = InvestmentLevelsConfig(
-    enabled=False,
-    levels={
-        "none": InvestmentLevelParams(cost_modifier=0.0, speed_modifier=0.0, success_modifier=1.0, capacity_cost=0, experience_modifier=0.0),
-        "standard": InvestmentLevelParams(cost_modifier=1.0, speed_modifier=1.0, success_modifier=1.0, capacity_cost=2, experience_modifier=1.0),
-    },
-)
-_DISABLED_INTERIM_TRIAL_OBS = InterimTrialObservationsConfig(
-    enabled=False,
-    latent_quality_concentration=10.0,
-    initial_noise_scale=0.3,
-)
-_DISABLED_RD_CAPACITY = CapacityConfig(
-    enabled=False,
-    base_capacity=80.0,
-    overage_max_penalty=0.5,
-    overage_cost_max_penalty=0.5,
-    overage_scaling="linear",
-)
 _DISABLED_MARKETING = MarketingConfig(
     enabled=False, dc_cost_fraction=0.035, dc_step_boost=0.10, dc_decay_rate=0.206,
     be_cost_fraction=0.0175, be_boost=0.25, be_decay_rate=0.206, be_effectiveness=3.5,
@@ -124,12 +75,6 @@ def _make_env(valid_json_assets_path, **kwargs):
         mask_first_order_assets=False,
         mask_negative_enpv_assets=False,
         flatten_obs=False,
-        distributional_ptrs_config=_DISABLED_DISTRIBUTIONAL_PTRS,
-        ta_experience_config=_DISABLED_TA_EXPERIENCE,
-        uncertain_ptrs_config=_DISABLED_UNCERTAIN_PTRS,
-        investment_levels_config=_DISABLED_INVESTMENT_LEVELS,
-        interim_trial_observations_config=_DISABLED_INTERIM_TRIAL_OBS,
-        rd_capacity_config=_DISABLED_RD_CAPACITY,
         drop_action_config=_DISABLED_DROP_ACTION,
         marketing_config=_DISABLED_MARKETING,
         clinical_sites_config=_DISABLED_CLINICAL_SITES,
@@ -334,7 +279,6 @@ def test_get_obs_asset_structure(test_env):
     asset_obs = obs["assets"][0]  # Get first asset observation
 
     # Test asset observation keys
-    # With all optional features disabled, interim_signal/trial_progress are absent
     expected_keys = {
         "max_revenue",
         "time_until_max_revenue",
@@ -355,7 +299,7 @@ def test_get_obs_asset_structure(test_env):
     assert isinstance(asset_obs["trials"], tuple)
     assert len(asset_obs["trials"]) == len(TRIAL_PHASES)
 
-    # With distributional_ptrs disabled, only base trial keys present
+    # Only base trial keys present
     trial_obs = asset_obs["trials"][0]
     expected_trial_keys = {
         "cost_remaining", "time_remaining", "ptrs",
@@ -1301,42 +1245,12 @@ def test_observation_space_contains_observation(env_pair):
 # =============================================================================
 
 
-def test_layout_all_enabled():
-    """Verify ObsLayout with all features enabled."""
-    from unittest.mock import MagicMock
-
-    cfg = MagicMock(enabled=True)
-    L = ObsLayout.from_config(
-        ta_experience_config=cfg,
-        rd_capacity_config=cfg,
-        distributional_ptrs_config=cfg,
-        uncertain_ptrs_config=cfg,
-        interim_trial_observations_config=cfg,
-    )
-    # cash(1) + ta_exp(3) + capacity(3) + ta_quality(6) = 13
-    assert L.global_features == 13
-    # 10 base + 2 interim + 1 ta_index = 13
-    assert L.asset_scalar_features == 13
-    # 3 base + 4 distributional = 7
-    assert L.trial_features == 7
-    assert L.asset_total_features == 13 + NUM_TRIAL_PHASES * 7
-
-
 def test_layout_all_disabled():
     """Verify ObsLayout with all features disabled."""
-    from unittest.mock import MagicMock
-
-    cfg = MagicMock(enabled=False)
-    L = ObsLayout.from_config(
-        ta_experience_config=cfg,
-        rd_capacity_config=cfg,
-        distributional_ptrs_config=cfg,
-        uncertain_ptrs_config=cfg,
-        interim_trial_observations_config=cfg,
-    )
+    L = ObsLayout.from_config()
     # cash only
     assert L.global_features == 1
-    # 10 base + 0 interim + 1 ta_index = 11
+    # 10 base + 1 ta_index = 11
     assert L.asset_scalar_features == 11
     # 3 base only
     assert L.trial_features == 3
@@ -1665,14 +1579,6 @@ _DISABLED_DROP_ACTION = DropActionConfig(
     enabled=False, drop_price_fraction=0.0, drop_price_rounding=1_000_000
 )
 
-_ENABLED_INVESTMENT_LEVELS = InvestmentLevelsConfig(
-    enabled=True,
-    levels={
-        "none": InvestmentLevelParams(cost_modifier=0.0, speed_modifier=0.0, success_modifier=1.0, capacity_cost=0, experience_modifier=0.0),
-        "standard": InvestmentLevelParams(cost_modifier=1.0, speed_modifier=1.0, success_modifier=1.0, capacity_cost=2, experience_modifier=1.0),
-    },
-)
-
 
 def _make_drop_env(valid_json_assets_path, **kwargs):
     """InvestmentGameEnv with the drop action enabled."""
@@ -1861,37 +1767,6 @@ def test_drop_action_step_removes_asset(valid_json_assets_path):
     assert target_id not in env.game_state.assets
 
 
-def test_drop_action_and_investment_levels_mutually_exclusive(valid_json_assets_path):
-    """Enabling both investment_levels and drop_action raises."""
-    with pytest.raises(ValueError, match="mutually exclusive"):
-        _make_env(
-            valid_json_assets_path,
-            investment_levels_config=_ENABLED_INVESTMENT_LEVELS,
-            drop_action_config=_ENABLED_DROP_ACTION,
-        )
-
-
-@pytest.mark.parametrize(
-    "levels_config,drop_config",
-    [
-        (_ENABLED_INVESTMENT_LEVELS, _DISABLED_DROP_ACTION),
-        (_DISABLED_INVESTMENT_LEVELS, _ENABLED_DROP_ACTION),
-        (_DISABLED_INVESTMENT_LEVELS, _DISABLED_DROP_ACTION),
-    ],
-    ids=["levels_only", "drop_only", "neither"],
-)
-def test_one_of_levels_or_drop_action_is_allowed(
-    valid_json_assets_path, levels_config, drop_config
-):
-    """At most one of the two features enabled is fine."""
-    env = _make_env(
-        valid_json_assets_path,
-        investment_levels_config=levels_config,
-        drop_action_config=drop_config,
-    )
-    assert env is not None
-
-
 class TestSingleAgentWarmupAdditive:
     """
     Single-agent warmup is a pre-roll: the clock rebases to 0 and the agent
@@ -1967,17 +1842,6 @@ class TestVecWarmupAdditive:
         for gs in wrapped.get_attr("game_state"):
             assert gs.time == 0
             assert gs.horizon == 10
-
-
-def test_investment_levels_action_space_is_multidiscrete(valid_json_assets_path):
-    """Enabling investment_levels makes the action space MultiDiscrete over levels."""
-    env = _make_env(
-        valid_json_assets_path,
-        investment_levels_config=_ENABLED_INVESTMENT_LEVELS,
-        drop_action_config=_DISABLED_DROP_ACTION,
-    )
-    assert isinstance(env.action_space, gym.spaces.MultiDiscrete)
-    assert list(env.action_space.nvec) == [len(InvestmentLevel)] * env.max_num_assets
 
 
 @pytest.mark.parametrize(

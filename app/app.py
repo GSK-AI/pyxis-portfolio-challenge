@@ -46,7 +46,7 @@ from pyxis_portfolio_challenge.game.asset_generators import (
 )
 from pyxis_portfolio_challenge.game.constants import (
     LEVELS,
-    InvestmentLevel,
+    InvestmentAction,
 )
 from pyxis_portfolio_challenge.game.game_state import GameState
 from pyxis_portfolio_challenge.game.multi_agent_game import MultiAgentGame
@@ -235,12 +235,6 @@ async def start_game(request: Request, payload: StartGameRequest) -> GameStateRe
         asset_arrival_sensitivity_below=game_config.asset_arrival_sensitivity_below,
         asset_arrival_sensitivity_above=game_config.asset_arrival_sensitivity_above,
         reinvestment_percentage=game_config.reinvestment_percentage,
-        ta_experience_config=game_config.ta_experience,
-        investment_levels_config=game_config.investment_levels,
-        uncertain_ptrs_config=game_config.uncertain_ptrs,
-        interim_trial_observations_config=game_config.interim_trial_observations,
-        distributional_ptrs_config=game_config.distributional_ptrs,
-        rd_capacity_config=game_config.rd_capacity,
         approval_phase_config=game_config.approval_phase,
         drop_action_config=game_config.drop_action,
         marketing_config=game_config.marketing,
@@ -273,20 +267,17 @@ async def start_game(request: Request, payload: StartGameRequest) -> GameStateRe
     return game_state_response
 
 
-def convert_action_to_investment_level(
+def convert_action_to_investment_action(
     action: ActionType | None,
-) -> InvestmentLevel | None:
-    """Convert a string action type to an InvestmentLevel enum."""
+) -> InvestmentAction | None:
+    """Convert a string action type to an InvestmentAction enum."""
     if action is None:
         return None
     action_map = {
-        "invest": InvestmentLevel.STANDARD,
-        "none": InvestmentLevel.NONE,
-        "minimal": InvestmentLevel.MINIMAL,
-        "standard": InvestmentLevel.STANDARD,
-        "accelerated": InvestmentLevel.ACCELERATED,
-        "stop": InvestmentLevel.STOP,
-        "drop": InvestmentLevel.DROP,
+        "invest": InvestmentAction.INVEST,
+        "none": InvestmentAction.NONE,
+        "stop": InvestmentAction.STOP,
+        "drop": InvestmentAction.DROP,
     }
     return action_map.get(action)
 
@@ -308,11 +299,9 @@ async def step_game(
 
     Actions can be:
     - "none": Do not invest (for idle assets)
-    - "invest": Invest at standard level (backward compatible)
-    - "minimal": Invest at minimal level (slower, cheaper)
-    - "standard": Invest at standard level
-    - "accelerated": Invest at accelerated level (faster, more expensive)
+    - "invest": Invest at standard level
     - "stop": Stop development early (for in-development assets)
+    - "drop": Voluntarily abandon the asset (drop_action feature)
 
     Returns:
         GameState
@@ -329,9 +318,9 @@ async def step_game(
             status_code=400, detail="Game has already ended, not taking step."
         )
 
-    # Convert string actions to InvestmentLevel enums
-    investment_actions: dict[uuid.UUID, InvestmentLevel | None] = {
-        asset_id: convert_action_to_investment_level(action)
+    # Convert string actions to InvestmentAction enums
+    investment_actions: dict[uuid.UUID, InvestmentAction | None] = {
+        asset_id: convert_action_to_investment_action(action)
         for asset_id, action in actions.items()
     }
 
@@ -603,11 +592,6 @@ async def start_multi_agent_game(
         leak_phase_probabilities=list(ma.leak_phase_probabilities),
         approval_phase_config=game_config.approval_phase,
         reward_fn_config={},
-        distributional_ptrs_config=game_config.distributional_ptrs,
-        ta_experience_config=game_config.ta_experience,
-        uncertain_ptrs_config=game_config.uncertain_ptrs,
-        investment_levels_config=game_config.investment_levels,
-        interim_trial_observations_config=game_config.interim_trial_observations,
         indications_per_ta=indications_per_ta,
         indication_spread=ma.indication_spread,
         indication_drift_speed=ma.indication_drift_speed,
@@ -615,14 +599,12 @@ async def start_multi_agent_game(
         congestion_exponent=ma.congestion_exponent,
         congestion_ramp_steps=ma.congestion_ramp_steps,
         congestion_incumbent_penalty=ma.congestion_incumbent_penalty,
-        rd_capacity_config=game_config.rd_capacity,
         drop_action_config=game_config.drop_action,
         ptrs_readings_config=game_config.ptrs_readings,
         clinical_sites_config=game_config.clinical_sites,
         marketing_config=game_config.marketing,
         bd_max_bid=ma.bd_max_bid,
         bd_max_slots=ma.bd_max_slots,
-        pricing_elasticity=game_config.pricing.elasticity,
         be_leak_probability=ma.be_leak_probability,
         dc_leak_probability=ma.dc_leak_probability,
         bd_persist_steps=ma.bd_persist_steps,
@@ -713,7 +695,7 @@ async def step_multi_agent_game(
     # If player is bankrupt, submit empty actions; otherwise build from payload
     num_bd_slots = len(multi_game.shared_market.current_bd_assets)
     if player_state.game_ended:
-        player_inv_actions: dict[uuid.UUID, InvestmentLevel | None] = {}
+        player_inv_actions: dict[uuid.UUID, InvestmentAction | None] = {}
         player_bd_bids = [0.0] * num_bd_slots
         player_upgrade = False
         player_site_bid = 0.0
@@ -723,7 +705,7 @@ async def step_multi_agent_game(
     else:
         # Build human player investment actions
         player_inv_actions = {
-            asset_id: convert_action_to_investment_level(action)
+            asset_id: convert_action_to_investment_action(action)
             for asset_id, action in payload.investment_actions.items()
         }
         # Pad/truncate cash bids (GBP) to match number of BD slots

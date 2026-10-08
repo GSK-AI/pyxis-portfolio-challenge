@@ -12,7 +12,7 @@ import uuid
 from pyxis_portfolio_challenge.agents.knapsack import KnapsackAgent
 from pyxis_portfolio_challenge.agents.utils import get_agent_investment_decisions
 from pyxis_portfolio_challenge.game.asset import AssetState
-from pyxis_portfolio_challenge.game.constants import InvestmentLevel
+from pyxis_portfolio_challenge.game.constants import InvestmentAction
 from pyxis_portfolio_challenge.game.multi_agent_game import MultiAgentGame
 
 logger = logging.getLogger(__name__)
@@ -151,13 +151,13 @@ def get_opponent_actions(
     agent_name: str,
     multi_game: MultiAgentGame,
     asset_id_orders: dict[str, list] | None = None,
-) -> tuple[dict[uuid.UUID, InvestmentLevel | None], list[float]]:
+) -> tuple[dict[uuid.UUID, InvestmentAction | None], list[float]]:
     """
     Get investment actions and BD bids for an opponent agent.
 
     Returns:
         Tuple of (investment_actions, bd_bids).
-        investment_actions: dict mapping asset UUID to InvestmentLevel.
+        investment_actions: dict mapping asset UUID to InvestmentAction.
         bd_bids: per-BD-slot cash bids in GBP (0.0 = pass). The highest bid
             wins and pays its own bid; an overbid can bankrupt the winner.
 
@@ -166,7 +166,7 @@ def get_opponent_actions(
 
     # Skip bankrupt agents
     if game_state.game_ended:
-        empty_actions: dict[uuid.UUID, InvestmentLevel | None] = {}
+        empty_actions: dict[uuid.UUID, InvestmentAction | None] = {}
         return empty_actions, []
 
     if agent_type == "do_nothing":
@@ -181,14 +181,14 @@ def get_opponent_actions(
 def _get_random_actions(
     agent_name: str,
     multi_game: MultiAgentGame,
-) -> tuple[dict[uuid.UUID, InvestmentLevel | None], list[float]]:
+) -> tuple[dict[uuid.UUID, InvestmentAction | None], list[float]]:
     """Randomly invest in idle assets."""
     game_state = multi_game.agent_states[agent_name]
-    investment_actions: dict[uuid.UUID, InvestmentLevel | None] = {}
+    investment_actions: dict[uuid.UUID, InvestmentAction | None] = {}
     for asset_id, asset in game_state.assets.items():
         if asset.state == AssetState.Idle:
             investment_actions[asset_id] = (
-                InvestmentLevel.STANDARD if random.random() > 0.5 else None
+                InvestmentAction.INVEST if random.random() > 0.5 else None
             )
         else:
             investment_actions[asset_id] = None
@@ -209,7 +209,7 @@ def _get_knapsack_actions(
     agent_type: str,
     agent_name: str,
     multi_game: MultiAgentGame,
-) -> tuple[dict[uuid.UUID, InvestmentLevel | None], list[float]]:
+) -> tuple[dict[uuid.UUID, InvestmentAction | None], list[float]]:
     """Get actions from the knapsack heuristic agent."""
     game_state = multi_game.agent_states[agent_name]
 
@@ -220,11 +220,11 @@ def _get_knapsack_actions(
     agent = OPPONENT_AGENT_FACTORIES[agent_type]()
     decisions = get_agent_investment_decisions(agent, game_state)
 
-    # Convert "invest" string decisions to InvestmentLevel
-    investment_actions: dict[uuid.UUID, InvestmentLevel | None] = {}
+    # Convert "invest" string decisions to InvestmentAction
+    investment_actions: dict[uuid.UUID, InvestmentAction | None] = {}
     for asset_id, decision in decisions.items():
         if decision == "invest":
-            investment_actions[asset_id] = InvestmentLevel.STANDARD
+            investment_actions[asset_id] = InvestmentAction.INVEST
         else:
             investment_actions[asset_id] = None
 

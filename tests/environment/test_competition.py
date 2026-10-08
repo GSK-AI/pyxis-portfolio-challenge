@@ -7,18 +7,10 @@ import upath
 
 from pyxis_portfolio_challenge.config import (
     ApprovalPhaseConfig,
-    CapacityConfig,
     ClinicalSitesConfig,
-    DistributionalPtrsConfig,
     DropActionConfig,
-    InterimTrialObservationsConfig,
-    InvestmentLevelParams,
-    InvestmentLevelsConfig,
     MarketingConfig,
-    PricingConfig,
     PtrsReadingsConfig,
-    TAExperienceConfig,
-    UncertainPtrsConfig,
 )
 from pyxis_portfolio_challenge.environment.competition import (
     Trainer,
@@ -71,47 +63,6 @@ def _make_env(num_agents=2, **kwargs):
         mask_first_order_assets=False,
         mask_negative_enpv_assets=False,
         flatten_obs=False,
-        distributional_ptrs_config=DistributionalPtrsConfig(
-            enabled=False,
-            ta_quality_variance={"oncology": 0.08, "respiratory and immunology": 0.05, "vaccines and infectious disease": 0.03},
-            asset_noise_std=0.03,
-            prior_concentration=5.0,
-            observation_noise=0.1,
-        ),
-        ta_experience_config=TAExperienceConfig(
-            enabled=False,
-            experience_to_full_knowledge=30.0,
-            max_expertise_boost=0.05,
-            experience_to_max_boost=40.0,
-            experience_decay_rate=0.98,
-            max_total_experience=60.0,
-            phase_experience_weights={"phase_1": 0.5, "phase_2": 1.0, "phase_3": 1.5, "approval": 0.5},
-            asset_arrival_temperature=0.1,
-        ),
-        uncertain_ptrs_config=UncertainPtrsConfig(
-            enabled=False,
-            ta_noise_config={"oncology": 0.12, "respiratory and immunology": 0.10, "vaccines and infectious disease": 0.08},
-            phase_noise_multipliers={"phase_1": 1.5, "phase_2": 1.0, "phase_3": 0.75, "approval": 0.5},
-        ),
-        investment_levels_config=InvestmentLevelsConfig(
-            enabled=False,
-            levels={
-                "none": InvestmentLevelParams(cost_modifier=0.0, speed_modifier=0.0, success_modifier=1.0, capacity_cost=0, experience_modifier=0.0),
-                "standard": InvestmentLevelParams(cost_modifier=1.0, speed_modifier=1.0, success_modifier=1.0, capacity_cost=2, experience_modifier=1.0),
-            },
-        ),
-        interim_trial_observations_config=InterimTrialObservationsConfig(
-            enabled=False,
-            latent_quality_concentration=10.0,
-            initial_noise_scale=0.3,
-        ),
-        rd_capacity_config=CapacityConfig(
-            enabled=False,
-            base_capacity=80.0,
-            overage_max_penalty=0.5,
-            overage_cost_max_penalty=0.5,
-            overage_scaling="linear",
-        ),
         approval_phase_config=ApprovalPhaseConfig(
             enabled=False, duration_min=1, duration_max=3,
             success_rate_min=0.85, success_rate_max=0.95, cost=50_000_000,
@@ -125,12 +76,6 @@ def _make_env(num_agents=2, **kwargs):
         congestion_exponent=1.0,
         congestion_ramp_steps=3,
         congestion_incumbent_penalty=0.0,
-        pricing_config=PricingConfig(
-            enabled=False,
-            levels=[0.60, 0.75, 1.00, 1.20, 1.40, 1.60],
-            default_level=2,
-            elasticity=2.0,
-        ),
         drop_action_config=DropActionConfig(
             enabled=False,
             drop_price_fraction=0.0,
@@ -469,7 +414,6 @@ class TestMakeMultiAgentTrainEnv:
         assert "num_agents" in kwargs
         assert "starting_cash" in kwargs
         assert "reward_fn" in kwargs
-        assert "pricing_config" in kwargs
 
     def test_num_agents_override(self):
         from pyxis_portfolio_challenge.environment.env_factory import (

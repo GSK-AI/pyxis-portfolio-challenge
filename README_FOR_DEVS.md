@@ -70,7 +70,7 @@ Both are created via factory functions in `environment/env_factory.py`.
 
 ### Configuration
 
-All environment parameters are driven by a central YAML config (`config.yaml`) validated by a Pydantic `Config` model in `config.py`. Feature flags (e.g. `ta_experience`, `distributional_ptrs`, `pricing`) use `enabled: true/false` — never null/optional. Reward functions and metrics are instantiated dynamically via the `_target_` pattern and `instantiate_from_config()`.
+All environment parameters are driven by a central YAML config (`config.yaml`) validated by a Pydantic `Config` model in `config.py`. Feature flags (e.g. `marketing`, `clinical_sites`, `ptrs_readings`) use `enabled: true/false` — never null/optional. Reward functions and metrics are instantiated dynamically via the `_target_` pattern and `instantiate_from_config()`.
 
 ### Key Directories
 

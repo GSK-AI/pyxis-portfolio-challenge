@@ -8,15 +8,9 @@ import pytest
 from pyxis_portfolio_challenge.config import (
     ApprovalPhaseConfig,
     ClinicalSitesConfig,
-    DistributionalPtrsConfig,
     DropActionConfig,
-    InterimTrialObservationsConfig,
-    InvestmentLevelParams,
-    InvestmentLevelsConfig,
     MarketingConfig,
     PtrsReadingsConfig,
-    TAExperienceConfig,
-    UncertainPtrsConfig,
     fibonacci_cost,
 )
 from pyxis_portfolio_challenge.game.asset import DrugAsset
@@ -24,33 +18,8 @@ from pyxis_portfolio_challenge.game.trial import Trial, TrialPhase, TrialState
 from pyxis_portfolio_challenge.rng import init_game_rng
 
 # Disabled feature configs required as keyword-only args by
-# GameState.initialise_new_game (rd_capacity and ptrs_readings passed explicitly).
+# GameState.initialise_new_game (ptrs_readings passed explicitly).
 _EXTRA_DISABLED_CONFIGS = dict(
-    investment_levels_config=InvestmentLevelsConfig(
-        enabled=False,
-        levels={
-            "none": InvestmentLevelParams(
-                cost_modifier=0.0, speed_modifier=0.0, success_modifier=1.0,
-                capacity_cost=0, experience_modifier=0.0,
-            ),
-            "standard": InvestmentLevelParams(
-                cost_modifier=1.0, speed_modifier=1.0, success_modifier=1.0,
-                capacity_cost=2, experience_modifier=1.0,
-            ),
-        },
-    ),
-    interim_trial_observations_config=InterimTrialObservationsConfig(
-        enabled=False, latent_quality_concentration=10.0, initial_noise_scale=0.3,
-    ),
-    distributional_ptrs_config=DistributionalPtrsConfig(
-        enabled=False,
-        ta_quality_variance={
-            "oncology": 0.08,
-            "respiratory and immunology": 0.05,
-            "vaccines and infectious disease": 0.03,
-        },
-        asset_noise_std=0.03, prior_concentration=5.0, observation_noise=0.1,
-    ),
     drop_action_config=DropActionConfig(
         enabled=False, drop_price_fraction=0.0, drop_price_rounding=1_000_000,
     ),
@@ -63,26 +32,6 @@ _EXTRA_DISABLED_CONFIGS = dict(
         purchase_cost_rounding=1_000_000, site_development_steps=2, agent_priority=False,
         priority_entropy_weight=1.0, auction_enabled=True, auction_interval_steps=20,
         auction_min_step=10, site_max_bid=100_000,
-    ),
-    ta_experience_config=TAExperienceConfig(
-        enabled=False, experience_to_full_knowledge=30.0, max_expertise_boost=0.05,
-        experience_to_max_boost=40.0, experience_decay_rate=0.98,
-        max_total_experience=60.0,
-        phase_experience_weights={
-            "phase_1": 0.5, "phase_2": 1.0, "phase_3": 1.5, "approval": 0.5,
-        },
-        asset_arrival_temperature=0.1,
-    ),
-    uncertain_ptrs_config=UncertainPtrsConfig(
-        enabled=False,
-        ta_noise_config={
-            "oncology": 0.12,
-            "respiratory and immunology": 0.10,
-            "vaccines and infectious disease": 0.08,
-        },
-        phase_noise_multipliers={
-            "phase_1": 1.5, "phase_2": 1.0, "phase_3": 0.75, "approval": 0.5,
-        },
     ),
     approval_phase_config=ApprovalPhaseConfig(
         enabled=False, duration_min=1, duration_max=3,
@@ -261,17 +210,7 @@ def test_action_masks_empty_slot_is_masked():
     """Research count > 0 must be masked for empty portfolio slots."""
     import upath
 
-    from pyxis_portfolio_challenge.config import (
-        ApprovalPhaseConfig,
-        CapacityConfig,
-        DistributionalPtrsConfig,
-        InterimTrialObservationsConfig,
-        InvestmentLevelParams,
-        InvestmentLevelsConfig,
-        PricingConfig,
-        TAExperienceConfig,
-        UncertainPtrsConfig,
-    )
+    from pyxis_portfolio_challenge.config import ApprovalPhaseConfig
     from pyxis_portfolio_challenge.environment.multi_agent_training_gym import (
         MultiAgentInvestmentGameEnv,
     )
@@ -312,66 +251,6 @@ def test_action_masks_empty_slot_is_masked():
         mask_first_order_assets=False,
         mask_negative_enpv_assets=False,
         flatten_obs=True,
-        distributional_ptrs_config=DistributionalPtrsConfig(
-            enabled=False,
-            ta_quality_variance={
-                "oncology": 0.08,
-                "respiratory and immunology": 0.05,
-                "vaccines and infectious disease": 0.03,
-            },
-            asset_noise_std=0.03,
-            prior_concentration=5.0,
-            observation_noise=0.1,
-        ),
-        ta_experience_config=TAExperienceConfig(
-            enabled=False,
-            experience_to_full_knowledge=30.0,
-            max_expertise_boost=0.05,
-            experience_to_max_boost=40.0,
-            experience_decay_rate=0.98,
-            max_total_experience=60.0,
-            phase_experience_weights={
-                "phase_1": 0.5,
-                "phase_2": 1.0,
-                "phase_3": 1.5,
-                "approval": 0.5,
-            },
-            asset_arrival_temperature=0.1,
-        ),
-        uncertain_ptrs_config=UncertainPtrsConfig(
-            enabled=False,
-            ta_noise_config={
-                "oncology": 0.12,
-                "respiratory and immunology": 0.10,
-                "vaccines and infectious disease": 0.08,
-            },
-            phase_noise_multipliers={
-                "phase_1": 1.5,
-                "phase_2": 1.0,
-                "phase_3": 0.75,
-                "approval": 0.5,
-            },
-        ),
-        investment_levels_config=InvestmentLevelsConfig(
-            enabled=False,
-            levels={
-                "none": InvestmentLevelParams(
-                    cost_modifier=0.0, speed_modifier=0.0, success_modifier=1.0,
-                    capacity_cost=0, experience_modifier=0.0,
-                ),
-                "standard": InvestmentLevelParams(
-                    cost_modifier=1.0, speed_modifier=1.0, success_modifier=1.0,
-                    capacity_cost=2, experience_modifier=1.0,
-                ),
-            },
-        ),
-        interim_trial_observations_config=InterimTrialObservationsConfig(
-            enabled=False, latent_quality_concentration=10.0, initial_noise_scale=0.3,
-        ),
-        rd_capacity_config=CapacityConfig(
-            enabled=False, base_capacity=80.0, overage_max_penalty=0.5,
-            overage_cost_max_penalty=0.5, overage_scaling="linear",
-        ),
         approval_phase_config=ApprovalPhaseConfig(
             enabled=False, duration_min=1, duration_max=3,
             success_rate_min=0.85, success_rate_max=0.95, cost=50_000_000,
@@ -385,10 +264,6 @@ def test_action_masks_empty_slot_is_masked():
         congestion_exponent=1.0,
         congestion_ramp_steps=3,
         congestion_incumbent_penalty=0.0,
-        pricing_config=PricingConfig(
-            enabled=False, levels=[0.60, 0.75, 1.00, 1.20, 1.40, 1.60],
-            default_level=2, elasticity=2.0,
-        ),
         drop_action_config=DropActionConfig(
             enabled=False, drop_price_fraction=0.0, drop_price_rounding=1_000_000,
         ),
@@ -429,17 +304,7 @@ def test_action_masks_cash_gates_high_counts():
     """
     import upath
 
-    from pyxis_portfolio_challenge.config import (
-        ApprovalPhaseConfig,
-        CapacityConfig,
-        DistributionalPtrsConfig,
-        InterimTrialObservationsConfig,
-        InvestmentLevelParams,
-        InvestmentLevelsConfig,
-        PricingConfig,
-        TAExperienceConfig,
-        UncertainPtrsConfig,
-    )
+    from pyxis_portfolio_challenge.config import ApprovalPhaseConfig
     from pyxis_portfolio_challenge.environment.multi_agent_training_gym import (
         MultiAgentInvestmentGameEnv,
     )
@@ -481,66 +346,6 @@ def test_action_masks_cash_gates_high_counts():
         mask_first_order_assets=False,
         mask_negative_enpv_assets=False,
         flatten_obs=True,
-        distributional_ptrs_config=DistributionalPtrsConfig(
-            enabled=False,
-            ta_quality_variance={
-                "oncology": 0.08,
-                "respiratory and immunology": 0.05,
-                "vaccines and infectious disease": 0.03,
-            },
-            asset_noise_std=0.03,
-            prior_concentration=5.0,
-            observation_noise=0.1,
-        ),
-        ta_experience_config=TAExperienceConfig(
-            enabled=False,
-            experience_to_full_knowledge=30.0,
-            max_expertise_boost=0.05,
-            experience_to_max_boost=40.0,
-            experience_decay_rate=0.98,
-            max_total_experience=60.0,
-            phase_experience_weights={
-                "phase_1": 0.5,
-                "phase_2": 1.0,
-                "phase_3": 1.5,
-                "approval": 0.5,
-            },
-            asset_arrival_temperature=0.1,
-        ),
-        uncertain_ptrs_config=UncertainPtrsConfig(
-            enabled=False,
-            ta_noise_config={
-                "oncology": 0.12,
-                "respiratory and immunology": 0.10,
-                "vaccines and infectious disease": 0.08,
-            },
-            phase_noise_multipliers={
-                "phase_1": 1.5,
-                "phase_2": 1.0,
-                "phase_3": 0.75,
-                "approval": 0.5,
-            },
-        ),
-        investment_levels_config=InvestmentLevelsConfig(
-            enabled=False,
-            levels={
-                "none": InvestmentLevelParams(
-                    cost_modifier=0.0, speed_modifier=0.0, success_modifier=1.0,
-                    capacity_cost=0, experience_modifier=0.0,
-                ),
-                "standard": InvestmentLevelParams(
-                    cost_modifier=1.0, speed_modifier=1.0, success_modifier=1.0,
-                    capacity_cost=2, experience_modifier=1.0,
-                ),
-            },
-        ),
-        interim_trial_observations_config=InterimTrialObservationsConfig(
-            enabled=False, latent_quality_concentration=10.0, initial_noise_scale=0.3,
-        ),
-        rd_capacity_config=CapacityConfig(
-            enabled=False, base_capacity=80.0, overage_max_penalty=0.5,
-            overage_cost_max_penalty=0.5, overage_scaling="linear",
-        ),
         approval_phase_config=ApprovalPhaseConfig(
             enabled=False, duration_min=1, duration_max=3,
             success_rate_min=0.85, success_rate_max=0.95, cost=50_000_000,
@@ -554,10 +359,6 @@ def test_action_masks_cash_gates_high_counts():
         congestion_exponent=1.0,
         congestion_ramp_steps=3,
         congestion_incumbent_penalty=0.0,
-        pricing_config=PricingConfig(
-            enabled=False, levels=[0.60, 0.75, 1.00, 1.20, 1.40, 1.60],
-            default_level=2, elasticity=2.0,
-        ),
         drop_action_config=DropActionConfig(
             enabled=False, drop_price_fraction=0.0, drop_price_rounding=1_000_000,
         ),
@@ -611,7 +412,6 @@ def test_action_masks_cash_gates_high_counts():
 
 def test_ptrs_readings_applied_immediately():
     """Readings submitted at step T are applied within that step (visible at T+1 obs)."""
-    from pyxis_portfolio_challenge.config import CapacityConfig
     from pyxis_portfolio_challenge.game.asset_generators import (
         DUMMY_LIST_DATA,
         FixedListAssetGenerator,
@@ -632,10 +432,6 @@ def test_ptrs_readings_applied_immediately():
         reinvestment_percentage=1.0,
         assets_data_list=DUMMY_LIST_DATA,
         seed=None,
-        rd_capacity_config=CapacityConfig(
-            enabled=False, base_capacity=80.0, overage_max_penalty=0.5,
-            overage_cost_max_penalty=0.5, overage_scaling="linear",
-        ),
         ptrs_readings_config=cfg,
         **_EXTRA_DISABLED_CONFIGS,
     )
@@ -809,7 +605,6 @@ def _make_indev_game_state(time_remaining_p1: int, cfg):
     """
     import uuid as _uuid
 
-    from pyxis_portfolio_challenge.config import CapacityConfig
     from pyxis_portfolio_challenge.game.asset import AssetState
     from pyxis_portfolio_challenge.game.asset_generators import (
         DUMMY_LIST_DATA,
@@ -829,10 +624,6 @@ def _make_indev_game_state(time_remaining_p1: int, cfg):
         reinvestment_percentage=1.0,
         assets_data_list=DUMMY_LIST_DATA,
         seed=None,
-        rd_capacity_config=CapacityConfig(
-            enabled=False, base_capacity=80.0, overage_max_penalty=0.5,
-            overage_cost_max_penalty=0.5, overage_scaling="linear",
-        ),
         ptrs_readings_config=cfg,
         **_EXTRA_DISABLED_CONFIGS,
     )

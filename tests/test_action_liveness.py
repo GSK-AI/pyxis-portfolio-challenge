@@ -60,9 +60,6 @@ def _noop_action(base):
         action["site_bid"] = np.array([0.0], dtype=np.float32)
     if "site_priority" in heads:
         action["site_priority"] = np.zeros(m, dtype=np.float32)
-    if "pricing" in heads:
-        default_level = base.pricing_config.default_level
-        action["pricing"] = np.full(m, default_level, dtype=np.int64)
     if "demand_creation" in heads:
         action["demand_creation"] = np.zeros(nind, dtype=np.int64)
     if "brand_equity" in heads:
@@ -88,10 +85,6 @@ def _active_value(base, env, head):
         return 1 if masks["upgrade"][1] else 0
     if head == "site_bid":
         return np.array([base.clinical_sites_config.site_max_bid * 0.1], dtype=np.float32)
-    if head == "pricing":
-        default_level = base.pricing_config.default_level
-        alt = 0 if default_level != 0 else len(base.pricing_config.levels) - 1
-        return np.full(m, alt, dtype=np.int64)
     if head == "demand_creation":
         return np.ones(nind, dtype=np.int64)
     if head == "brand_equity":

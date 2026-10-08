@@ -1,25 +1,24 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
-import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from pyxis_portfolio_challenge.game.asset_generators import JSONAssetGenerator
-from pyxis_portfolio_challenge.game.constants import InvestmentLevel
 from app.app import (
-    convert_action_to_investment_level,
+    convert_action_to_investment_action,
     get_agents,
     lifespan,
     start_game,
     step_game,
 )
+from pyxis_portfolio_challenge.game.asset_generators import JSONAssetGenerator
+from pyxis_portfolio_challenge.game.constants import InvestmentAction
 
 
-def test_convert_action_to_investment_level_maps_drop():
-    """The 'drop' action must round-trip to InvestmentLevel.DROP (not None)."""
-    assert convert_action_to_investment_level("drop") == InvestmentLevel.DROP
-    assert convert_action_to_investment_level("invest") == InvestmentLevel.STANDARD
-    assert convert_action_to_investment_level(None) is None
+def test_convert_action_to_investment_action_maps_drop():
+    """The 'drop' action must round-trip to InvestmentAction.DROP (not None)."""
+    assert convert_action_to_investment_action("drop") == InvestmentAction.DROP
+    assert convert_action_to_investment_action("invest") == InvestmentAction.INVEST
+    assert convert_action_to_investment_action(None) is None
 
 # create new FastAPI app instance without auth middleware for testing
 app = FastAPI(lifespan=lifespan)

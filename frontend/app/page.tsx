@@ -191,8 +191,8 @@ export default function InvestmentGame() {
   const advanceYearSingle = useCallback(
     async (intents: TurnIntents) => {
       if (!gameState || gameState.game_ended) return;
-      // Classic payload mapping: `true` → "invest"; level strings
-      // ("minimal"/"standard"/"accelerated"/"stop") pass through.
+      // Classic payload mapping: `true` → "invest"; other action strings
+      // ("stop") pass through.
       const actions: Record<string, string> = {};
       Object.entries(intents.invest).forEach(([id, val]) => {
         if (val === true) actions[id] = "invest";
@@ -210,8 +210,8 @@ export default function InvestmentGame() {
   const advanceYearMulti = useCallback(
     async (intents: TurnIntents) => {
       if (!multiAgentState || multiAgentState.game_ended) return;
-      // Classic payload mapping: `true` → "invest"; level strings
-      // ("minimal"/"standard"/"accelerated"/"stop") pass through.
+      // Classic payload mapping: `true` → "invest"; other action strings
+      // ("stop") pass through.
       const investmentActions: Record<string, ActionType> = {};
       Object.entries(intents.invest).forEach(([id, val]) => {
         if (val === true) investmentActions[id] = "invest";
