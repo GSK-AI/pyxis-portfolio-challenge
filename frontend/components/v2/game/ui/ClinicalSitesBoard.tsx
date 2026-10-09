@@ -21,6 +21,7 @@ export function ClinicalSitesBoard({
   buySite,
   onBuySiteChange,
   siteAuctionActive,
+  siteAuctionReserve = 0,
   siteBid,
   maxSiteBid,
   onSiteBidChange,
@@ -35,6 +36,8 @@ export function ClinicalSitesBoard({
   buySite: boolean;
   onBuySiteChange: (buy: boolean) => void;
   siteAuctionActive: boolean;
+  // Reserve price (GBP) for the site on offer: the minimum winning bid. 0 = none.
+  siteAuctionReserve?: number;
   siteBid: number;
   maxSiteBid: number;
   onSiteBidChange: (bid: number) => void;
@@ -46,6 +49,8 @@ export function ClinicalSitesBoard({
   const canAfford = nextSitePurchaseCost <= playerCash;
   const overCash = siteBid > playerCash;
   const bidCap = Math.min(maxSiteBid, playerCash);
+  // Reserve price: a positive bid below it wins no site.
+  const belowReserve = siteBid > 0 && siteBid < siteAuctionReserve;
   // --- end identical logic ---
 
   return (
@@ -156,8 +161,16 @@ export function ClinicalSitesBoard({
       {/* Site auction (only on auction years) */}
       {siteAuctionActive && (
         <div className="space-y-2 rounded bg-gradient-to-r from-[#eef4fc] to-white p-3">
-          <div className="text-xs font-bold text-primary">
-            Site auction this year
+          <div className="flex items-center justify-between text-xs font-bold text-primary">
+            <span>Site auction this year</span>
+            {siteAuctionReserve > 0 && (
+              <span
+                className="font-medium text-primary/80"
+                title="Minimum winning bid. A bid below the reserve wins no site."
+              >
+                Reserve: {formatDisplayNumber(siteAuctionReserve)}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">Bid (£)</span>
@@ -178,6 +191,7 @@ export function ClinicalSitesBoard({
               className={cn(
                 "h-8 w-36 bg-card text-sm",
                 overCash && "border-destructive text-destructive",
+                !overCash && belowReserve && "border-amber-400 text-amber-600",
               )}
             />
             {siteBid > 0 && (
@@ -188,6 +202,11 @@ export function ClinicalSitesBoard({
             {overCash && (
               <span className="text-xs font-bold text-destructive">
                 exceeds cash
+              </span>
+            )}
+            {!overCash && belowReserve && (
+              <span className="text-xs font-bold text-amber-600">
+                below reserve
               </span>
             )}
           </div>

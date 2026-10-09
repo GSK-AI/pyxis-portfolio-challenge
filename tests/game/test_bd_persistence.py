@@ -14,10 +14,14 @@ import uuid
 
 import pytest
 
+from pyxis_portfolio_challenge.environment.market_mechanics import (
+    auction_reserve_price,
+    resolve_bd_bid,
+)
 from pyxis_portfolio_challenge.game.asset import AssetState, DrugAsset
 from pyxis_portfolio_challenge.game.shared_market_state import SharedMarketState
 from pyxis_portfolio_challenge.game.trial import Trial, TrialPhase, TrialState
-from pyxis_portfolio_challenge.rng import init_game_rng
+from pyxis_portfolio_challenge.rng import get_game_rng, init_game_rng
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Helpers
@@ -34,6 +38,7 @@ _MARKET_DEFAULTS = dict(
     bd_leak_lambda_boost=0.3,
     bd_min_step=0,
     bd_max_bid=10000.0,
+    bd_reserve_fraction=0.0,
     bd_phase_weights=None,
     bd_indication_activity_bias=0.8,
     congestion_exponent=0.0,
@@ -335,3 +340,79 @@ class TestBackwardCompat:
 
         assert market.current_bd_assets == []
         assert market.bd_asset_ages == {}
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# BD auction reserve price
+# ──────────────────────────────────────────────────────────────────────────────
+
+class TestBDAuctionReserve:
+    def test_no_bids_returns_none_regardless_of_reserve(self):
+        init_game_rng(1)
+        asset = _fake_asset()
+        assert resolve_bd_bid(
+            {}, asset, get_game_rng(), reserve=1_000_000
+        ) == (None, 0.0)
+
+    def test_highest_wins_when_above_reserve(self):
+        init_game_rng(1)
+        asset = _fake_asset()
+        winner, price = resolve_bd_bid(
+            {"a": 1_000_000, "b": 3_000_000},
+            asset,
+            get_game_rng(),
+            reserve=2_000_000,
+        )
+        assert winner == "b"
+        assert price == pytest.approx(3_000_000)
+
+    def test_below_reserve_no_sale(self):
+        # Top bid (3M) below reserve (5M): asset is withdrawn (no winner).
+        init_game_rng(1)
+        asset = _fake_asset()
+        assert resolve_bd_bid(
+            {"a": 1_000_000, "b": 3_000_000},
+            asset,
+            get_game_rng(),
+            reserve=5_000_000,
+        ) == (None, 0.0)
+
+    def test_at_reserve_sells(self):
+        # A bid exactly at the reserve clears it.
+        init_game_rng(1)
+        asset = _fake_asset()
+        winner, price = resolve_bd_bid(
+            {"a": 5_000_000, "b": 2_000_000},
+            asset,
+            get_game_rng(),
+            reserve=5_000_000,
+        )
+        assert winner == "a"
+        assert price == pytest.approx(5_000_000)
+
+    def test_zero_reserve_is_no_op(self):
+        init_game_rng(1)
+        asset = _fake_asset()
+        winner, price = resolve_bd_bid(
+            {"a": 1.0}, asset, get_game_rng(), reserve=0.0
+        )
+        assert winner == "a"
+        assert price == pytest.approx(1.0)
+
+
+class TestAuctionReservePrice:
+    """The shared reserve helper: fraction × anchor, floored at 0, £1M-rounded."""
+
+    def test_rounds_to_nearest_million(self):
+        # 0.25 × 499_000_001 = 124_750_000.25 -> nearest £1M = 125_000_000.
+        assert auction_reserve_price(0.25, 499_000_001) == pytest.approx(125_000_000)
+
+    def test_negative_anchor_floored_to_zero(self):
+        # A cash-negative asset carries no reserve.
+        assert auction_reserve_price(0.25, -800_000_000) == 0.0
+
+    def test_zero_fraction_disables(self):
+        assert auction_reserve_price(0.0, 1_000_000_000) == 0.0
+
+    def test_exact_multiple_unchanged(self):
+        assert auction_reserve_price(0.5, 500_000_000) == pytest.approx(250_000_000)

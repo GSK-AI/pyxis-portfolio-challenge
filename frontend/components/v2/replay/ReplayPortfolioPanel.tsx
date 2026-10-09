@@ -55,6 +55,7 @@ export function ReplayPortfolioPanel({
   color,
   cumulativeReward,
   reward,
+  siteAuctionReserve = 0,
   highlightFilter = null,
 }: {
   agentId: string;
@@ -66,6 +67,8 @@ export function ReplayPortfolioPanel({
   color: string;
   cumulativeReward: number;
   reward: number;
+  /** Clinical-site auction reserve (GBP) for this step; 0 when none. */
+  siteAuctionReserve?: number;
   /** Shared legend filter from the replay page. */
   highlightFilter?: HighlightFilter;
 }) {
@@ -304,8 +307,23 @@ export function ReplayPortfolioPanel({
                       Bought a new site
                     </span>
                   ) : actions.site_bid > 0 ? (
-                    <span className="font-bold text-primary">
+                    <span
+                      className={
+                        siteAuctionReserve > 0 &&
+                        actions.site_bid < siteAuctionReserve
+                          ? "font-bold text-amber-600"
+                          : "font-bold text-primary"
+                      }
+                      title={
+                        siteAuctionReserve > 0
+                          ? `Auction reserve: ${formatDisplayNumber(siteAuctionReserve)}`
+                          : undefined
+                      }
+                    >
                       Site bid: {formatDisplayNumber(actions.site_bid)}
+                      {siteAuctionReserve > 0 &&
+                        actions.site_bid < siteAuctionReserve &&
+                        " (below reserve)"}
                     </span>
                   ) : (
                     <span className={QUIET}>No site action</span>

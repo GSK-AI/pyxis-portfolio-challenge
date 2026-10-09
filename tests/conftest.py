@@ -53,6 +53,7 @@ _DISABLED_CLINICAL_SITES = ClinicalSitesConfig(
     auction_interval_steps=20,
     auction_min_step=10,
     site_max_bid=100_000,
+    auction_reserve_fraction=0.0,
 )
 _DISABLED_PTRS_READINGS = PtrsReadingsConfig(
     enabled=False,

@@ -87,6 +87,12 @@ export function ReplayBDMarketBoard({
               value={formatDisplayNumber(asset.max_revenue)}
             />
             <Metric label="PTRS" value={`${(asset.ptrs * 100).toFixed(0)}%`} />
+            {(asset.reserve_price ?? 0) > 0 && (
+              <Metric
+                label="Reserve"
+                value={formatDisplayNumber(asset.reserve_price ?? 0)}
+              />
+            )}
           </div>
 
           {/* Actions view: each agent's bid for this asset */}

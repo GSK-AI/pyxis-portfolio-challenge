@@ -75,6 +75,7 @@ def _make_env(
         bd_leak_lambda_boost=0.3,
         bd_min_step=5,
         bd_max_bid=10000.0,
+        bd_reserve_fraction=0.0,
         bd_max_slots=1,
         bd_phase_weights=[0.2, 0.4, 0.4],
         bd_indication_activity_bias=0.8,
@@ -138,6 +139,7 @@ def _make_env(
             auction_interval_steps=20,
             auction_min_step=10,
             site_max_bid=100_000,
+            auction_reserve_fraction=0.0,
         ),
         bd_persist_steps=1,
         dc_leak_min_agents=3,
@@ -373,6 +375,7 @@ _SHARED_MARKET_DEFAULTS = dict(
     bd_leak_lambda_boost=0.3,
     bd_min_step=5,
     bd_max_bid=10000.0,
+    bd_reserve_fraction=0.0,
     bd_phase_weights=None,
     bd_indication_activity_bias=0.8,
     leak_phase_probabilities=None,
@@ -3062,6 +3065,7 @@ class TestClinicalSiteAuction:
                 agent_priority=False,
                 priority_entropy_weight=1.0,
                 site_max_bid=100_000,
+                auction_reserve_fraction=0.0,
             ),
         )
 
@@ -3115,6 +3119,61 @@ class TestClinicalSiteAuction:
         assert new_game.agent_states[a].operational_sites == 3
         assert new_game.agent_states[b].operational_sites == 3
 
+    @staticmethod
+    def _reserve_env(reserve_fraction):
+        # purchase_base_cost 500M => reserve = fraction × 500M (rounded to £1M).
+        return _make_env(
+            num_agents=2,
+            clinical_sites_config=ClinicalSitesConfig(
+                enabled=True,
+                starting_sites=3,
+                auction_enabled=True,
+                auction_interval_steps=1,
+                auction_min_step=0,
+                purchase_base_cost=500_000_000,
+                purchase_cost_rounding=1_000_000,
+                site_development_steps=2,
+                agent_priority=False,
+                priority_entropy_weight=1.0,
+                site_max_bid=100_000,
+                auction_reserve_fraction=reserve_fraction,
+            ),
+        )
+
+    def test_below_reserve_wins_no_site(self):
+        # Reserve = 0.5 × 500M = 250M; a 100M top bid is below it -> no site, no
+        # charge, and the site stays with nobody (both agents keep 3).
+        env = self._reserve_env(0.5)
+        env.reset(seed=0)
+        game = env.multi_agent_game
+        a, b = env.agents
+        new_game = game.step(
+            investor_actions={a: {}, b: {}},
+            site_bids={a: 100_000_000.0, b: 50_000_000.0},
+        )
+        base_env = self._reserve_env(0.5)
+        base_env.reset(seed=0)
+        base_game = base_env.multi_agent_game.step(
+            investor_actions={a: {}, b: {}}, site_bids={a: 0.0, b: 0.0}
+        )
+        assert new_game.agent_states[a].operational_sites == 3
+        assert new_game.agent_states[b].operational_sites == 3
+        assert new_game.agent_states[a].cash == pytest.approx(
+            base_game.agent_states[a].cash
+        )
+
+    def test_at_reserve_wins_site(self):
+        # A bid exactly at the 250M reserve clears it and wins the site.
+        env = self._reserve_env(0.5)
+        env.reset(seed=0)
+        game = env.multi_agent_game
+        a, b = env.agents
+        new_game = game.step(
+            investor_actions={a: {}, b: {}},
+            site_bids={a: 250_000_000.0, b: 10_000_000.0},
+        )
+        assert new_game.agent_states[a].operational_sites == 4
+
     def test_no_auction_when_not_scheduled(self):
         env = _make_env(
             num_agents=2,
@@ -3130,6 +3189,7 @@ class TestClinicalSiteAuction:
                 agent_priority=False,
                 priority_entropy_weight=1.0,
                 site_max_bid=100_000,
+                auction_reserve_fraction=0.0,
             ),
         )
         env.reset(seed=0)
@@ -3155,6 +3215,7 @@ class TestClinicalSiteAuction:
                 agent_priority=False,
                 priority_entropy_weight=1.0,
                 site_max_bid=100_000,
+                auction_reserve_fraction=0.0,
             ),
         )
         base_env.reset(seed=0)
@@ -3187,6 +3248,7 @@ def _sites_env(*, flatten_obs=True, starting_cash=None, **cfg_kwargs):
         auction_interval_steps=20,
         auction_min_step=10,
         site_max_bid=100_000,
+        auction_reserve_fraction=0.0,
     )
     site_defaults.update(cfg_kwargs)
     env_kwargs = dict(num_agents=2, flatten_obs=flatten_obs)
@@ -3365,6 +3427,7 @@ class TestClinicalSiteEnvStep:
             auction_interval_steps=1,
             auction_min_step=0,
             site_max_bid=100_000,
+            auction_reserve_fraction=0.0,
         )
         env.reset(seed=0)
         a, b = env.agents
@@ -3394,6 +3457,7 @@ class TestClinicalSiteEnvStep:
                 auction_interval_steps=20,
                 auction_min_step=10,
                 site_max_bid=100_000,
+                auction_reserve_fraction=0.0,
             ),
         )
         env.reset(seed=0)

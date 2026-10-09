@@ -38,6 +38,7 @@ def patched_config(monkeypatch):
                 purchase_cost_rounding=1_000_000, site_development_steps=2,
                 agent_priority=False, priority_entropy_weight=1.0, auction_enabled=True,
                 auction_interval_steps=20, auction_min_step=10, site_max_bid=100_000,
+                auction_reserve_fraction=0.0,
             ),
             "ptrs_readings": PtrsReadingsConfig(
                 enabled=False, cost_fraction=0.05, cost_rounding=1_000_000,

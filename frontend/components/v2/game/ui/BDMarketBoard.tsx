@@ -69,6 +69,9 @@ function BDAssetCard({
 }) {
   // --- identical logic to the classic BDAssetCard ---
   const overCash = bid > playerCash;
+  // Reserve price: the minimum winning bid. A positive bid below it wins nothing.
+  const reserve = asset.reserve_price ?? 0;
+  const belowReserve = bid > 0 && bid < reserve;
   const readingCosts = asset.ptrs_reading_costs ?? [];
   const maxReadings = readingCosts.length;
   const showReadings = readingsEnabled && maxReadings > 0;
@@ -119,6 +122,13 @@ function BDAssetCard({
           value={formatDisplayNumber(asset.max_revenue)}
         />
         <Metric label="PTRS" value={`${(asset.ptrs * 100).toFixed(0)}%`} />
+        {reserve > 0 && (
+          <Metric
+            label="Reserve"
+            value={formatDisplayNumber(reserve)}
+            title="Minimum winning bid. A bid below the reserve wins nothing; the asset stays on the market."
+          />
+        )}
         {showReadings && (
           <Metric
             label="Eff. Read"
@@ -147,6 +157,7 @@ function BDAssetCard({
           className={cn(
             "h-8 w-32 bg-card text-sm",
             overCash && "border-destructive text-destructive",
+            !overCash && belowReserve && "border-amber-400 text-amber-600",
           )}
         />
         {bid > 0 && (
@@ -157,6 +168,11 @@ function BDAssetCard({
         {overCash && (
           <span className="text-xs font-bold text-destructive">
             exceeds cash
+          </span>
+        )}
+        {!overCash && belowReserve && (
+          <span className="text-xs font-bold text-amber-600">
+            below reserve
           </span>
         )}
       </div>

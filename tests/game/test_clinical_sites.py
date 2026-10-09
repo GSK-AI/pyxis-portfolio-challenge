@@ -60,6 +60,7 @@ def _sites_cfg(**overrides) -> ClinicalSitesConfig:
         auction_interval_steps=20,
         auction_min_step=10,
         site_max_bid=100_000,
+        auction_reserve_fraction=0.0,
     )
     base.update(overrides)
     return ClinicalSitesConfig(**base)
@@ -517,7 +518,9 @@ def test_in_development_asset_does_not_consume_a_new_site():
 def test_resolve_site_bid_highest_wins_pays_own_bid():
     init_game_rng(1)
     winner, price = resolve_site_bid(
-        {"a": 1_000_000, "b": 3_000_000, "c": 2_000_000}, get_game_rng()
+        {"a": 1_000_000, "b": 3_000_000, "c": 2_000_000},
+        get_game_rng(),
+        reserve=0.0,
     )
     assert winner == "b"
     assert price == pytest.approx(3_000_000)
@@ -525,16 +528,38 @@ def test_resolve_site_bid_highest_wins_pays_own_bid():
 
 def test_resolve_site_bid_no_bids_returns_none():
     init_game_rng(1)
-    assert resolve_site_bid({}, get_game_rng()) == (None, 0.0)
+    assert resolve_site_bid({}, get_game_rng(), reserve=0.0) == (None, 0.0)
     # Zero / negative bids are passes
-    assert resolve_site_bid({"a": 0.0, "b": -5.0}, get_game_rng()) == (None, 0.0)
+    assert resolve_site_bid(
+        {"a": 0.0, "b": -5.0}, get_game_rng(), reserve=0.0
+    ) == (None, 0.0)
 
 
 def test_resolve_site_bid_ties_break_randomly_but_price_fixed():
     init_game_rng(7)
-    winner, price = resolve_site_bid({"a": 2_000_000, "b": 2_000_000}, get_game_rng())
+    winner, price = resolve_site_bid(
+        {"a": 2_000_000, "b": 2_000_000}, get_game_rng(), reserve=0.0
+    )
     assert winner in {"a", "b"}
     assert price == pytest.approx(2_000_000)
+
+
+def test_resolve_site_bid_below_reserve_no_sale():
+    # Top bid (3M) is below the reserve (5M): nobody wins, no site sold.
+    init_game_rng(1)
+    assert resolve_site_bid(
+        {"a": 1_000_000, "b": 3_000_000}, get_game_rng(), reserve=5_000_000
+    ) == (None, 0.0)
+
+
+def test_resolve_site_bid_at_reserve_sells():
+    # A bid exactly at the reserve clears it (first-price, pays own bid).
+    init_game_rng(1)
+    winner, price = resolve_site_bid(
+        {"a": 5_000_000, "b": 2_000_000}, get_game_rng(), reserve=5_000_000
+    )
+    assert winner == "a"
+    assert price == pytest.approx(5_000_000)
 
 
 # ---------------------------------------------------------------------------

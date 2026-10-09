@@ -32,6 +32,7 @@ _EXTRA_DISABLED_CONFIGS = dict(
         purchase_cost_rounding=1_000_000, site_development_steps=2, agent_priority=False,
         priority_entropy_weight=1.0, auction_enabled=True, auction_interval_steps=20,
         auction_min_step=10, site_max_bid=100_000,
+        auction_reserve_fraction=0.0,
     ),
     approval_phase_config=ApprovalPhaseConfig(
         enabled=False, duration_min=1, duration_max=3,
@@ -233,6 +234,7 @@ def test_action_masks_empty_slot_is_masked():
         bd_leak_lambda_boost=0.3,
         bd_min_step=5,
         bd_max_bid=10000.0,
+        bd_reserve_fraction=0.0,
         bd_max_slots=1,
         bd_phase_weights=[0.2, 0.4, 0.4],
         bd_indication_activity_bias=0.8,
@@ -328,6 +330,7 @@ def test_action_masks_cash_gates_high_counts():
         bd_leak_lambda_boost=0.3,
         bd_min_step=5,
         bd_max_bid=10000.0,
+        bd_reserve_fraction=0.0,
         bd_max_slots=1,
         bd_phase_weights=[0.2, 0.4, 0.4],
         bd_indication_activity_bias=0.8,
