@@ -513,6 +513,11 @@ async def get_multi_agent_config():
         "bd_enabled": ma.bd_enabled,
         "bd_base_lambda": ma.bd_base_lambda,
         "bd_max_bid": ma.bd_max_bid,
+        # Auction reserve fractions: minimum winning bid = fraction × item value
+        # (BD: cash_enpv; site: first-upgrade build cost). Per-item reserve £ are
+        # also sent in the state response; these let the UI label the rule.
+        "bd_reserve_fraction": ma.bd_reserve_fraction,
+        "auction_reserve_fraction": game_config.clinical_sites.auction_reserve_fraction,
         # Clinical-site PvP auction bid cap (units match bd_max_bid, GBP
         # millions); drives the site-bid input ceiling in the UI.
         "site_max_bid": game_config.clinical_sites.site_max_bid,
@@ -604,6 +609,7 @@ async def start_multi_agent_game(
         clinical_sites_config=game_config.clinical_sites,
         marketing_config=game_config.marketing,
         bd_max_bid=ma.bd_max_bid,
+        bd_reserve_fraction=ma.bd_reserve_fraction,
         bd_max_slots=ma.bd_max_slots,
         be_leak_probability=ma.be_leak_probability,
         dc_leak_probability=ma.dc_leak_probability,

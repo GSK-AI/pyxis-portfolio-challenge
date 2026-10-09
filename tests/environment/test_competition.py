@@ -45,6 +45,7 @@ def _make_env(num_agents=2, **kwargs):
         bd_leak_lambda_boost=0.3,
         bd_min_step=5,
         bd_max_bid=10000.0,
+        bd_reserve_fraction=0.0,
         bd_max_slots=1,
         bd_phase_weights=[0.2, 0.4, 0.4],
         bd_indication_activity_bias=0.8,
@@ -104,6 +105,7 @@ def _make_env(num_agents=2, **kwargs):
             auction_interval_steps=20,
             auction_min_step=10,
             site_max_bid=100_000,
+            auction_reserve_fraction=0.0,
         ),
         ptrs_readings_config=PtrsReadingsConfig(
             enabled=False,

@@ -177,6 +177,9 @@ export const bdAssetSchema = z.object({
   ptrs: z.number(),
   enpv: z.number(),
   cash_enpv: z.number(), // cash-adjusted eNPV; a fair-value anchor for a cash bid
+  // Auction reserve (GBP, £1M-rounded): the minimum winning bid for this asset.
+  // A bid below this wins nothing and the asset stays on the market. 0 = disabled.
+  reserve_price: z.number(),
   // PTRS readings (ptrs_readings feature): this player's private diligence on the
   // candidate — readings so far, the effective-readings signal, and the cost curve
   // for buying 1..N more this step. Optional/empty when the feature is off or the
@@ -249,6 +252,9 @@ export const multiAgentGameStepSchema = z.object({
   bd_enabled: z.boolean(),
   // Whether a clinical site is up for the PvP auction this step (clinical_sites).
   site_auction_active: z.boolean(),
+  // Reserve price (GBP, £1M-rounded) for the site on offer: the minimum winning
+  // bid. A bid below this wins no site. 0 when the feature/auction is off.
+  site_auction_reserve: z.number(),
   alerts: z.array(alertSchema),
   indication_markets: z.array(indicationMarketSchema),
   opponents: z.array(opponentSummarySchema),
@@ -331,6 +337,9 @@ export const sharedMarketSnapshotSchema = z.object({
   alerts: z.array(alertSchema),
   indication_markets: z.array(indicationMarketSchema),
   last_bd_acquisitions: z.record(z.string(), z.array(bdAcquisitionSchema)),
+  // Clinical-site auction reserve (GBP, £1M-rounded) for the site on offer this
+  // step: the minimum winning bid. 0 when the feature/auction is off.
+  site_auction_reserve: z.number(),
 });
 export type SharedMarketSnapshot = z.infer<typeof sharedMarketSnapshotSchema>;
 

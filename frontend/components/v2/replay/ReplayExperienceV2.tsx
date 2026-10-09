@@ -155,6 +155,9 @@ export function ReplayExperienceV2({
                   color={replay.agentColors[agentId]}
                   cumulativeReward={replay.cumulativeRewards[agentId] ?? 0}
                   reward={replay.currentRewards[agentId] ?? 0}
+                  siteAuctionReserve={
+                    replay.currentSharedMarket.site_auction_reserve ?? 0
+                  }
                   highlightFilter={highlightFilter}
                 />
               );

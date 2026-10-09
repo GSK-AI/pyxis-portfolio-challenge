@@ -251,3 +251,49 @@ class TestPtrsReadingsConfigHelpers:
     def test_effective_readings_zero_when_no_precision(self):
         cfg = self._cfg()
         assert cfg.effective_readings(0.0) == 0.0
+
+
+class TestAuctionReserveFractions:
+    """Validate the auction reserve-price fraction fields (0..1)."""
+
+    @staticmethod
+    def _yaml_data():
+        import yaml
+
+        with open(
+            f"{PROJECT_ROOT}/pyxis_portfolio_challenge/config.yaml", "r"
+        ) as f:
+            return yaml.safe_load(f)
+
+    def test_default_yaml_has_reserve_fractions(self):
+        cfg = config.from_yaml()
+        assert cfg.multi_agent.bd_reserve_fraction == pytest.approx(0.10)
+        assert cfg.clinical_sites.auction_reserve_fraction == pytest.approx(0.25)
+
+    @pytest.mark.parametrize("fraction", [0.0, 0.25, 1.0])
+    def test_bd_reserve_fraction_in_range_accepted(self, fraction):
+        data = self._yaml_data()
+        data["multi_agent"]["bd_reserve_fraction"] = fraction
+        cfg = config.Config(**data)
+        assert cfg.multi_agent.bd_reserve_fraction == fraction
+
+    @pytest.mark.parametrize("fraction", [-0.01, 1.01, 2.0])
+    def test_bd_reserve_fraction_out_of_range_rejected(self, fraction):
+        data = self._yaml_data()
+        data["multi_agent"]["bd_reserve_fraction"] = fraction
+        with pytest.raises(ValidationError, match="bd_reserve_fraction"):
+            config.Config(**data)
+
+    @pytest.mark.parametrize("fraction", [0.0, 0.5, 1.0])
+    def test_site_reserve_fraction_in_range_accepted(self, fraction):
+        data = self._yaml_data()
+        data["clinical_sites"]["auction_reserve_fraction"] = fraction
+        cfg = config.Config(**data)
+        assert cfg.clinical_sites.auction_reserve_fraction == fraction
+
+    @pytest.mark.parametrize("fraction", [-0.01, 1.01, 2.0])
+    def test_site_reserve_fraction_out_of_range_rejected(self, fraction):
+        data = self._yaml_data()
+        data["clinical_sites"]["auction_reserve_fraction"] = fraction
+        with pytest.raises(ValidationError, match="auction_reserve_fraction"):
+            config.Config(**data)

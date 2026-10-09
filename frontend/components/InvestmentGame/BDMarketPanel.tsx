@@ -16,7 +16,9 @@ How bidding works:
 
 Use the cash-adjusted eNPV as a fair-value guide: bidding much above it overpays, while bidding below it risks losing the auction.
 
-Acquired assets are added to your portfolio and begin trials from the listed phase. If no one bids, the asset is lost.`;
+Each asset also has a reserve price (shown on the card). A winning bid below the reserve wins nothing — the asset simply stays on the market — so there is no point bidding under it.
+
+Acquired assets are added to your portfolio and begin trials from the listed phase. If no one bids (or every bid is below the reserve), the asset is lost.`;
 
 function BDAssetCard({
   asset,
@@ -41,6 +43,9 @@ function BDAssetCard({
   onReadingChange: (count: number) => void;
 }) {
   const overCash = bid > playerCash;
+  // Reserve price: the minimum winning bid. A positive bid below it wins nothing.
+  const reserve = asset.reserve_price ?? 0;
+  const belowReserve = bid > 0 && bid < reserve;
   const readingCosts = asset.ptrs_reading_costs ?? [];
   const maxReadings = readingCosts.length;
   const showReadings = readingsEnabled && maxReadings > 0;
@@ -100,6 +105,14 @@ function BDAssetCard({
           PTRS:{" "}
           <span className="font-medium">{(asset.ptrs * 100).toFixed(0)}%</span>
         </span>
+        {reserve > 0 && (
+          <span title="Minimum winning bid. A bid below the reserve wins nothing; the asset stays on the market.">
+            Reserve:{" "}
+            <span className="font-semibold text-gray-800">
+              {formatDisplayNumber(reserve)}
+            </span>
+          </span>
+        )}
         {/* Effective-readings confidence signal — only meaningful once diligence
             can be bought (feature on and a pending trial exists). */}
         {showReadings && (
@@ -130,7 +143,9 @@ function BDAssetCard({
           className={`w-32 rounded border px-2 py-1 text-[11px] ${
             overCash
               ? "border-red-300 bg-red-50 text-red-700"
-              : "border-gray-200 bg-white text-gray-700"
+              : belowReserve
+                ? "border-amber-300 bg-amber-50 text-amber-700"
+                : "border-gray-200 bg-white text-gray-700"
           }`}
         />
         {bid > 0 && (
@@ -141,6 +156,11 @@ function BDAssetCard({
         {overCash && (
           <span className="text-[10px] font-medium text-red-600">
             exceeds cash
+          </span>
+        )}
+        {!overCash && belowReserve && (
+          <span className="text-[10px] font-medium text-amber-600">
+            below reserve
           </span>
         )}
       </div>

@@ -894,6 +894,7 @@ export default function GameExperienceV2({
           buySite={buySite}
           onBuySiteChange={setBuySite}
           siteAuctionActive={multiState?.site_auction_active ?? false}
+          siteAuctionReserve={multiState?.site_auction_reserve ?? 0}
           siteBid={siteBid}
           maxSiteBid={siteMaxBid}
           onSiteBidChange={setSiteBid}

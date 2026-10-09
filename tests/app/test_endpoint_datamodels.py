@@ -195,6 +195,7 @@ def test_bd_asset_readings_prefer_clone_over_shared():
         reinvestment_percentage=0.10,
         ptrs_cfg=cfg,
         clone=clone,
+        bd_reserve_fraction=0.25,
     )
 
     assert resp.ptrs == pytest.approx(0.42)
@@ -203,6 +204,9 @@ def test_bd_asset_readings_prefer_clone_over_shared():
     assert resp.ptrs_reading_costs == pytest.approx(
         cfg.reading_cost_curve(shared.trial.cost_remaining)
     )
+    # Reserve = 0.25 × cash_enpv, floored at 0 and rounded to the nearest £1M.
+    expected_reserve = round(max(0.0, 0.25 * shared.cash_enpv(0.10)) / 1e6) * 1e6
+    assert resp.reserve_price == pytest.approx(expected_reserve)
 
 
 def test_bd_asset_readings_fall_back_to_shared_without_clone():
@@ -218,6 +222,7 @@ def test_bd_asset_readings_fall_back_to_shared_without_clone():
         reinvestment_percentage=0.10,
         ptrs_cfg=cfg,
         clone=None,
+        bd_reserve_fraction=0.25,
     )
 
     assert resp.ptrs == pytest.approx(shared.trial.ptrs)

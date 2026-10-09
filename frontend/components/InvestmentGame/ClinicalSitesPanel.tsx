@@ -18,7 +18,8 @@ Buying a site:
 
 Site auction (PvP):
 - Periodically an extra site is put up for a sealed-bid auction against your opponents.
-- The highest bidder wins the site and pays their bid; bid within your cash.`;
+- The highest bidder wins the site and pays their bid; bid within your cash.
+- The auction has a reserve price (shown when it runs). A winning bid below the reserve wins no site, so there is no point bidding under it.`;
 
 export default function ClinicalSitesPanel({
   operationalSites,
@@ -30,6 +31,7 @@ export default function ClinicalSitesPanel({
   buySite,
   onBuySiteChange,
   siteAuctionActive,
+  siteAuctionReserve = 0,
   siteBid,
   maxSiteBid,
   onSiteBidChange,
@@ -44,6 +46,8 @@ export default function ClinicalSitesPanel({
   buySite: boolean;
   onBuySiteChange: (buy: boolean) => void;
   siteAuctionActive: boolean;
+  // Reserve price (GBP) for the site on offer: the minimum winning bid. 0 = none.
+  siteAuctionReserve?: number;
   siteBid: number;
   maxSiteBid: number;
   onSiteBidChange: (bid: number) => void;
@@ -60,6 +64,8 @@ export default function ClinicalSitesPanel({
   const canAfford = nextSitePurchaseCost <= playerCash;
   const overCash = siteBid > playerCash;
   const bidCap = Math.min(maxSiteBid, playerCash);
+  // Reserve price: a positive bid below it wins no site.
+  const belowReserve = siteBid > 0 && siteBid < siteAuctionReserve;
 
   return (
     <div className="flex flex-col rounded-lg border border-gray-200 bg-white p-4">
@@ -161,8 +167,16 @@ export default function ClinicalSitesPanel({
       {/* Site auction (only on auction years) */}
       {siteAuctionActive && (
         <div className="mt-3 rounded-md border border-blue-200 bg-blue-50 p-2.5">
-          <div className="mb-1.5 flex items-center gap-1 text-[11px] font-semibold text-blue-700">
-            Site auction this year
+          <div className="mb-1.5 flex items-center justify-between text-[11px] font-semibold text-blue-700">
+            <span>Site auction this year</span>
+            {siteAuctionReserve > 0 && (
+              <span
+                className="font-medium text-blue-600"
+                title="Minimum winning bid. A bid below the reserve wins no site."
+              >
+                Reserve: {formatDisplayNumber(siteAuctionReserve)}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <span className="text-[10px] text-gray-500">Bid (£):</span>
@@ -183,7 +197,9 @@ export default function ClinicalSitesPanel({
               className={`w-32 rounded border px-2 py-1 text-[11px] ${
                 overCash
                   ? "border-red-300 bg-red-50 text-red-700"
-                  : "border-gray-200 bg-white text-gray-700"
+                  : belowReserve
+                    ? "border-amber-300 bg-amber-50 text-amber-700"
+                    : "border-gray-200 bg-white text-gray-700"
               }`}
             />
             {siteBid > 0 && (
@@ -194,6 +210,11 @@ export default function ClinicalSitesPanel({
             {overCash && (
               <span className="text-[10px] font-medium text-red-600">
                 exceeds cash
+              </span>
+            )}
+            {!overCash && belowReserve && (
+              <span className="text-[10px] font-medium text-amber-600">
+                below reserve
               </span>
             )}
           </div>
